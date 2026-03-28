@@ -126,4 +126,11 @@
   html {
     @apply font-sans;
   }
+  button, [role="button"], a, select,
+  input[type="checkbox"], input[type="radio"],
+  label[for], [role="tab"], [role="menuitem"],
+  [role="option"], [role="combobox"],
+  [data-slot="button"] {
+    cursor: pointer;
+  }
 }
