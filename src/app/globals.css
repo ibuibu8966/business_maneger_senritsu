@@ -126,11 +126,15 @@
   html {
     @apply font-sans;
   }
-  button, [role="button"], a, select,
+  button, [role="button"], a, select, summary,
   input[type="checkbox"], input[type="radio"],
   label[for], [role="tab"], [role="menuitem"],
-  [role="option"], [role="combobox"],
-  [data-slot="button"] {
+  [role="option"], [role="combobox"], [role="switch"],
+  [data-slot="button"],
+  [data-slot="dialog-trigger"], [data-slot="dialog-close"],
+  [data-slot="sheet-trigger"], [data-slot="sheet-close"],
+  [data-slot="tabs-trigger"], [data-slot="card-action"],
+  [data-slot="select-trigger"] {
     cursor: pointer;
   }
 }

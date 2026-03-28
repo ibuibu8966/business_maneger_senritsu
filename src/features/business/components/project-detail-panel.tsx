@@ -258,12 +258,17 @@ export function ProjectInfoPanel({
               )}
             </select>
           )}
-          {node.relatedContacts.length === 0 ? (
+          {node.relatedContacts.length === 0 && (node.relatedPartners ?? []).length === 0 ? (
             <p className="text-xs text-muted-foreground">なし</p>
           ) : (
             <div className="flex flex-wrap gap-1">
               {node.relatedContacts.map((c) => (
-                <Badge key={c.id} variant="secondary" className="text-xs group/badge">
+                <Badge
+                  key={c.id}
+                  variant="secondary"
+                  className="text-xs group/badge cursor-pointer"
+                  onClick={() => window.open(`/crm/contacts/${c.id}`, "_blank")}
+                >
                   {c.name}
                   {c.role && <span className="text-[10px] text-muted-foreground ml-1">({c.role})</span>}
                   <button
@@ -274,8 +279,6 @@ export function ProjectInfoPanel({
                         const updatedContactIds = node.relatedContacts.filter((rc) => rc.source === "direct" && rc.id !== c.id).map((rc) => rc.id)
                         update({ contactIds: updatedContactIds })
                       } else {
-                        // Partner経由のContactは、対応するPartnerを外す
-                        // ここではPartner自体を外す処理は複雑なので、直接contactIdsから外す
                         const updatedContactIds = node.relatedContacts.filter((rc) => rc.source === "direct" && rc.id !== c.id).map((rc) => rc.id)
                         update({ contactIds: updatedContactIds })
                       }
@@ -283,6 +286,16 @@ export function ProjectInfoPanel({
                   >
                     ×
                   </button>
+                </Badge>
+              ))}
+              {(node.relatedPartners ?? []).map((p) => (
+                <Badge
+                  key={p.id}
+                  variant="secondary"
+                  className="text-xs cursor-pointer"
+                  onClick={() => window.open(`/crm/partners/${p.id}`, "_blank")}
+                >
+                  {p.name}
                 </Badge>
               ))}
             </div>
@@ -295,17 +308,6 @@ export function ProjectInfoPanel({
             <div className="flex flex-wrap gap-1">
               {node.accountNames.map((a) => (
                 <Badge key={a} variant="outline" className="text-xs">{a}</Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {node.partnerNames.length > 0 && (
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">外部会社・担当者</p>
-            <div className="flex flex-wrap gap-1">
-              {node.partnerNames.map((p) => (
-                <Badge key={p} variant="secondary" className="text-xs">{p}</Badge>
               ))}
             </div>
           </div>

@@ -1359,21 +1359,26 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
               <Button variant="ghost" size="sm" className="h-6 text-[10px] w-full" onClick={() => setShowContactSelect(false)}>キャンセル</Button>
             </div>
           )}
-          {relatedContacts.length === 0 ? (
+          {relatedContacts.length === 0 && relatedPartners.length === 0 ? (
             <p className="text-xs text-muted-foreground">なし</p>
           ) : (
             <div className="flex flex-wrap gap-1">
               {relatedContacts.map((c) => (
-                <Badge key={c.id} variant="secondary" className="text-xs group/badge">
+                <Badge
+                  key={c.id}
+                  variant="secondary"
+                  className="text-xs group/badge cursor-pointer"
+                  onClick={() => window.open(`/crm/contacts/${c.id}`, "_blank")}
+                >
                   {c.name}{c.role && <span className="text-[10px] text-muted-foreground ml-1">({c.role})</span>}
                   <button
                     className="ml-1 opacity-0 group-hover/badge:opacity-100 text-muted-foreground hover:text-red-500"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation()
                       if (c.source === "direct") {
                         const nextDirectIds = relatedContacts.filter((rc) => rc.source === "direct" && rc.id !== c.id).map((rc) => rc.id)
                         update({ contactIds: nextDirectIds })
                       } else {
-                        // Partner経由の場合、Partnerを外す
                         const nextPartners = relatedPartners.filter((p) => p.id !== c.id)
                         setRelatedPartners(nextPartners)
                         update({ partnerIds: nextPartners.map((p) => p.id) })
@@ -1385,6 +1390,16 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
                   </button>
                 </Badge>
               ))}
+              {relatedPartners.map((p) => (
+                <Badge
+                  key={p.id}
+                  variant="secondary"
+                  className="text-xs cursor-pointer"
+                  onClick={() => window.open(`/crm/partners/${p.id}`, "_blank")}
+                >
+                  {p.name}
+                </Badge>
+              ))}
             </div>
           )}
         </div>
@@ -1394,15 +1409,6 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
             <p className="text-[10px] text-muted-foreground mb-1">紐づき口座</p>
             <div className="flex flex-wrap gap-1">
               {biz.accountNames.map((a) => <Badge key={a} variant="outline" className="text-xs">{a}</Badge>)}
-            </div>
-          </div>
-        )}
-
-        {biz.partnerNames.length > 0 && (
-          <div>
-            <p className="text-[10px] text-muted-foreground mb-1">外部会社</p>
-            <div className="flex flex-wrap gap-1">
-              {biz.partnerNames.map((p) => <Badge key={p} variant="secondary" className="text-xs">{p}</Badge>)}
             </div>
           </div>
         )}
