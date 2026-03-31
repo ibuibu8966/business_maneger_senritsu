@@ -76,4 +76,8 @@ export const queryKeys = {
   },
   auditLogs: { all: ["auditLogs"] as const },
   dashboardLayout: { all: ["dashboardLayout"] as const },
+  meetingsByDate: {
+    all: ["meetingsByDate"] as const,
+    date: (date: string) => ["meetingsByDate", date] as const,
+  },
 }

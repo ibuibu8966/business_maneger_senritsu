@@ -89,11 +89,10 @@ export function SalonMemberList() {
                   <TableCell className="text-sm text-muted-foreground">
                     {r.nextMeetingDate ? new Date(r.nextMeetingDate).toLocaleDateString("ja-JP") : "-"}
                   </TableCell>
-                  <TableCell>
-                    {r.isFinalMeeting ? (
-                      <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">最終</Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {r.lastMeetingDate ? new Date(r.lastMeetingDate).toLocaleDateString("ja-JP") : "-"}
+                    {r.isFinalMeeting && (
+                      <Badge variant="outline" className="ml-1 text-xs text-orange-600 border-orange-300">最終</Badge>
                     )}
                   </TableCell>
                   <TableCell>

@@ -11,13 +11,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   useCreateScheduleEvent,
   useUpdateScheduleEvent,
   useDeleteScheduleEvent,
@@ -168,42 +161,30 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
           {/* 従業員 */}
           <div className="space-y-1.5">
             <Label>担当者 *</Label>
-            <Select value={employeeId} onValueChange={(v) => { if (v) setEmployeeId(v) }}>
-              <SelectTrigger>
-                <SelectValue placeholder="選択してください">
-                  {employeeId ? employees.find((e) => e.id === employeeId)?.name : "選択してください"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((emp) => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: emp.color }} />
-                      {emp.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={employeeId}
+              onChange={(e) => { if (e.target.value) setEmployeeId(e.target.value) }}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">選択してください</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>{emp.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* 予定種別 */}
           <div className="space-y-1.5">
             <Label>予定種別</Label>
-            <Select value={eventType} onValueChange={(v) => { if (v) setEventType(v) }}>
-              <SelectTrigger>
-                <SelectValue>
-                  {EVENT_TYPES.find((t) => t.value === eventType)?.label}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {EVENT_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={eventType}
+              onChange={(e) => { if (e.target.value) setEventType(e.target.value) }}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {EVENT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* 終日トグル */}

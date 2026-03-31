@@ -107,7 +107,8 @@ export class ScheduleController {
       return NextResponse.json(dtos)
     } catch (e) {
       logger.error("Google Calendar list error:", e)
-      return NextResponse.json({ error: "予定の取得に失敗しました" }, { status: 500 })
+      // OAuthトークン失効等の場合は空配列を返す（フロントがクラッシュしないように）
+      return NextResponse.json([])
     }
   }
 

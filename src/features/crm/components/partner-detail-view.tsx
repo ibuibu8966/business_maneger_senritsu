@@ -17,13 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+// Native <select> used instead of Radix Select
 import {
   Dialog,
   DialogContent,
@@ -544,18 +538,14 @@ export function PartnerDetailView({ partnerId }: Props) {
           <div className="space-y-3 pt-2">
             <div>
               <Label className="text-xs">担当者</Label>
-              <Select value={addContactId} onValueChange={(v) => setAddContactId(v ?? "")}>
-                <SelectTrigger className="h-8 text-sm mt-1">
-                  <SelectValue placeholder="担当者を選択..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableContacts.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={addContactId} onChange={(e) => setAddContactId(e.target.value)}>
+                <option value="">担当者を選択...</option>
+                {availableContacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <Label className="text-xs">役割</Label>
@@ -597,18 +587,14 @@ export function PartnerDetailView({ partnerId }: Props) {
           <div className="space-y-3 pt-2">
             <div>
               <Label className="text-xs">事業</Label>
-              <Select value={addBusinessId} onValueChange={(v) => setAddBusinessId(v ?? "")}>
-                <SelectTrigger className="h-8 text-sm mt-1">
-                  <SelectValue placeholder="事業を選択..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableBusinesses.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={addBusinessId} onChange={(e) => setAddBusinessId(e.target.value)}>
+                <option value="">事業を選択...</option>
+                {availableBusinesses.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button
@@ -643,52 +629,41 @@ export function PartnerDetailView({ partnerId }: Props) {
             </div>
             <div>
               <Label className="text-xs">担当者 *</Label>
-              <Select value={addTicketAssigneeId} onValueChange={(v) => setAddTicketAssigneeId(v ?? "")}>
-                <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="担当者を選択..." /></SelectTrigger>
-                <SelectContent>
-                  {employees.filter(e => e.isActive).map(e => (
-                    <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={addTicketAssigneeId} onChange={(e) => setAddTicketAssigneeId(e.target.value)}>
+                <option value="">担当者を選択...</option>
+                {employees.filter(e => e.isActive).map(e => (
+                  <option key={e.id} value={e.id}>{e.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <Label className="text-xs">連絡先（任意）</Label>
-              <Select value={addTicketContactId} onValueChange={(v) => setAddTicketContactId(v ?? "")}>
-                <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="連絡先を選択..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">なし</SelectItem>
-                  {partner.contacts.map(c => (
-                    <SelectItem key={c.contactId} value={c.contactId}>{c.contactName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={addTicketContactId} onChange={(e) => setAddTicketContactId(e.target.value)}>
+                <option value="">なし</option>
+                {partner.contacts.map(c => (
+                  <option key={c.contactId} value={c.contactId}>{c.contactName}</option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">ツール</Label>
-                <Select value={addTicketTool} onValueChange={(v) => setAddTicketTool(v ?? "LINE")}>
-                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LINE">LINE</SelectItem>
-                    <SelectItem value="Telegram">Telegram</SelectItem>
-                    <SelectItem value="Discord">Discord</SelectItem>
-                    <SelectItem value="電話">電話</SelectItem>
-                    <SelectItem value="Zoom">Zoom</SelectItem>
-                    <SelectItem value="対面">対面</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={addTicketTool} onChange={(e) => setAddTicketTool(e.target.value)}>
+                  <option value="LINE">LINE</option>
+                  <option value="Telegram">Telegram</option>
+                  <option value="Discord">Discord</option>
+                  <option value="電話">電話</option>
+                  <option value="Zoom">Zoom</option>
+                  <option value="対面">対面</option>
+                </select>
               </div>
               <div>
                 <Label className="text-xs">優先度</Label>
-                <Select value={addTicketPriority} onValueChange={(v) => setAddTicketPriority(v ?? "中")}>
-                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="高">高</SelectItem>
-                    <SelectItem value="中">中</SelectItem>
-                    <SelectItem value="低">低</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={addTicketPriority} onChange={(e) => setAddTicketPriority(e.target.value)}>
+                  <option value="高">高</option>
+                  <option value="中">中</option>
+                  <option value="低">低</option>
+                </select>
               </div>
             </div>
             <div>

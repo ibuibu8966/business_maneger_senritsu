@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -10,13 +10,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { BusinessDTO, AccountTagDTO } from "@/types/dto"
 import { TagSelect } from "./tag-select"
 
@@ -38,6 +31,19 @@ export function AccountModal({ open, onOpenChange, businesses, allTags = [], onC
   const [purpose, setPurpose] = useState("")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
+  // ダイアログを開くたびにリセット
+  useEffect(() => {
+    if (open) {
+      setName("")
+      setOwnerType("internal")
+      setAccountType("bank")
+      setBusinessId("")
+      setBalance("")
+      setPurpose("")
+      setSelectedTags([])
+    }
+  }, [open])
+
   const toggleTag = (tagName: string) => {
     setSelectedTags((prev) => prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName])
   }
@@ -53,10 +59,6 @@ export function AccountModal({ open, onOpenChange, businesses, allTags = [], onC
       purpose,
       tags: selectedTags,
     })
-    setName("")
-    setBalance("")
-    setPurpose("")
-    setSelectedTags([])
   }
 
   return (
@@ -120,15 +122,16 @@ export function AccountModal({ open, onOpenChange, businesses, allTags = [], onC
           </div>
           <div>
             <Label className="text-xs">紐づく事業（任意）</Label>
-            <Select value={businessId} onValueChange={(v) => setBusinessId(v ?? "")}>
-              <SelectTrigger><SelectValue placeholder="なし" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">なし</SelectItem>
-                {businesses.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={businessId}
+              onChange={(e) => setBusinessId(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">なし</option>
+              {businesses.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <Label className="text-xs">初期残高（円）</Label>

@@ -843,3 +843,11 @@ export async function deleteCrmTag(id: string): Promise<void> {
   if (!res.ok) throw new Error("CRMタグの削除に失敗")
 }
 
+// ========== 面談 ==========
+
+export async function fetchMeetingsByDate(date: string) {
+  const res = await fetch(`${CRM_BASE}/meetings?date=${date}`)
+  if (!res.ok) throw new Error("面談の取得に失敗")
+  return res.json()
+}
+

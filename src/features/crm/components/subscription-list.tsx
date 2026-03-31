@@ -1,14 +1,11 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo } from "react"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
 import { useSubscriptions, useUpdateSubscription } from "@/hooks/use-crm"
 import { formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -29,7 +26,6 @@ export function SubscriptionList() {
   const [editId, setEditId] = useState<string | null>(null)
   const [editField, setEditField] = useState<EditField>(null)
   const [editValue, setEditValue] = useState("")
-  const selectOpenRef = useRef(false)
 
   const { data: subscriptions = [], isLoading } = useSubscriptions()
   const updateMutation = useUpdateSubscription()
@@ -100,24 +96,17 @@ export function SubscriptionList() {
   const isEditing = (id: string, field: EditField) => editId === id && editField === field
 
   const InlineSelect = ({ id, field, value, items }: { id: string; field: EditField; value: string; items: { id: string; label: string }[] }) => (
-    <Select
-      defaultOpen
+    <select
+      autoFocus
       value={value}
-      onValueChange={(v) => handleSelectChange(v ?? value)}
-      onOpenChange={(open) => {
-        selectOpenRef.current = open
-        if (!open) setTimeout(() => { if (!selectOpenRef.current) cancelEdit() }, 150)
-      }}
+      onChange={(e) => handleSelectChange(e.target.value || value)}
+      onBlur={() => cancelEdit()}
+      className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
-      <SelectTrigger className="h-7 text-sm">
-        <SelectValue>{items.find(item => item.id === value)?.label ?? value}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {items.map(item => (
-          <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      {items.map(item => (
+        <option key={item.id} value={item.id}>{item.label}</option>
+      ))}
+    </select>
   )
 
   if (isLoading) return <div className="p-4 text-muted-foreground">読み込み中...</div>
@@ -126,21 +115,23 @@ export function SubscriptionList() {
     <div className="flex flex-col h-full">
       {/* フィルター */}
       <div className="px-4 py-3 border-b flex items-center gap-3 flex-wrap">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "すべて")}>
-          <SelectTrigger className="h-8 text-sm w-28"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="すべて">全て</SelectItem>
-            <SelectItem value="有効">有効</SelectItem>
-            <SelectItem value="解約">解約</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={exemptFilter} onValueChange={(v) => setExemptFilter(v ?? "すべて")}>
-          <SelectTrigger className="h-8 text-sm w-28"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="すべて">全て</SelectItem>
-            <SelectItem value="免除のみ">免除のみ</SelectItem>
-          </SelectContent>
-        </Select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value || "すべて")}
+          className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="すべて">全て</option>
+          <option value="有効">有効</option>
+          <option value="解約">解約</option>
+        </select>
+        <select
+          value={exemptFilter}
+          onChange={(e) => setExemptFilter(e.target.value || "すべて")}
+          className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="すべて">全て</option>
+          <option value="免除のみ">免除のみ</option>
+        </select>
         <span className="text-xs text-muted-foreground">{filtered.length}件</span>
       </div>
 

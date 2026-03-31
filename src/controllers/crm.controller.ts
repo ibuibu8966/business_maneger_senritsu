@@ -121,7 +121,7 @@ export class ContactController {
         discordId: c.discordId, email: c.email, phone: c.phone, memo: c.memo,
         memberpayId: c.memberpayId, robotpayId: c.robotpayId, paypalId: c.paypalId,
         nextMeetingDate: c.nextMeetingDate?.toISOString() ?? null,
-        lastMeetingDate: c.meetings?.[0]?.date?.toISOString() ?? null,
+        lastMeetingDate: c.lastMeetingDate?.toISOString() ?? c.meetings?.[0]?.date?.toISOString() ?? null,
         isFinalMeeting: c.isFinalMeeting, tags: c.tags,
         isArchived: c.isArchived, createdAt: c.createdAt.toISOString(),
       })))
@@ -157,7 +157,7 @@ export class ContactController {
       if (data.nextMeetingDate) updateData.nextMeetingDate = new Date(data.nextMeetingDate)
       if (data.nextMeetingDate === null) updateData.nextMeetingDate = null
       const r = await ContactRepository.update(id, updateData as Parameters<typeof ContactRepository.update>[1])
-      return NextResponse.json({ ...r, type: r.type.toLowerCase(), createdAt: r.createdAt.toISOString(), memberpayId: r.memberpayId ?? "", robotpayId: r.robotpayId ?? "", paypalId: r.paypalId ?? "", nextMeetingDate: r.nextMeetingDate?.toISOString() ?? null, lastMeetingDate: null, isFinalMeeting: r.isFinalMeeting, tags: r.tags })
+      return NextResponse.json({ ...r, type: r.type.toLowerCase(), createdAt: r.createdAt.toISOString(), memberpayId: r.memberpayId ?? "", robotpayId: r.robotpayId ?? "", paypalId: r.paypalId ?? "", nextMeetingDate: r.nextMeetingDate?.toISOString() ?? null, lastMeetingDate: r.lastMeetingDate?.toISOString() ?? null, isFinalMeeting: r.isFinalMeeting, tags: r.tags })
     } catch (e) {
       if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
       return NextResponse.json({ error: "連絡先の更新に失敗しました" }, { status: 500 })
@@ -583,6 +583,21 @@ export class ContactMeetingController {
       const r = await ContactMeetingRepository.create({
         contactId, date: new Date(data.date), summary: data.summary ?? "",
       })
+
+      // 面談メモ追加後、nextMeetingDate / lastMeetingDate を自動再計算
+      const now = new Date()
+      const allMeetings = await ContactMeetingRepository.findByContactId(contactId)
+      const futureMeetings = allMeetings
+        .filter(m => m.date > now)
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+      const pastMeetings = allMeetings
+        .filter(m => m.date <= now)
+        .sort((a, b) => b.date.getTime() - a.date.getTime())
+      await ContactRepository.update(contactId, {
+        nextMeetingDate: futureMeetings[0]?.date ?? null,
+        lastMeetingDate: pastMeetings[0]?.date ?? null,
+      })
+
       return NextResponse.json({
         id: r.id, contactId: r.contactId, date: r.date.toISOString(),
         summary: r.summary, createdAt: r.createdAt.toISOString(),

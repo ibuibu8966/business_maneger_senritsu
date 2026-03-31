@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -16,13 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+// Native <select> used instead of Radix Select
 import {
   ArrowLeft,
   Pencil,
@@ -169,7 +163,6 @@ export function ContactDetailView({ contactId }: Props) {
   const [subEditId, setSubEditId] = useState<string | null>(null)
   const [subEditField, setSubEditField] = useState<string | null>(null)
   const [subEditValue, setSubEditValue] = useState("")
-  const subSelectOpenRef = useRef(false)
 
   const startSubEdit = (id: string, field: string, value: string) => {
     setSubEditId(id)
@@ -206,24 +199,17 @@ export function ContactDetailView({ contactId }: Props) {
   const isSubEditing = (id: string, field: string) => subEditId === id && subEditField === field
 
   const SubInlineSelect = ({ id, field, value, items }: { id: string; field: string; value: string; items: { id: string; label: string }[] }) => (
-    <Select
-      defaultOpen
+    <select
+      autoFocus
+      className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       value={value}
-      onValueChange={(v) => handleSubSelectChange(v ?? value)}
-      onOpenChange={(open) => {
-        subSelectOpenRef.current = open
-        if (!open) setTimeout(() => { if (!subSelectOpenRef.current) cancelSubEdit() }, 150)
-      }}
+      onChange={(e) => handleSubSelectChange(e.target.value)}
+      onBlur={() => { setTimeout(() => cancelSubEdit(), 150) }}
     >
-      <SelectTrigger className="h-7 text-sm">
-        <SelectValue>{items.find(item => item.id === value)?.label ?? value}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {items.map(item => (
-          <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      {items.map(item => (
+        <option key={item.id} value={item.id}>{item.label}</option>
+      ))}
+    </select>
   )
 
   const handleAddMeeting = () => {
@@ -453,15 +439,10 @@ export function ContactDetailView({ contactId }: Props) {
             <div>
               <p className="text-xs text-muted-foreground">種別</p>
               {editing ? (
-                <Select value={editType} onValueChange={(v) => setEditType(v ?? "サロン生")}>
-                  <SelectTrigger className="h-8 text-sm mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="サロン生">サロン生</SelectItem>
-                    <SelectItem value="取引先">取引先</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={editType} onChange={(e) => setEditType(e.target.value)}>
+                  <option value="サロン生">サロン生</option>
+                  <option value="取引先">取引先</option>
+                </select>
               ) : (
                 <p className="text-sm font-medium">
                   {TYPE_LABELS[contact.type] ?? contact.type}
@@ -877,7 +858,7 @@ export function ContactDetailView({ contactId }: Props) {
               <Label htmlFor="final-meeting" className="text-xs text-muted-foreground">最終面談（次回不要）</Label>
               <Switch
                 id="final-meeting"
-                checked={contact.isFinalMeeting}
+                checked={!!contact.isFinalMeeting}
                 onCheckedChange={(checked) => {
                   updateContactMutation.mutate({ id: contact.id, data: { isFinalMeeting: checked } })
                 }}
@@ -918,27 +899,22 @@ export function ContactDetailView({ contactId }: Props) {
           <div className="space-y-3 pt-2">
             <div>
               <Label className="text-xs">コース</Label>
-              <Select value={addSubCourseId} onValueChange={(v) => setAddSubCourseId(v ?? "")}>
-                <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="コースを選択..." /></SelectTrigger>
-                <SelectContent>
-                  {allCourses.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.salonName} - {c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={addSubCourseId} onChange={(e) => setAddSubCourseId(e.target.value)}>
+                <option value="">コースを選択...</option>
+                {allCourses.map(c => (
+                  <option key={c.id} value={c.id}>{c.salonName} - {c.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <Label className="text-xs">決済方法</Label>
-              <Select value={addSubMethod} onValueChange={(v) => setAddSubMethod(v ?? "その他")}>
-                <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="メンバーペイ">メンバーペイ</SelectItem>
-                  <SelectItem value="ロボットペイ">ロボットペイ</SelectItem>
-                  <SelectItem value="PayPal">PayPal</SelectItem>
-                  <SelectItem value="UnivaPay">UnivaPay</SelectItem>
-                  <SelectItem value="その他">その他</SelectItem>
-                </SelectContent>
-              </Select>
+              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={addSubMethod} onChange={(e) => setAddSubMethod(e.target.value)}>
+                <option value="メンバーペイ">メンバーペイ</option>
+                <option value="ロボットペイ">ロボットペイ</option>
+                <option value="PayPal">PayPal</option>
+                <option value="UnivaPay">UnivaPay</option>
+                <option value="その他">その他</option>
+              </select>
             </div>
             <div>
               <Label className="text-xs">開始日</Label>

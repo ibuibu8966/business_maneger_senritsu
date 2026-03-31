@@ -7,7 +7,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useSession } from "next-auth/react"
 import { Check, RefreshCw, Copy, ExternalLink } from "lucide-react"
 import { usePaymentChecks, useUpsertPaymentCheck, useGeneratePaymentChecks } from "@/hooks/use-crm"
@@ -155,18 +154,14 @@ export function PaymentCheckList() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Select
+                  <select
                     value={c.discordRoleAssigned ? "付与済" : "未付与"}
-                    onValueChange={(v) => handleRoleChange(c, v === "付与済")}
+                    onChange={(e) => handleRoleChange(c, e.target.value === "付与済")}
+                    className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
-                    <SelectTrigger className="h-7 w-[80px] text-xs">
-                      <SelectValue placeholder="選択..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="付与済">付与済</SelectItem>
-                      <SelectItem value="未付与">未付与</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="付与済">付与済</option>
+                    <option value="未付与">未付与</option>
+                  </select>
                 </TableCell>
                 <TableCell className="text-sm">
                   {c.confirmedBy || "-"}

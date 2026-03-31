@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useMemo, useRef, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,13 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+// Native <select> used instead of Radix Select
 // Tabs removed — using nav buttons matching accounting layout
 import { Badge } from "@/components/ui/badge"
 import { Plus, ChevronDown, ChevronRight, Archive, ArrowLeftRight } from "lucide-react"
@@ -200,7 +194,7 @@ export function BalanceDashboard() {
   const [txEditId, setTxEditId] = useState<string | null>(null)
   const [txEditField, setTxEditField] = useState<TxEditField | null>(null)
   const [txEditValue, setTxEditValue] = useState("")
-  const selectOpenRef = useRef(false)
+
 
   const startTxEdit = (t: AccountTransactionDTO, field: TxEditField) => {
     setTxEditId(t.id)
@@ -394,6 +388,8 @@ export function BalanceDashboard() {
   // フィルタリング
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
+      // 振替は別セクションで表示
+      if (t.type === "transfer") return false
       // アーカイブフィルタ
       if (showArchivedTx ? !t.isArchived : t.isArchived) return false
       if (txTypeFilter !== "all" && t.type !== txTypeFilter) return false
@@ -403,6 +399,18 @@ export function BalanceDashboard() {
       return true
     })
   }, [transactions, txTypeFilter, txAccountFilter, showArchivedTx, taggedAccountIdSet])
+
+  const filteredTransfers = useMemo(() => {
+    return transactions.filter((t) => {
+      if (t.type !== "transfer") return false
+      // ペアの片方だけ表示
+      if (t.linkedTransferId && t.id > t.linkedTransferId) return false
+      if (showArchivedTx ? !t.isArchived : t.isArchived) return false
+      if (txAccountFilter !== "all" && t.accountId !== txAccountFilter) return false
+      if (taggedAccountIdSet && !taggedAccountIdSet.has(t.accountId)) return false
+      return true
+    })
+  }, [transactions, txAccountFilter, showArchivedTx, taggedAccountIdSet])
 
   const filteredLendings = useMemo(() => {
     return lendings.filter((l) => {
@@ -647,106 +655,6 @@ export function BalanceDashboard() {
               </DragOverlay>
             </DndContext>
 
-            {/* 最近の入出金・運用履歴 */}
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm font-medium">最近の入出金・運用履歴</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-24">日付</TableHead>
-                      <TableHead>口座</TableHead>
-                      <TableHead>カテゴリ</TableHead>
-                      <TableHead className="text-right">金額</TableHead>
-                      <TableHead>相手口座</TableHead>
-                      <TableHead>メモ</TableHead>
-                      <TableHead>タグ</TableHead>
-                      <TableHead className="w-16"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.filter((t) => !t.isArchived).slice(0, 10).map((t) => {
-                      const isPositive = ["deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
-                      return (
-                        <TableRow key={t.id} className="">
-                          <TableCell className="text-sm" onDoubleClick={() => startTxEdit(t, "date")}>
-                            {isTxEditing(t.id, "date") ? (
-                              <Input type="date" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm w-32" />
-                            ) : (
-                              <span className="cursor-text">{formatDate(t.date)}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm">{t.accountName}</TableCell>
-                          <TableCell onDoubleClick={() => startTxEdit(t, "type")}>
-                            {isTxEditing(t.id, "type") ? (
-                              <Select defaultOpen value={txEditValue} onValueChange={(v) => { if (v) saveTxSelect(v) }} onOpenChange={(open) => { selectOpenRef.current = open; if (!open) setTimeout(() => { if (!selectOpenRef.current) cancelTxEdit() }, 150) }}>
-                                <SelectTrigger className="h-7 text-xs w-28"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(TRANSACTION_TYPE_LABELS).map(([key, label]) => (
-                                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Badge variant="outline" className={cn("text-xs cursor-text border", getTxTypeColor(t.type))}>{t.categoryName}</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className={cn("text-sm text-right font-medium tabular-nums", isPositive ? "text-emerald-600" : "text-red-600")} onDoubleClick={() => startTxEdit(t, "amount")}>
-                            {isTxEditing(t.id, "amount") ? (
-                              <Input type="number" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm text-right w-24" />
-                            ) : (
-                              <span className="cursor-text">{isPositive ? "+" : "-"}{formatCurrency(t.amount ?? 0)}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm" onDoubleClick={() => startTxEdit(t, "counterparty")}>
-                            {isTxEditing(t.id, "counterparty") ? (
-                              <Select defaultOpen value={txEditValue} onValueChange={(v) => { if (v !== null) saveTxSelect(v) }} onOpenChange={(o) => { selectOpenRef.current = o; if (!o) setTimeout(() => { if (!selectOpenRef.current) cancelTxEdit() }, 150) }}>
-                                <SelectTrigger className="h-7 text-xs"><SelectValue>{accounts.find((a) => a.id === txEditValue)?.name || "選択..."}</SelectValue></SelectTrigger>
-                                <SelectContent>
-                                  <AccountSelectItems accounts={accounts} />
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <span className="cursor-text">
-                                {t.counterparty || (t.type === "transfer"
-                                  ? (t.accountId === t.fromAccountId ? t.toAccountName : t.fromAccountName) ?? "-"
-                                  : "-")}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm max-w-[200px]" onDoubleClick={() => startTxEdit(t, "memo")}>
-                            {isTxEditing(t.id, "memo") ? (
-                              <Input autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm" />
-                            ) : (
-                              <div className="cursor-text">
-                                <div className="truncate">{t.memo || <span className="text-muted-foreground">-</span>}</div>
-                                {t.editedBy && <span className="text-xs text-muted-foreground">最終編集: {t.editedBy}</span>}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <TagSelect allTags={allTags} selectedTags={t.tags ?? []} onToggle={(tagName) => toggleTxTag(t, tagName)} onCreate={handleCreateTag} size="compact" />
-                          </TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => archiveTx(t.id, !t.isArchived)}>
-                              <Archive className="h-3.5 w-3.5 text-muted-foreground" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                    {transactions.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">取引データなし</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
             {/* 最近の貸借 */}
             <Card>
               <CardHeader className="p-4 pb-2">
@@ -783,12 +691,9 @@ export function BalanceDashboard() {
                           <TableCell className="text-xs text-muted-foreground">{l.createdAt.split("T")[0]}</TableCell>
                           <TableCell className="text-sm font-medium" onDoubleClick={() => startLendEdit(l, "counterparty")}>
                             {isLendEditing(l.id, "counterparty") ? (
-                              <Select defaultOpen value={lendEditValue} onValueChange={(v) => { if (v !== null) saveLendSelect(v) }} onOpenChange={(o) => { if (!o) setTimeout(() => cancelLendEdit(), 150) }}>
-                                <SelectTrigger className="h-7 text-xs"><SelectValue>{accounts.find((a) => a.id === lendEditValue)?.name || "選択..."}</SelectValue></SelectTrigger>
-                                <SelectContent>
+                              <select autoFocus className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={lendEditValue} onChange={(e) => { if (e.target.value) saveLendSelect(e.target.value) }} onBlur={() => { setTimeout(() => cancelLendEdit(), 150) }}>
                                   <AccountSelectItems accounts={accounts} />
-                                </SelectContent>
-                              </Select>
+                              </select>
                             ) : (
                               <span className="cursor-text">
                                 {l.type === "lend"
@@ -819,14 +724,11 @@ export function BalanceDashboard() {
                           </TableCell>
                           <TableCell onDoubleClick={() => startLendEdit(l, "status")}>
                             {isLendEditing(l.id, "status") ? (
-                              <Select defaultOpen value={lendEditValue} onValueChange={(v) => { if (v) saveLendSelect(v) }} onOpenChange={(open) => { selectOpenRef.current = open; if (!open) setTimeout(() => { if (!selectOpenRef.current) cancelLendEdit() }, 150) }}>
-                                <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="active">返済中</SelectItem>
-                                  <SelectItem value="completed">完済</SelectItem>
-                                  <SelectItem value="overdue">延滞</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <select autoFocus className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-24" value={lendEditValue} onChange={(e) => { if (e.target.value) saveLendSelect(e.target.value) }} onBlur={() => { setTimeout(() => cancelLendEdit(), 150) }}>
+                                <option value="active">返済中</option>
+                                <option value="completed">完済</option>
+                                <option value="overdue">延滞</option>
+                              </select>
                             ) : (
                               <Badge variant="outline" className={cn("text-xs cursor-text",
                                 l.status === "active" && "border-blue-300 text-blue-700",
@@ -885,6 +787,146 @@ export function BalanceDashboard() {
                     {lendings.filter((l) => !l.isArchived && l.status !== "completed" && !(l.linkedLendingId && l.id > l.linkedLendingId)).length === 0 && (
                       <TableRow>
                         <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-6">未返済の貸借なし</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* 最近の振替 */}
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-medium">最近の振替</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-24">日付</TableHead>
+                      <TableHead>やりとり</TableHead>
+                      <TableHead>入/出</TableHead>
+                      <TableHead className="text-right">金額</TableHead>
+                      <TableHead>メモ</TableHead>
+                      <TableHead>タグ</TableHead>
+                      <TableHead className="w-16"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTransfers.filter((t) => !t.isArchived).slice(0, 10).map((t) => {
+                      const isIncoming = t.toAccountId === t.accountId
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
+                          <TableCell className="text-sm">{t.fromAccountName ?? "-"} → {t.toAccountName ?? "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200")}>
+                              {isIncoming ? "入金" : "出金"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-right font-medium tabular-nums" onDoubleClick={() => startTxEdit(t, "amount")}>
+                            {isTxEditing(t.id, "amount") ? (
+                              <Input type="number" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm text-right w-24" />
+                            ) : (
+                              <span className="cursor-text">{formatCurrency(t.amount ?? 0)}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm max-w-[200px]" onDoubleClick={() => startTxEdit(t, "memo")}>
+                            {isTxEditing(t.id, "memo") ? (
+                              <Input autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm" />
+                            ) : (
+                              <div className="cursor-text">
+                                <div className="truncate">{t.memo || <span className="text-muted-foreground">-</span>}</div>
+                                {t.editedBy && <span className="text-xs text-muted-foreground">最終編集: {t.editedBy}</span>}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <TagSelect allTags={allTags} selectedTags={t.tags ?? []} onToggle={(tagName) => toggleTxTag(t, tagName)} onCreate={handleCreateTag} size="compact" />
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => archiveTx(t.id, !t.isArchived)}>
+                              <Archive className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {filteredTransfers.filter((t) => !t.isArchived).length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">振替データなし</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* 最近の入出金・運用履歴 */}
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-medium">最近の入出金・運用履歴</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-24">日付</TableHead>
+                      <TableHead>口座</TableHead>
+                      <TableHead>カテゴリ</TableHead>
+                      <TableHead className="text-right">金額</TableHead>
+                      <TableHead>メモ</TableHead>
+                      <TableHead>タグ</TableHead>
+                      <TableHead className="w-16"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.filter((t) => !t.isArchived && t.type !== "transfer").slice(0, 10).map((t) => {
+                      const isPositive = ["deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
+                      return (
+                        <TableRow key={t.id} className="">
+                          <TableCell className="text-sm" onDoubleClick={() => startTxEdit(t, "date")}>
+                            {isTxEditing(t.id, "date") ? (
+                              <Input type="date" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm w-32" />
+                            ) : (
+                              <span className="cursor-text">{formatDate(t.date)}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">{t.accountName}</TableCell>
+                          <TableCell>
+                              <Badge variant="outline" className={cn("text-xs border", getTxTypeColor(t.type))}>{t.categoryName}</Badge>
+                          </TableCell>
+                          <TableCell className={cn("text-sm text-right font-medium tabular-nums", isPositive ? "text-emerald-600" : "text-red-600")} onDoubleClick={() => startTxEdit(t, "amount")}>
+                            {isTxEditing(t.id, "amount") ? (
+                              <Input type="number" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm text-right w-24" />
+                            ) : (
+                              <span className="cursor-text">{isPositive ? "+" : "-"}{formatCurrency(t.amount ?? 0)}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm max-w-[200px]" onDoubleClick={() => startTxEdit(t, "memo")}>
+                            {isTxEditing(t.id, "memo") ? (
+                              <Input autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm" />
+                            ) : (
+                              <div className="cursor-text">
+                                <div className="truncate">{t.memo || <span className="text-muted-foreground">-</span>}</div>
+                                {t.editedBy && <span className="text-xs text-muted-foreground">最終編集: {t.editedBy}</span>}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <TagSelect allTags={allTags} selectedTags={t.tags ?? []} onToggle={(tagName) => toggleTxTag(t, tagName)} onCreate={handleCreateTag} size="compact" />
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => archiveTx(t.id, !t.isArchived)}>
+                              <Archive className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {transactions.filter((t) => !t.isArchived && t.type !== "transfer").length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">取引データなし</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -985,6 +1027,75 @@ export function BalanceDashboard() {
         {/* ── 入出金・運用履歴タブ ── */}
         {activeTab === "transactions" && (
           <div className="space-y-4">
+            {/* 振替 */}
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-medium">振替</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-24">日付</TableHead>
+                      <TableHead>やりとり</TableHead>
+                      <TableHead>入/出</TableHead>
+                      <TableHead className="text-right">金額</TableHead>
+                      <TableHead>メモ</TableHead>
+                      <TableHead>タグ</TableHead>
+                      <TableHead className="w-16"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTransfers.slice(0, 50).map((t) => {
+                      const isIncoming = t.toAccountId === t.accountId
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
+                          <TableCell className="text-sm">{t.fromAccountName ?? "-"} → {t.toAccountName ?? "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200")}>
+                              {isIncoming ? "入金" : "出金"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-right font-medium tabular-nums" onDoubleClick={() => startTxEdit(t, "amount")}>
+                            {isTxEditing(t.id, "amount") ? (
+                              <Input type="number" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm text-right w-24" />
+                            ) : (
+                              <span className="cursor-text">{formatCurrency(t.amount ?? 0)}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm max-w-[200px]" onDoubleClick={() => startTxEdit(t, "memo")}>
+                            {isTxEditing(t.id, "memo") ? (
+                              <Input autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm" />
+                            ) : (
+                              <div className="cursor-text">
+                                <div className="truncate">{t.memo || <span className="text-muted-foreground">-</span>}</div>
+                                {t.editedBy && <span className="text-xs text-muted-foreground">最終編集: {t.editedBy}</span>}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <TagSelect allTags={allTags} selectedTags={t.tags ?? []} onToggle={(tagName) => toggleTxTag(t, tagName)} onCreate={handleCreateTag} size="compact" />
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => archiveTx(t.id, !t.isArchived)}>
+                              <Archive className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {filteredTransfers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">振替データなし</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* 入出金・運用履歴 */}
             <Card>
               <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -994,28 +1105,18 @@ export function BalanceDashboard() {
                   </Button>
                 </div>
                 <div className="flex gap-2">
-                  <Select value={txTypeFilter} onValueChange={(v) => setTxTypeFilter(v ?? "all")}>
-                    <SelectTrigger className="h-7 text-xs w-28">
-                      <SelectValue>{txTypeFilter === "all" ? "全カテゴリ" : TRANSACTION_TYPE_LABELS[txTypeFilter]}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全カテゴリ</SelectItem>
-                      {Object.entries(TRANSACTION_TYPE_LABELS).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={txAccountFilter} onValueChange={(v) => setTxAccountFilter(v ?? "all")}>
-                    <SelectTrigger className="h-7 text-xs w-32">
-                      <SelectValue>{txAccountFilter === "all" ? "全口座" : accounts.find((a) => a.id === txAccountFilter)?.name ?? "全口座"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全口座</SelectItem>
-                      {accounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-28" value={txTypeFilter} onChange={(e) => setTxTypeFilter(e.target.value)}>
+                    <option value="all">全カテゴリ</option>
+                    {Object.entries(TRANSACTION_TYPE_LABELS).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                  <select className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-32" value={txAccountFilter} onChange={(e) => setTxAccountFilter(e.target.value)}>
+                    <option value="all">全口座</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
                   <Button size="sm" variant={showArchivedTx ? "default" : "outline"} className="h-7 text-xs" onClick={() => setShowArchivedTx((v) => !v)}>
                     アーカイブ
                   </Button>
@@ -1029,7 +1130,6 @@ export function BalanceDashboard() {
                       <TableHead>口座</TableHead>
                       <TableHead>カテゴリ</TableHead>
                       <TableHead className="text-right">金額</TableHead>
-                      <TableHead>相手口座</TableHead>
                       <TableHead>メモ</TableHead>
                       <TableHead>タグ</TableHead>
                       <TableHead className="w-16"></TableHead>
@@ -1048,43 +1148,14 @@ export function BalanceDashboard() {
                             )}
                           </TableCell>
                           <TableCell className="text-sm">{t.accountName}</TableCell>
-                          <TableCell onDoubleClick={() => startTxEdit(t, "type")}>
-                            {isTxEditing(t.id, "type") ? (
-                              <Select defaultOpen value={txEditValue} onValueChange={(v) => { if (v) saveTxSelect(v) }} onOpenChange={(open) => { selectOpenRef.current = open; if (!open) setTimeout(() => { if (!selectOpenRef.current) cancelTxEdit() }, 150) }}>
-                                <SelectTrigger className="h-7 text-xs w-28">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(TRANSACTION_TYPE_LABELS).map(([key, label]) => (
-                                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Badge variant="outline" className={cn("text-xs cursor-text border", getTxTypeColor(t.type))}>{t.categoryName}</Badge>
-                            )}
+                          <TableCell>
+                              <Badge variant="outline" className={cn("text-xs border", getTxTypeColor(t.type))}>{t.categoryName}</Badge>
                           </TableCell>
                           <TableCell className={cn("text-sm text-right font-medium tabular-nums", isPositive ? "text-emerald-600" : "text-red-600")} onDoubleClick={() => startTxEdit(t, "amount")}>
                             {isTxEditing(t.id, "amount") ? (
                               <Input type="number" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm text-right w-24" />
                             ) : (
                               <span className="cursor-text">{isPositive ? "+" : "-"}{formatCurrency(t.amount ?? 0)}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm" onDoubleClick={() => startTxEdit(t, "counterparty")}>
-                            {isTxEditing(t.id, "counterparty") ? (
-                              <Select defaultOpen value={txEditValue} onValueChange={(v) => { if (v !== null) saveTxSelect(v) }} onOpenChange={(o) => { selectOpenRef.current = o; if (!o) setTimeout(() => { if (!selectOpenRef.current) cancelTxEdit() }, 150) }}>
-                                <SelectTrigger className="h-7 text-xs"><SelectValue>{accounts.find((a) => a.id === txEditValue)?.name || "選択..."}</SelectValue></SelectTrigger>
-                                <SelectContent>
-                                  <AccountSelectItems accounts={accounts} />
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <span className="cursor-text">
-                                {t.counterparty || (t.type === "transfer"
-                                  ? (t.accountId === t.fromAccountId ? t.toAccountName : t.fromAccountName) ?? "-"
-                                  : "-")}
-                              </span>
                             )}
                           </TableCell>
                           <TableCell className="text-sm max-w-[200px]" onDoubleClick={() => startTxEdit(t, "memo")}>
@@ -1110,7 +1181,7 @@ export function BalanceDashboard() {
                     })}
                     {filteredTransactions.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
                           取引データなし
                         </TableCell>
                       </TableRow>
@@ -1134,27 +1205,17 @@ export function BalanceDashboard() {
                   </Button>
                 </div>
                 <div className="flex gap-2">
-                  <Select value={lendingTypeFilter} onValueChange={(v) => setLendingTypeFilter(v ?? "all")}>
-                    <SelectTrigger className="h-7 text-xs w-24">
-                      <SelectValue>{lendingTypeFilter === "all" ? "全て" : lendingTypeFilter === "lend" ? "貸出" : "借入"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全て</SelectItem>
-                      <SelectItem value="lend">貸出</SelectItem>
-                      <SelectItem value="borrow">借入</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={lendingStatusFilter} onValueChange={(v) => setLendingStatusFilter(v ?? "all")}>
-                    <SelectTrigger className="h-7 text-xs w-24">
-                      <SelectValue>{lendingStatusFilter === "all" ? "全て" : LENDING_STATUS_LABELS[lendingStatusFilter]}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全て</SelectItem>
-                      <SelectItem value="active">返済中</SelectItem>
-                      <SelectItem value="completed">完済</SelectItem>
-                      <SelectItem value="overdue">延滞</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-24" value={lendingTypeFilter} onChange={(e) => setLendingTypeFilter(e.target.value)}>
+                    <option value="all">全て</option>
+                    <option value="lend">貸出</option>
+                    <option value="borrow">借入</option>
+                  </select>
+                  <select className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-24" value={lendingStatusFilter} onChange={(e) => setLendingStatusFilter(e.target.value)}>
+                    <option value="all">全て</option>
+                    <option value="active">返済中</option>
+                    <option value="completed">完済</option>
+                    <option value="overdue">延滞</option>
+                  </select>
                   <Button size="sm" variant={showArchivedLending ? "default" : "outline"} className="h-7 text-xs" onClick={() => setShowArchivedLending((v) => !v)}>
                     アーカイブ
                   </Button>
@@ -1193,12 +1254,9 @@ export function BalanceDashboard() {
                           <TableCell className="text-xs text-muted-foreground">{l.createdAt.split("T")[0]}</TableCell>
                           <TableCell className="text-sm font-medium" onDoubleClick={() => startLendEdit(l, "counterparty")}>
                             {isLendEditing(l.id, "counterparty") ? (
-                              <Select defaultOpen value={lendEditValue} onValueChange={(v) => { if (v !== null) saveLendSelect(v) }} onOpenChange={(o) => { if (!o) setTimeout(() => cancelLendEdit(), 150) }}>
-                                <SelectTrigger className="h-7 text-xs"><SelectValue>{accounts.find((a) => a.id === lendEditValue)?.name || "選択..."}</SelectValue></SelectTrigger>
-                                <SelectContent>
+                              <select autoFocus className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={lendEditValue} onChange={(e) => { if (e.target.value) saveLendSelect(e.target.value) }} onBlur={() => { setTimeout(() => cancelLendEdit(), 150) }}>
                                   <AccountSelectItems accounts={accounts} />
-                                </SelectContent>
-                              </Select>
+                              </select>
                             ) : (
                               <span className="cursor-text">
                                 {l.type === "lend"
@@ -1229,16 +1287,11 @@ export function BalanceDashboard() {
                           </TableCell>
                           <TableCell onDoubleClick={() => startLendEdit(l, "status")}>
                             {isLendEditing(l.id, "status") ? (
-                              <Select defaultOpen value={lendEditValue} onValueChange={(v) => { if (v) saveLendSelect(v) }} onOpenChange={(open) => { selectOpenRef.current = open; if (!open) setTimeout(() => { if (!selectOpenRef.current) cancelLendEdit() }, 150) }}>
-                                <SelectTrigger className="h-7 text-xs w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="active">返済中</SelectItem>
-                                  <SelectItem value="completed">完済</SelectItem>
-                                  <SelectItem value="overdue">延滞</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <select autoFocus className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-24" value={lendEditValue} onChange={(e) => { if (e.target.value) saveLendSelect(e.target.value) }} onBlur={() => { setTimeout(() => cancelLendEdit(), 150) }}>
+                                <option value="active">返済中</option>
+                                <option value="completed">完済</option>
+                                <option value="overdue">延滞</option>
+                              </select>
                             ) : (
                               <Badge variant="outline" className={cn("text-xs cursor-text",
                                 l.status === "active" && "border-blue-300 text-blue-700",

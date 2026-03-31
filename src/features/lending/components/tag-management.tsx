@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import type { AccountTagDTO } from "@/types/dto"
@@ -16,6 +15,8 @@ import {
   useUpdateAccountTag,
   useDeleteAccountTag,
 } from "@/hooks/use-lending"
+
+const selectClassName = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
 const TAG_COLORS = [
   { value: "", label: "デフォルト" },
@@ -167,25 +168,11 @@ export function TagManagement() {
             </div>
             <div>
               <Label className="text-xs">色</Label>
-              <Select value={color} onValueChange={(v) => setColor(v ?? "")}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {TAG_COLORS.find((c) => c.value === color)?.label ?? "デフォルト"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {TAG_COLORS.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      <span className="flex items-center gap-2">
-                        {c.value && (
-                          <span className={`inline-block w-3 h-3 rounded-full ${COLOR_CLASSES[c.value]?.split(" ")[0] ?? "bg-muted"}`} />
-                        )}
-                        {c.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select value={color} onChange={(e) => setColor(e.target.value)} className={selectClassName}>
+                {TAG_COLORS.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
             </div>
             {name.trim() && (
               <div>

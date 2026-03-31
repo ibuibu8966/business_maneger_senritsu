@@ -11,13 +11,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   useCreateEmployee,
   useUpdateEmployee,
 } from "@/hooks/use-schedule"
@@ -71,8 +64,8 @@ export function EmployeeModal({ open, onClose, employee, myRole }: Props) {
       setPassword("")
       setRole(employee.role)
       setGoogleCalId(employee.googleCalId ?? "")
-      setCoreTimeStart(employee.coreTimeStart ?? "")
-      setCoreTimeEnd(employee.coreTimeEnd ?? "")
+      setCoreTimeStart((employee.coreTimeStart ?? "").replace("24:00", "23:59"))
+      setCoreTimeEnd((employee.coreTimeEnd ?? "").replace("24:00", "23:59"))
     } else {
       setName("")
       setColor("#3B82F6")
@@ -155,43 +148,32 @@ export function EmployeeModal({ open, onClose, employee, myRole }: Props) {
           {/* 色 */}
           <div className="space-y-1.5">
             <Label>カレンダー表示色</Label>
-            <Select value={color} onValueChange={(v) => { if (v) setColor(v) }}>
-              <SelectTrigger>
-                <SelectValue>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                    {COLORS.find((c) => c.value === color)?.label ?? color}
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+              <select
+                value={color}
+                onChange={(e) => { if (e.target.value) setColor(e.target.value) }}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
                 {COLORS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: c.value }} />
-                      {c.label}
-                    </div>
-                  </SelectItem>
+                  <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+            </div>
           </div>
 
           {/* ロール */}
           <div className="space-y-1.5">
             <Label>ロール</Label>
-            <Select value={role} onValueChange={(v) => { if (v) setRole(v) }}>
-              <SelectTrigger>
-                <SelectValue>
-                  {availableRoles.find((r) => r.value === role)?.label ?? role}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {availableRoles.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={role}
+              onChange={(e) => { if (e.target.value) setRole(e.target.value) }}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {availableRoles.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* メール */}

@@ -1,8 +1,3 @@
-import {
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-} from "@/components/ui/select"
 import type { AccountDetailDTO } from "@/types/dto"
 
 const ACCOUNT_GROUP_LABELS: Record<string, string> = {
@@ -15,7 +10,7 @@ const ACCOUNT_GROUP_LABELS: Record<string, string> = {
 const GROUP_ORDER = ["internal-bank", "internal-securities", "external-bank", "external-securities"]
 
 /**
- * 口座をグループ分けしてSelectItem群を返す
+ * 口座をグループ分けしてoptgroup/option群を返す
  * @param value - "id" なら a.id を value に、"name" なら a.name を value にする
  */
 export function AccountSelectItems({
@@ -38,14 +33,13 @@ export function AccountSelectItems({
         const items = grouped.get(key)
         if (!items || items.length === 0) return null
         return (
-          <SelectGroup key={key}>
-            <SelectLabel>{ACCOUNT_GROUP_LABELS[key]}</SelectLabel>
+          <optgroup key={key} label={ACCOUNT_GROUP_LABELS[key]}>
             {items.map((a) => (
-              <SelectItem key={a.id} value={value === "id" ? a.id : a.name}>
+              <option key={a.id} value={value === "id" ? a.id : a.name}>
                 {a.name}
-              </SelectItem>
+              </option>
             ))}
-          </SelectGroup>
+          </optgroup>
         )
       })}
     </>

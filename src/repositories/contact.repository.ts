@@ -55,7 +55,7 @@ export class ContactRepository {
     occupation?: string; age?: number | null; interests?: string; mindset?: string
     lineId?: string; discordId?: string; email?: string; phone?: string; memo?: string; isArchived?: boolean
     memberpayId?: string; robotpayId?: string; paypalId?: string; nextMeetingDate?: Date | null
-    isFinalMeeting?: boolean; tags?: string[]
+    lastMeetingDate?: Date | null; isFinalMeeting?: boolean; tags?: string[]
   }) {
     return prisma.contact.update({ where: { id }, data })
   }

@@ -11,9 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
-import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { Plus, Search, Archive, ArchiveRestore } from "lucide-react"
@@ -76,16 +73,15 @@ export function ContactList() {
             className="h-8 text-sm pl-8 w-60"
           />
         </div>
-        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "すべて")}>
-          <SelectTrigger className="h-8 text-sm w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="すべて">すべて</SelectItem>
-            <SelectItem value="サロン生">サロン生</SelectItem>
-            <SelectItem value="取引先連絡先">取引先連絡先</SelectItem>
-          </SelectContent>
-        </Select>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value || "すべて")}
+          className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="すべて">すべて</option>
+          <option value="サロン生">サロン生</option>
+          <option value="取引先連絡先">取引先連絡先</option>
+        </select>
         <Button variant={showArchived ? "secondary" : "ghost"} size="sm" onClick={() => setShowArchived(!showArchived)} className="text-xs">
           <Archive className="h-3.5 w-3.5 mr-1" />{showArchived ? "アーカイブ済み" : "アーカイブ表示"}
         </Button>
@@ -237,13 +233,14 @@ function ContactModal({
             </div>
             <div>
               <Label className="text-xs">種別</Label>
-              <Select value={type} onValueChange={(v) => setType(v ?? "サロン生")}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="サロン生">サロン生</SelectItem>
-                  <SelectItem value="取引先連絡先">取引先連絡先</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value || "サロン生")}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="サロン生">サロン生</option>
+                <option value="取引先連絡先">取引先連絡先</option>
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

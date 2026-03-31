@@ -479,6 +479,7 @@ model Contact {
   robotpayId   String      @default("")           // ロボットペイID
   paypalId     String      @default("")           // PayPal ID
   nextMeetingDate DateTime? // 次回面談予定日
+  lastMeetingDate DateTime? // 最終面談日（過去の最新面談日）
   isFinalMeeting Boolean   @default(false)        // 最終面談済み（次回面談不要）
   tags         String[]    @default([])            // タグ
   isArchived   Boolean     @default(false)        // アーカイブ済み

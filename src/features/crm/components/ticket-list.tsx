@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo } from "react"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -9,9 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
@@ -49,7 +46,6 @@ export function TicketList() {
   const [editId, setEditId] = useState<string | null>(null)
   const [editField, setEditField] = useState<EditField>(null)
   const [editValue, setEditValue] = useState("")
-  const selectOpenRef = useRef(false)
 
   const { data: tickets = [], isLoading } = useTickets({ isArchived: showArchived ? true : undefined })
   const { data: contacts = [] } = useContacts()
@@ -116,24 +112,17 @@ export function TicketList() {
   const isEditing = (id: string, field: EditField) => editId === id && editField === field
 
   const InlineSelect = ({ id, field, value, items }: { id: string; field: EditField; value: string; items: { id: string; label: string }[] }) => (
-    <Select
-      defaultOpen
+    <select
+      autoFocus
       value={value}
-      onValueChange={(v) => handleSelectChange(v ?? value)}
-      onOpenChange={(open) => {
-        selectOpenRef.current = open
-        if (!open) setTimeout(() => { if (!selectOpenRef.current) cancelEdit() }, 150)
-      }}
+      onChange={(e) => handleSelectChange(e.target.value || value)}
+      onBlur={() => cancelEdit()}
+      className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
-      <SelectTrigger className="h-7 text-sm">
-        <SelectValue>{items.find(item => item.id === value)?.label ?? value}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {items.map(item => (
-          <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      {items.map(item => (
+        <option key={item.id} value={item.id}>{item.label}</option>
+      ))}
+    </select>
   )
 
   if (isLoading) return <div className="p-4 text-muted-foreground">読み込み中...</div>
@@ -142,25 +131,27 @@ export function TicketList() {
     <div className="flex flex-col h-full">
       {/* フィルター */}
       <div className="px-4 py-3 border-b flex items-center gap-3 flex-wrap">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "全ステータス")}>
-          <SelectTrigger className="h-8 text-sm w-32"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="全ステータス">全ステータス</SelectItem>
-            <SelectItem value="未着手">未着手</SelectItem>
-            <SelectItem value="確認待ち">確認待ち</SelectItem>
-            <SelectItem value="対応中">対応中</SelectItem>
-            <SelectItem value="完了">完了</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v ?? "全優先度")}>
-          <SelectTrigger className="h-8 text-sm w-28"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="全優先度">全優先度</SelectItem>
-            <SelectItem value="高">高</SelectItem>
-            <SelectItem value="中">中</SelectItem>
-            <SelectItem value="低">低</SelectItem>
-          </SelectContent>
-        </Select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value || "全ステータス")}
+          className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="全ステータス">全ステータス</option>
+          <option value="未着手">未着手</option>
+          <option value="確認待ち">確認待ち</option>
+          <option value="対応中">対応中</option>
+          <option value="完了">完了</option>
+        </select>
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value || "全優先度")}
+          className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="全優先度">全優先度</option>
+          <option value="高">高</option>
+          <option value="中">中</option>
+          <option value="低">低</option>
+        </select>
         <Button variant={showArchived ? "secondary" : "ghost"} size="sm" onClick={() => setShowArchived(!showArchived)} className="text-xs">
           <Archive className="h-3.5 w-3.5 mr-1" />{showArchived ? "アーカイブ済み" : "アーカイブ表示"}
         </Button>
@@ -330,52 +321,57 @@ function TicketModal({
           </div>
           <div>
             <Label className="text-xs">連絡先 *</Label>
-            <Select value={contactId} onValueChange={(v) => setContactId(v ?? "")}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="選択..." /></SelectTrigger>
-              <SelectContent>
-                {contacts.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <select
+              value={contactId}
+              onChange={(e) => setContactId(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">選択...</option>
+              {contacts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">ツール</Label>
-              <Select value={tool} onValueChange={(v) => setTool(v ?? "LINE")}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="LINE">LINE</SelectItem>
-                  <SelectItem value="Telegram">Telegram</SelectItem>
-                  <SelectItem value="Discord">Discord</SelectItem>
-                  <SelectItem value="電話">電話</SelectItem>
-                  <SelectItem value="Zoom">Zoom</SelectItem>
-                  <SelectItem value="対面">対面</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={tool}
+                onChange={(e) => setTool(e.target.value || "LINE")}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="LINE">LINE</option>
+                <option value="Telegram">Telegram</option>
+                <option value="Discord">Discord</option>
+                <option value="電話">電話</option>
+                <option value="Zoom">Zoom</option>
+                <option value="対面">対面</option>
+              </select>
             </div>
             <div>
               <Label className="text-xs">優先度</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v ?? "中")}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="高">高</SelectItem>
-                  <SelectItem value="中">中</SelectItem>
-                  <SelectItem value="低">低</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value || "中")}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="高">高</option>
+                <option value="中">中</option>
+                <option value="低">低</option>
+              </select>
             </div>
           </div>
           {ticket && (
             <div>
               <Label className="text-xs">ステータス</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v ?? "未着手")}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="未着手">未着手</SelectItem>
-                  <SelectItem value="確認待ち">確認待ち</SelectItem>
-                  <SelectItem value="対応中">対応中</SelectItem>
-                  <SelectItem value="完了">完了</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value || "未着手")}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="未着手">未着手</option>
+                <option value="確認待ち">確認待ち</option>
+                <option value="対応中">対応中</option>
+                <option value="完了">完了</option>
+              </select>
             </div>
           )}
           <div>

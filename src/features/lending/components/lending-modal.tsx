@@ -11,14 +11,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { AccountDetailDTO } from "@/types/dto"
 import { AccountSelectItems } from "./account-select-items"
+
+const selectClassName = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
 interface Props {
   open: boolean
@@ -85,12 +81,10 @@ export function LendingModal({ open, onOpenChange, accounts, onSave, initialValu
         <div className="space-y-3">
           <div>
             <Label className="text-xs">自口座</Label>
-            <Select value={accountId} onValueChange={(v) => setAccountId(v ?? "")}>
-              <SelectTrigger><SelectValue>{accounts.find((a) => a.id === accountId)?.name ?? "選択..."}</SelectValue></SelectTrigger>
-              <SelectContent>
-                <AccountSelectItems accounts={accounts} />
-              </SelectContent>
-            </Select>
+            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectClassName}>
+              <option value="">選択...</option>
+              <AccountSelectItems accounts={accounts} />
+            </select>
           </div>
           <div>
             <Label className="text-xs">相手区分</Label>
@@ -117,12 +111,10 @@ export function LendingModal({ open, onOpenChange, accounts, onSave, initialValu
           </div>
           <div>
             <Label className="text-xs">相手口座</Label>
-            <Select value={counterpartyAccountId} onValueChange={(v) => setCounterpartyAccountId(v ?? "")}>
-              <SelectTrigger><SelectValue>{counterpartyAccounts.find((a) => a.id === counterpartyAccountId)?.name ?? "選択..."}</SelectValue></SelectTrigger>
-              <SelectContent>
-                <AccountSelectItems accounts={counterpartyAccounts} />
-              </SelectContent>
-            </Select>
+            <select value={counterpartyAccountId} onChange={(e) => setCounterpartyAccountId(e.target.value)} className={selectClassName}>
+              <option value="">選択...</option>
+              <AccountSelectItems accounts={counterpartyAccounts} />
+            </select>
           </div>
           <div>
             <Label className="text-xs">実行日</Label>

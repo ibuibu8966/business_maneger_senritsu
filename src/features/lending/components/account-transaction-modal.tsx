@@ -11,15 +11,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { AccountDetailDTO } from "@/types/dto"
 import { AccountSelectItems } from "./account-select-items"
+
+const selectClassName = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
 interface Props {
   open: boolean
@@ -117,35 +112,28 @@ export function AccountTransactionModal({ open, onOpenChange, accounts, onSave, 
         <div className="space-y-3">
           <div>
             <Label className="text-xs">{isTransfer ? "振替元" : "対象口座"}</Label>
-            <Select value={accountId} onValueChange={(v) => setAccountId(v ?? "")}>
-              <SelectTrigger><SelectValue>{accounts.find((a) => a.id === accountId)?.name ?? "選択..."}</SelectValue></SelectTrigger>
-              <SelectContent>
-                <AccountSelectItems accounts={accounts} />
-              </SelectContent>
-            </Select>
+            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectClassName}>
+              <option value="">選択...</option>
+              <AccountSelectItems accounts={accounts} />
+            </select>
           </div>
           {isTransfer ? (
             <div>
               <Label className="text-xs">振替先</Label>
-              <Select value={toAccountId} onValueChange={(v) => setToAccountId(v ?? "")}>
-                <SelectTrigger><SelectValue>{accounts.find((a) => a.id === toAccountId)?.name ?? "選択..."}</SelectValue></SelectTrigger>
-                <SelectContent>
-                  <AccountSelectItems accounts={accounts.filter((a) => a.id !== accountId)} />
-                </SelectContent>
-              </Select>
+              <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} className={selectClassName}>
+                <option value="">選択...</option>
+                <AccountSelectItems accounts={accounts.filter((a) => a.id !== accountId)} />
+              </select>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">カテゴリ</Label>
-                <Select value={type} onValueChange={(v) => setType(v ?? defaultCategoryId)}>
-                  <SelectTrigger><SelectValue>{accountCategories.find((t) => t.value === type)?.label ?? "選択..."}</SelectValue></SelectTrigger>
-                  <SelectContent>
-                    {accountCategories.filter((t) => t.value !== "transfer").map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select value={type} onChange={(e) => setType(e.target.value || defaultCategoryId)} className={selectClassName}>
+                  {accountCategories.filter((t) => t.value !== "transfer").map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <Label className="text-xs">日付</Label>

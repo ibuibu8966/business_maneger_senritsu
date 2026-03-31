@@ -22,13 +22,7 @@ import { formatCurrency, formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { CardSkeleton } from "@/components/skeletons/card-skeleton"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+// Native <select> used instead of Radix Select
 import {
   useAccountDetail,
   useAccountTransactions,
@@ -46,7 +40,6 @@ import {
 import { useBusinesses } from "@/hooks/use-lending"
 import { AccountTransactionModal } from "./account-transaction-modal"
 import { LendingModal } from "./lending-modal"
-import { AccountSelectItems } from "./account-select-items"
 import { PaymentModal } from "./payment-modal"
 import { TagSelect } from "./tag-select"
 
@@ -101,8 +94,18 @@ export function AccountDetailView({ accountId }: Props) {
   const { data: businesses = [] } = useBusinesses()
   const { data: allTags = [] } = useAccountTags()
   const [showArchivedTx, setShowArchivedTx] = useState(false)
+  const [showArchivedTransfer, setShowArchivedTransfer] = useState(false)
   const [showArchivedLending, setShowArchivedLending] = useState(false)
   const { data: transactions = [], isLoading: txLoading } = useAccountTransactions({ accountId, isArchived: showArchivedTx ? true : false })
+  const { data: transferTxsRaw = [] } = useAccountTransactions({ accountId, isArchived: showArchivedTransfer ? true : false })
+  const transferTxs = transferTxsRaw
+    .filter((t: { type: string }) => t.type === "transfer")
+    .filter((t: { id: string; linkedTransferId?: string | null }) => {
+      // ペアのうち片方だけ表示（linkedTransferIdが自分のIDより大きい方を除外）
+      if (!t.linkedTransferId) return true
+      return t.id < t.linkedTransferId
+    })
+  const nonTransferTxs = transactions.filter((t: { type: string }) => t.type !== "transfer")
   const { data: lendings = [], isLoading: lendLoading } = useLendings({ accountId, isArchived: showArchivedLending ? true : false })
 
   const createTxMutation = useCreateAccountTransaction()
@@ -148,7 +151,6 @@ export function AccountDetailView({ accountId }: Props) {
     const acct = allAccounts.find((a) => a.id === editTxCounterparty)
     const patch: Record<string, unknown> = {
       date: editTxDate,
-      type: editTxType,
       amount: Number(editTxAmount),
       counterparty: acct?.name ?? editTxCounterparty,
       memo: editTxMemo,
@@ -294,7 +296,7 @@ export function AccountDetailView({ accountId }: Props) {
   }
 
   return (
-    <div className="p-4 space-y-4 overflow-auto">
+    <div className="p-4 space-y-3 overflow-auto">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -393,7 +395,7 @@ export function AccountDetailView({ accountId }: Props) {
 
       {/* 口座情報カード */}
       <Card>
-        <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between">
+        <CardHeader className="px-3 py-2 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-medium">口座情報</CardTitle>
           {!editing ? (
             <Button size="sm" variant="ghost" onClick={startEditing} className="h-7 text-xs gap-1">
@@ -410,8 +412,8 @@ export function AccountDetailView({ accountId }: Props) {
             </div>
           )}
         </CardHeader>
-        <CardContent className="p-3 pt-0">
-          <div className="grid grid-cols-4 gap-3 mb-3">
+        <CardContent className="px-3 pb-2 pt-0">
+          <div className="grid grid-cols-4 gap-2 mb-2">
             <div>
               <p className="text-xs text-muted-foreground">所有区分</p>
               <p className="text-sm font-medium">{OWNER_TYPE_LABELS[account.ownerType]}</p>
@@ -423,17 +425,12 @@ export function AccountDetailView({ accountId }: Props) {
             <div>
               <p className="text-xs text-muted-foreground">紐づく事業</p>
               {editing ? (
-                <Select value={editBusinessId ?? "none"} onValueChange={(v) => setEditBusinessId(v === "none" ? null : v)}>
-                  <SelectTrigger className="h-8 text-sm mt-1">
-                    <SelectValue>{editBusinessId ? businesses.find((b) => b.id === editBusinessId)?.name ?? "選択..." : "なし"}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">なし</SelectItem>
-                    {businesses.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1" value={editBusinessId ?? "none"} onChange={(e) => setEditBusinessId(e.target.value === "none" ? null : e.target.value)}>
+                  <option value="none">なし</option>
+                  {businesses.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
               ) : (
                 <p className="text-sm font-medium">{account.businessName || "-"}</p>
               )}
@@ -455,7 +452,7 @@ export function AccountDetailView({ accountId }: Props) {
               )}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+          <div className="grid grid-cols-2 gap-2 pt-1.5 border-t">
             <div>
               <p className="text-xs text-muted-foreground mb-1">目的・用途</p>
               {editing ? (
@@ -488,15 +485,15 @@ export function AccountDetailView({ accountId }: Props) {
 
       {/* 貸借セクション */}
       <Card>
-        <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium">この口座の貸借</CardTitle>
+        <CardHeader className="px-3 py-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-medium">貸借</CardTitle>
           <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
             <input type="checkbox" checked={showArchivedLending} onChange={(e) => setShowArchivedLending(e.target.checked)} className="rounded" />
             アーカイブのみ表示
           </label>
         </CardHeader>
-        <CardContent className="p-3 pt-0">
-          <Table>
+        <CardContent className="px-3 pb-2 pt-0">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8"></TableHead>
@@ -612,7 +609,7 @@ export function AccountDetailView({ accountId }: Props) {
               {displayLendings.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-6">
-                    この口座の貸借データなし
+                    貸借データなし
                   </TableCell>
                 </TableRow>
               )}
@@ -621,32 +618,148 @@ export function AccountDetailView({ accountId }: Props) {
         </CardContent>
       </Card>
 
-      {/* 取引履歴 */}
+      {/* 振替セクション */}
       <Card>
-        <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between">
+        <CardHeader className="px-3 py-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-medium">振替</CardTitle>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+            <input type="checkbox" checked={showArchivedTransfer} onChange={(e) => setShowArchivedTransfer(e.target.checked)} className="rounded" />
+            アーカイブのみ表示
+          </label>
+        </CardHeader>
+        <CardContent className="px-3 pb-2 pt-0">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-24">日付</TableHead>
+                <TableHead>やりとり</TableHead>
+                <TableHead>入/出</TableHead>
+                <TableHead className="text-right">金額</TableHead>
+                <TableHead>メモ</TableHead>
+                <TableHead className="w-16"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transferTxs.map((t) => {
+                const isIncoming = t.toAccountId === accountId
+                const fromName = t.fromAccountName ?? "不明"
+                const toName = t.toAccountName ?? "不明"
+                const isEditing = editingTxId === t.id
+
+                if (isEditing) {
+                  return (
+                    <TableRow key={t.id} className="bg-muted/30">
+                      <TableCell>
+                        <Input type="date" value={editTxDate} onChange={(e) => setEditTxDate(e.target.value)} className="h-7 text-xs w-28" />
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {fromName} <span className="text-muted-foreground">→</span> {toName}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200")}>
+                          {isIncoming ? "入金" : "出金"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Input type="number" value={editTxAmount} onChange={(e) => setEditTxAmount(e.target.value)} className="h-7 text-xs text-right w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Input value={editTxMemo} onChange={(e) => setEditTxMemo(e.target.value)} className="h-7 text-xs" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-0.5">
+                          <Button size="sm" variant="ghost" onClick={saveEditingTx} className="h-6 w-6 p-0" disabled={updateTxMutation.isPending}>
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={cancelEditingTx} className="h-6 w-6 p-0">
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                }
+
+                return (
+                  <TableRow key={t.id} onDoubleClick={() => startEditingTx(t)} className={cn("cursor-pointer", t.isArchived && "opacity-50")}>
+                    <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
+                    <TableCell className="text-sm font-medium">
+                      {fromName} <span className="text-muted-foreground">→</span> {toName}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200")}>
+                        {isIncoming ? "入金" : "出金"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-right tabular-nums">{formatCurrency(t.amount ?? 0)}</TableCell>
+                    <TableCell className="text-sm max-w-[200px]">
+                      <div>
+                        <div className="truncate">{t.memo || <span className="text-muted-foreground">-</span>}</div>
+                        {t.editedBy && <span className="text-xs text-muted-foreground">最終編集: {t.editedBy}</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-0.5">
+                        <Button size="sm" variant="ghost" onClick={() => startEditingTx(t)} className="h-6 w-6 p-0">
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            const next = !t.isArchived
+                            updateTxMutation.mutate(
+                              { id: t.id, data: { isArchived: next } },
+                              {
+                                onSuccess: () => toast.success(next ? "アーカイブしました" : "アーカイブを解除しました"),
+                                onError: () => toast.error("操作に失敗しました"),
+                              }
+                            )
+                          }}
+                        >
+                          <Archive className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+              {transferTxs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">
+                    振替データなし
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* 取引履歴（振替以外） */}
+      <Card>
+        <CardHeader className="px-3 py-2 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-medium">取引履歴</CardTitle>
           <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
             <input type="checkbox" checked={showArchivedTx} onChange={(e) => setShowArchivedTx(e.target.checked)} className="rounded" />
             アーカイブのみ表示
           </label>
         </CardHeader>
-        <CardContent className="p-3 pt-0">
-          <Table>
+        <CardContent className="px-3 pb-2 pt-0">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-24">日付</TableHead>
                 <TableHead>カテゴリ</TableHead>
                 <TableHead className="text-right">金額</TableHead>
-                <TableHead>相手口座</TableHead>
                 <TableHead>メモ</TableHead>
                 <TableHead className="w-16"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((t) => {
-                const isPositive = t.type === "transfer"
-                  ? t.toAccountId === accountId
-                  : ["deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain", "revenue", "misc_income"].includes(t.type)
+              {nonTransferTxs.map((t) => {
+                const isPositive = ["deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain", "revenue", "misc_income"].includes(t.type)
                 const isEditing = editingTxId === t.id
                 const isAutoType = ["lend", "borrow", "repayment_receive", "repayment_pay", "interest_receive", "interest_pay"].includes(t.type)
 
@@ -657,25 +770,10 @@ export function AccountDetailView({ accountId }: Props) {
                         <Input type="date" value={editTxDate} onChange={(e) => setEditTxDate(e.target.value)} className="h-7 text-xs w-28" />
                       </TableCell>
                       <TableCell>
-                        <Select value={editTxType} onValueChange={(v) => setEditTxType(v ?? "")}>
-                          <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {EDITABLE_TX_TYPES.map((tt) => (
-                              <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Badge variant="outline" className={cn("text-xs border", getTxTypeColor(editTxType))}>{EDITABLE_TX_TYPES.find((tt) => tt.value === editTxType)?.label ?? editTxType}</Badge>
                       </TableCell>
                       <TableCell>
                         <Input type="number" value={editTxAmount} onChange={(e) => setEditTxAmount(e.target.value)} className="h-7 text-xs text-right w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Select value={editTxCounterparty} onValueChange={(v) => setEditTxCounterparty(v ?? "")}>
-                          <SelectTrigger className="h-7 text-xs"><SelectValue>{allAccounts.find((a) => a.id === editTxCounterparty)?.name || editTxCounterparty || "選択..."}</SelectValue></SelectTrigger>
-                          <SelectContent>
-                            <AccountSelectItems accounts={allAccounts.filter((a) => a.id !== accountId)} />
-                          </SelectContent>
-                        </Select>
                       </TableCell>
                       <TableCell>
                         <Input value={editTxMemo} onChange={(e) => setEditTxMemo(e.target.value)} className="h-7 text-xs" />
@@ -702,11 +800,6 @@ export function AccountDetailView({ accountId }: Props) {
                     </TableCell>
                     <TableCell className={cn("text-sm text-right font-medium tabular-nums", isPositive ? "text-emerald-600" : "text-red-600")}>
                       {isPositive ? "+" : "-"}{formatCurrency(t.amount ?? 0)}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {t.counterparty || (t.type === "transfer"
-                        ? (t.accountId === t.fromAccountId ? t.toAccountName : t.fromAccountName) ?? "-"
-                        : "-")}
                     </TableCell>
                     <TableCell className="text-sm max-w-[200px]">
                       <div>
@@ -743,9 +836,9 @@ export function AccountDetailView({ accountId }: Props) {
                   </TableRow>
                 )
               })}
-              {transactions.length === 0 && (
+              {nonTransferTxs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">
+                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">
                     取引データなし
                   </TableCell>
                 </TableRow>
