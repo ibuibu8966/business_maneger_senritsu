@@ -356,6 +356,9 @@ export interface BusinessTaskDTO {
   createdBy: string
   sortOrder: number
   createdAt: string
+  // 今日やるフラグ
+  todayFlag: boolean
+  todayFlaggedAt: string | null
   // プロジェクト情報
   projectPurpose: string
   projectDeadline: string | null

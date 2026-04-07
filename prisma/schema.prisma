@@ -126,10 +126,13 @@ model BusinessTask {
   partner     Partner?           @relation(fields: [partnerId], references: [id])
   tool        TicketTool?                             // 連絡ツール（任意）
   priority    BusinessPriority   @default(MEDIUM)     // 優先度
+  todayFlag       Boolean   @default(false)           // 今日やるフラグ（深夜2時リセット）
+  todayFlaggedAt  DateTime?                           // 今日やるフラグを立てた日時
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
   checklistItems TaskChecklistItem[]
+  missedLogs     TaskMissedLog[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -137,7 +140,26 @@ model BusinessTask {
   @@index([contactId])
   @@index([partnerId])
   @@index([priority])
+  @@index([todayFlag])
   @@map("business_tasks")
+}
+
+// ========== 未達成ログ（深夜2時Cronで記録） ==========
+model TaskMissedLog {
+  id             String             @id @default(cuid())
+  taskId         String                                      // 対象タスク
+  task           BusinessTask       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskTitle      String                                      // 記録時点のタスク名（削除耐性）
+  projectId      String                                      // 所属プロジェクトID
+  projectName    String             @default("")             // 記録時点のプロジェクト名
+  scheduledDate  DateTime           @db.Date                 // 予定日（対象日）
+  missedAt       DateTime           @default(now())          // 記録日時
+  statusAtMissed BusinessTaskStatus                           // 記録時点のステータス
+
+  @@index([taskId])
+  @@index([scheduledDate])
+  @@index([projectId])
+  @@map("task_missed_logs")
 }
 
 // ========== 事業課題 ==========

@@ -89,6 +89,7 @@ const createTaskSchema = z.object({
   recurringEndDate: z.string().nullable().optional(),
   createdBy: z.string().optional(),
   sortOrder: z.number().int().optional(),
+  todayFlag: z.boolean().optional(),
 })
 
 const updateTaskSchema = createTaskSchema.partial()

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown } from "lucide-react"
+import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -351,10 +351,12 @@ function SortableTaskRow({
   task,
   index,
   onClickTask,
+  onToggleTodayFlag,
 }: {
   task: TaskItem
   index: number
   onClickTask: (t: TaskItem) => void
+  onToggleTodayFlag: (t: TaskItem) => void
 }) {
   const {
     attributes,
@@ -382,8 +384,24 @@ function SortableTaskRow({
       onClick={() => onClickTask(task)}
       className={`flex items-center gap-2 p-2.5 rounded-md border text-xs bg-background hover:bg-muted/50 cursor-grab active:cursor-grabbing touch-none ${
         task.status === "done" ? "opacity-50" : ""
-      }`}
+      } ${task.todayFlag ? "ring-1 ring-yellow-400/60 bg-yellow-50/40" : ""}`}
     >
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleTodayFlag(task)
+        }}
+        className="shrink-0 p-0.5 rounded hover:bg-muted"
+        title={task.todayFlag ? "今日やる（解除）" : "今日やるに設定"}
+      >
+        <Star
+          className={`w-4 h-4 ${
+            task.todayFlag ? "fill-yellow-400 text-yellow-500" : "text-muted-foreground"
+          }`}
+        />
+      </button>
       <span className="text-muted-foreground w-5 text-center shrink-0">{index + 1}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -1435,6 +1453,7 @@ export function TaskListView() {
 
   const [filterStaffId, setFilterStaffId] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all")
+  const [showTodayOnly, setShowTodayOnly] = useState<boolean>(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [taskOrder, setTaskOrder] = useState<string[]>([])
 
@@ -1469,8 +1488,13 @@ export function TaskListView() {
   const filteredTasks = allTasks.filter((t) => {
     if (filterStaffId !== "all" && t.assigneeId !== filterStaffId) return false
     if (filterStatus !== "all" && t.status !== filterStatus) return false
+    if (showTodayOnly && !t.todayFlag) return false
     return true
   }).sort((a, b) => a.sortOrder - b.sortOrder)
+
+  const handleToggleTodayFlag = (t: TaskItem) => {
+    updateTaskMutation.mutate({ id: t.id, data: { todayFlag: !t.todayFlag } })
+  }
 
   // カスタム順序の適用
   const orderedTasks = taskOrder.length > 0
@@ -1544,6 +1568,19 @@ export function TaskListView() {
             )
           })}
 
+          <Separator orientation="vertical" className="h-5 mx-1" />
+
+          <Button
+            variant={showTodayOnly ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 text-xs cursor-pointer"
+            onClick={() => setShowTodayOnly((v) => !v)}
+            title="今日やるフラグのついたタスクのみ表示"
+          >
+            <Star className={`w-3 h-3 mr-1 ${showTodayOnly ? "fill-yellow-400 text-yellow-500" : ""}`} />
+            今日やる（{allTasks.filter((t) => t.todayFlag).length}）
+          </Button>
+
           <div className="flex-1" />
 
           <Button size="sm" className="h-7 text-xs cursor-pointer" onClick={() => setCreateDialogOpen(true)}>
@@ -1567,6 +1604,7 @@ export function TaskListView() {
                       task={t}
                       index={i}
                       onClickTask={(task) => setSelectedTaskId(task.id)}
+                      onToggleTodayFlag={handleToggleTodayFlag}
                     />
                   ))}
                 </div>

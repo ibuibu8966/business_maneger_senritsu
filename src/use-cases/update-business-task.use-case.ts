@@ -23,6 +23,10 @@ export class UpdateBusinessTask {
     if (data.partnerId !== undefined) dbData.partnerId = data.partnerId || null
     if (data.tool !== undefined) dbData.tool = data.tool || null
     if (data.priority !== undefined) dbData.priority = PRIORITY_TO_DB[data.priority as string] ?? "MEDIUM"
+    if (data.todayFlag !== undefined) {
+      dbData.todayFlag = data.todayFlag
+      dbData.todayFlaggedAt = data.todayFlag ? new Date() : null
+    }
     const result = await BusinessTaskRepository.update(id, dbData)
 
     try {

@@ -33,6 +33,9 @@ export class GetBusinessTasks {
       createdBy: t.createdBy,
       sortOrder: t.sortOrder,
       createdAt: t.createdAt.toISOString(),
+      // 今日やるフラグ
+      todayFlag: t.todayFlag ?? false,
+      todayFlaggedAt: t.todayFlaggedAt ? t.todayFlaggedAt.toISOString() : null,
       // プロジェクト情報
       projectPurpose: t.project?.purpose ?? "",
       projectDeadline: t.project?.deadline ? t.project.deadline.toISOString().split("T")[0] : null,
