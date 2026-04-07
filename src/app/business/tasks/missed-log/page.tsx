@@ -51,10 +51,27 @@ async function fetchMissedLogs(date: string): Promise<MissedLog[]> {
 
 export default function MissedLogPage() {
   const [date, setDate] = useState<string>("")
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
 
-  const { data: logs = [], isLoading, refetch } = useQuery({
+  const { data: rawLogs = [], isLoading, refetch } = useQuery({
     queryKey: ["missed-log", date],
     queryFn: () => fetchMissedLogs(date),
+  })
+
+  // 担当者リスト（未設定を含む）
+  const assigneeOptions = Array.from(
+    new Set(rawLogs.map((l) => l.assigneeName || ""))
+  ).sort((a, b) => {
+    if (a === "") return 1
+    if (b === "") return -1
+    return a.localeCompare(b, "ja")
+  })
+
+  // 担当者フィルタ適用
+  const logs = rawLogs.filter((l) => {
+    if (assigneeFilter === "all") return true
+    if (assigneeFilter === "__none__") return !l.assigneeName
+    return l.assigneeName === assigneeFilter
   })
 
   // 日付でグルーピング
@@ -76,7 +93,22 @@ export default function MissedLogPage() {
               「今日やる」フラグを立てたのに、その日のうちに完了できなかったタスクの記録です（深夜2時JSTに自動記録）
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              className="text-xs border rounded-md h-8 px-2 bg-background"
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+            >
+              <option value="all">全員</option>
+              {assigneeOptions.map((name) => (
+                <option
+                  key={name || "__none__"}
+                  value={name === "" ? "__none__" : name}
+                >
+                  {name === "" ? "担当未設定" : name}
+                </option>
+              ))}
+            </select>
             <CalendarIcon className="w-4 h-4 text-muted-foreground" />
             <Input
               type="date"
