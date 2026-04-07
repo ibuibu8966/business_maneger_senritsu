@@ -13,6 +13,8 @@ type MissedLog = {
   taskTitle: string
   projectId: string
   projectName: string
+  assigneeId: string | null
+  assigneeName: string
   scheduledDate: string
   missedAt: string
   statusAtMissed: "TODO" | "IN_PROGRESS" | "WAITING" | "DONE"
@@ -137,6 +139,9 @@ export default function MissedLogPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] text-muted-foreground">
+                          {log.assigneeName ? `担当: ${log.assigneeName}` : "担当未設定"}
+                        </span>
                         <Badge
                           variant="outline"
                           className={`text-[10px] h-4 px-1.5 font-semibold ${STATUS_CLASS[log.statusAtMissed] ?? ""}`}

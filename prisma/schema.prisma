@@ -152,6 +152,8 @@ model TaskMissedLog {
   taskTitle      String                                      // 記録時点のタスク名（削除耐性）
   projectId      String                                      // 所属プロジェクトID
   projectName    String             @default("")             // 記録時点のプロジェクト名
+  assigneeId     String?                                     // 記録時点の担当者ID（nullable）
+  assigneeName   String             @default("")             // 記録時点の担当者名（削除耐性）
   scheduledDate  DateTime           @db.Date                 // 予定日（対象日）
   missedAt       DateTime           @default(now())          // 記録日時
   statusAtMissed BusinessTaskStatus                           // 記録時点のステータス

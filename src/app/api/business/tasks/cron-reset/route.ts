@@ -46,7 +46,9 @@ async function runReset(req: NextRequest) {
         title: true,
         projectId: true,
         status: true,
+        assigneeId: true,
         project: { select: { name: true } },
+        assignee: { select: { name: true } },
       },
     })
 
@@ -58,6 +60,8 @@ async function runReset(req: NextRequest) {
           taskTitle: t.title,
           projectId: t.projectId,
           projectName: t.project?.name ?? "",
+          assigneeId: t.assigneeId ?? null,
+          assigneeName: t.assignee?.name ?? "",
           scheduledDate: yesterday,
           statusAtMissed: t.status,
         })),
