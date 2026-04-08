@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,14 @@ type MeResponse = {
 }
 
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="p-6"><Loader2 className="w-5 h-5 animate-spin" /></div>}>
+      <ProfilePageInner />
+    </Suspense>
+  )
+}
+
+function ProfilePageInner() {
   const { data: session } = useSession()
   const search = useSearchParams()
   const [me, setMe] = useState<MeResponse | null>(null)
