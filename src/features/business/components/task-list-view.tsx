@@ -91,6 +91,7 @@ function TaskCreateDialog({
   const [projectId, setProjectId] = useState("")
   const [assigneeId, setAssigneeId] = useState("s1") // デフォルト: ログインユーザー
   const [deadline, setDeadline] = useState("")
+  const [executionTime, setExecutionTime] = useState("09:00")
   const [recurring, setRecurring] = useState(false)
   const [recurringPattern, setRecurringPattern] = useState("")
   const [recurringDay, setRecurringDay] = useState("")
@@ -127,12 +128,14 @@ function TaskCreateDialog({
       partnerId: partnerId || null,
       priority: priority || "medium",
       tool: tool || null,
+      executionTime: executionTime || null,
     })
     onClose()
     setTitle("")
     setDetail("")
     setProjectId("")
     setDeadline("")
+    setExecutionTime("09:00")
     setRecurring(false)
     setRecurringPattern("")
     setRecurringDay("")
@@ -193,6 +196,15 @@ function TaskCreateDialog({
               <Label className="text-xs">期限</Label>
               <Input type="date" className="mt-1 h-8 text-sm" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
             </div>
+          </div>
+          <div>
+            <Label className="text-xs">実行時刻（LINE通知の対象）</Label>
+            <Input
+              type="time"
+              className="mt-1 h-8 text-sm w-[120px]"
+              value={executionTime}
+              onChange={(e) => setExecutionTime(e.target.value)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -435,6 +447,11 @@ function SortableTaskRow({
         </Badge>
         {task.assigneeName && (
           <span className="text-muted-foreground text-[10px]">{task.assigneeName}</span>
+        )}
+        {task.executionTime && (
+          <span className="text-[10px] text-purple-600 font-medium">
+            🕐{task.executionTime}
+          </span>
         )}
         {task.deadline && (
           <span className={`text-[10px] ${
@@ -1288,6 +1305,17 @@ function TaskDetailPanel({
           <p className={`text-sm ${task.deadline && new Date(task.deadline) < new Date() && task.status !== "done" ? "text-red-600 font-medium" : ""}`}>
             {task.deadline ?? "なし"}
           </p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">実行時刻（LINE通知）</p>
+          <Input
+            type="time"
+            className="h-7 text-xs w-[120px]"
+            value={task.executionTime ?? ""}
+            onChange={(e) => {
+              updateTaskMutation.mutate({ id: task.id, data: { executionTime: e.target.value || null } })
+            }}
+          />
         </div>
       </div>
 

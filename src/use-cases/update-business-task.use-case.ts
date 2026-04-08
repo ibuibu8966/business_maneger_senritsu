@@ -27,6 +27,11 @@ export class UpdateBusinessTask {
       dbData.todayFlag = data.todayFlag
       dbData.todayFlaggedAt = data.todayFlag ? new Date() : null
     }
+    if (data.executionTime !== undefined) {
+      dbData.executionTime = data.executionTime || null
+      // 実行時刻が変わったら通知済みフラグもリセット
+      dbData.notifiedExecAt = null
+    }
     const result = await BusinessTaskRepository.update(id, dbData)
 
     try {

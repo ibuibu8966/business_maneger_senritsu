@@ -128,6 +128,8 @@ model BusinessTask {
   priority    BusinessPriority   @default(MEDIUM)     // 優先度
   todayFlag       Boolean   @default(false)           // 今日やるフラグ（深夜2時リセット）
   todayFlaggedAt  DateTime?                           // 今日やるフラグを立てた日時
+  executionTime   String?                             // 実行時刻（"HH:MM"形式、デフォルト09:00）
+  notifiedExecAt  String?                             // 最後にLINE通知済みの "YYYY-MM-DD HH:MM" 文字列（重複防止）
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 

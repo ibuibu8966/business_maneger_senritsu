@@ -23,6 +23,7 @@ export class CreateBusinessTask {
     partnerId?: string | null
     tool?: string | null
     priority?: string
+    executionTime?: string | null
   }) {
     const result = await BusinessTaskRepository.create({
       projectId: data.projectId,
@@ -42,6 +43,7 @@ export class CreateBusinessTask {
       partnerId: data.partnerId ?? null,
       tool: data.tool ?? null,
       priority: data.priority ? PRIORITY_TO_DB[data.priority] ?? "MEDIUM" : "MEDIUM",
+      executionTime: data.executionTime !== undefined ? data.executionTime : "09:00",
     })
 
     try {

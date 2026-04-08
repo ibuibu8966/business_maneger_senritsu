@@ -131,6 +131,8 @@ export interface TaskItem {
   // 今日やるフラグ
   todayFlag: boolean
   todayFlaggedAt: string | null
+  // 実行時刻（"HH:MM"）
+  executionTime: string | null
   // プロジェクト情報
   projectPurpose: string
   projectDeadline: string | null

@@ -14,6 +14,7 @@ import {
   Store,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useMyBadgeCounts } from "@/hooks/use-my-badge-counts"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 const menuItems = [
@@ -29,6 +30,7 @@ const menuItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { total } = useMyBadgeCounts()
 
   return (
     <aside className="w-56 border-r bg-card flex flex-col">
@@ -41,12 +43,13 @@ export function Sidebar() {
           return role ? item.roles.includes(role) : true
         }).map((item) => {
           const isActive = pathname.startsWith(item.href)
+          const badgeCount = item.href === "/business" ? total : 0
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
+                "relative flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -54,6 +57,11 @@ export function Sidebar() {
             >
               <item.icon className="h-4 w-4" />
               {item.label}
+              {badgeCount > 0 && (
+                <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 leading-none">
+                  {badgeCount > 99 ? "99+" : badgeCount}
+                </span>
+              )}
             </Link>
           )
         })}
@@ -63,10 +71,10 @@ export function Sidebar() {
         <div className="border-t p-3 space-y-2">
           <ThemeToggle />
           <div className="flex items-center justify-between">
-            <div className="min-w-0">
+            <Link href="/profile" className="min-w-0 flex-1 hover:opacity-80">
               <p className="text-sm font-medium truncate">{session.user.name}</p>
               <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
-            </div>
+            </Link>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="ml-2 p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
