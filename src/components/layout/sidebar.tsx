@@ -14,6 +14,7 @@ import {
   Store,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 const menuItems = [
   { href: "/dashboard", label: "ダッシュボード", icon: LayoutDashboard, roles: ["master_admin", "admin", "employee"] },
@@ -59,7 +60,8 @@ export function Sidebar() {
       </nav>
 
       {session?.user && (
-        <div className="border-t p-3">
+        <div className="border-t p-3 space-y-2">
+          <ThemeToggle />
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-sm font-medium truncate">{session.user.name}</p>

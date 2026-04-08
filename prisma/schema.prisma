@@ -400,8 +400,9 @@ model Employee {
   googleCalId   String?                              // Googleサブカレンダー ID
   coreTimeStart String?                              // コアタイム開始（例: "14:00"）
   coreTimeEnd   String?                              // コアタイム終了（例: "18:00"）
-  isActive      Boolean         @default(true)       // 有効フラグ
-  createdAt     DateTime        @default(now())      // 作成日時
+  isActive        Boolean         @default(true)       // 有効フラグ
+  themePreference String          @default("system")   // テーマ設定（light/dark/system）
+  createdAt       DateTime        @default(now())      // 作成日時
   updatedAt     DateTime        @updatedAt           // 更新日時
   scheduleEvents ScheduleEvent[]                     // この従業員の予定
   tickets        Ticket[]                            // CRM: 担当チケット
