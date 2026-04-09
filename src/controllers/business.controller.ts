@@ -4,6 +4,7 @@ import { z } from "zod"
 import { GetBusinessDetails } from "@/use-cases/get-business-details.use-case"
 import { CreateBusiness } from "@/use-cases/create-business.use-case"
 import { UpdateBusinessDetail } from "@/use-cases/update-business-detail.use-case"
+import { DeleteBusiness } from "@/use-cases/delete-business.use-case"
 import { GetProjects } from "@/use-cases/get-projects.use-case"
 import { CreateProject } from "@/use-cases/create-project.use-case"
 import { UpdateProject } from "@/use-cases/update-project.use-case"
@@ -167,6 +168,16 @@ export class BusinessController {
       if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
       logger.error("事業の更新に失敗しました", e)
       return NextResponse.json({ error: "事業の更新に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async delete(_req: NextRequest, id: string) {
+    try {
+      await DeleteBusiness.execute(id)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("事業の削除に失敗しました", e)
+      return NextResponse.json({ error: "事業の削除に失敗しました" }, { status: 500 })
     }
   }
 }

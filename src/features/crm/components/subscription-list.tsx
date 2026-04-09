@@ -79,7 +79,7 @@ export function SubscriptionList() {
   }
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") saveEdit()
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) saveEdit()
     if (e.key === "Escape") cancelEdit()
   }
 

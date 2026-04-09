@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import {
-  fetchBusinessDetails, fetchBusinessById, createBusiness, updateBusiness,
+  fetchBusinessDetails, fetchBusinessById, createBusiness, updateBusiness, deleteBusiness,
   fetchProjects, fetchProjectById, createProject, updateProject, deleteProject,
   fetchBusinessTasks, createBusinessTask, updateBusinessTask, deleteBusinessTask, reorderBusinessTasks,
   fetchBusinessIssues, createBusinessIssue, updateBusinessIssue, deleteBusinessIssue, addBusinessIssueNote,
@@ -46,6 +46,18 @@ export function useUpdateBusiness() {
       qc.invalidateQueries({ queryKey: queryKeys.projects.all })
       qc.invalidateQueries({ queryKey: queryKeys.businessTasks.all })
       qc.invalidateQueries({ queryKey: queryKeys.businessIssues.all })
+    },
+  })
+}
+
+export function useDeleteBusiness() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteBusiness(id),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.businessDetails.all })
+      qc.invalidateQueries({ queryKey: queryKeys.projects.all })
+      qc.invalidateQueries({ queryKey: queryKeys.businessTasks.all })
     },
   })
 }

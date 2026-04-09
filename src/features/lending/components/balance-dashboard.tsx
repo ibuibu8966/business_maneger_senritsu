@@ -256,7 +256,7 @@ export function BalanceDashboard() {
     cancelTxEdit()
   }
   const handleTxKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") saveTxEdit()
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) saveTxEdit()
     if (e.key === "Escape") cancelTxEdit()
   }
 
@@ -309,7 +309,7 @@ export function BalanceDashboard() {
     cancelLendEdit()
   }
   const handleLendKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") saveLendEdit()
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) saveLendEdit()
     if (e.key === "Escape") cancelLendEdit()
   }
 

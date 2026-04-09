@@ -50,4 +50,11 @@ export class BusinessRepository {
   static async update(id: string, data: any) {
     return prisma.business.update({ where: { id }, data })
   }
+
+  static async softDelete(id: string) {
+    return prisma.business.update({
+      where: { id },
+      data: { isActive: false },
+    })
+  }
 }

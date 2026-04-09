@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { ProjectNode, TaskItem, IssueItem, Priority } from "./mock-data"
 import { ISSUE_STATUS_CONFIG, TASK_STATUS_CONFIG, PRIORITY_CONFIG } from "./mock-data"
-import { useCreateBusinessTask, useCreateBusinessIssue } from "@/hooks/use-business"
+import { useCreateBusinessTask, useCreateBusinessIssue, useDeleteProject } from "@/hooks/use-business"
 import { useEmployees } from "@/hooks/use-schedule"
 import { useContacts, usePartners } from "@/hooks/use-crm"
+import { useFileUpload } from "../hooks/use-file-upload"
 
 const statusLabel: Record<string, { label: string; color: string }> = {
   active: { label: "有効", color: "bg-green-100 text-green-800" },
@@ -40,6 +41,7 @@ export function ProjectInfoPanel({
   }
 
   const { data: employees = [] } = useEmployees()
+  const deleteProjectMutation = useDeleteProject()
 
   const [status, setLocalStatus] = useState(node.status === "active" ? "active" : "completed")
   const [priority, setLocalPriority] = useState<Priority>(node.priority)
@@ -62,8 +64,12 @@ export function ProjectInfoPanel({
     setShowUrlInput(false)
   }
 
+  const { openFilePicker } = useFileUpload((result) => {
+    update({ attachments: [...node.attachments, { id: `att-${Date.now()}`, name: result.name, url: result.url, type: "file" }] })
+  })
+
   const handleAddFile = () => {
-    update({ attachments: [...node.attachments, { id: `att-${Date.now()}`, name: `添付ファイル_${node.attachments.length + 1}.pdf`, url: `/files/dummy-${Date.now()}.pdf`, type: "file" }] })
+    openFilePicker()
   }
 
   const handleRemoveAttachment = (id: string) => {
@@ -347,7 +353,7 @@ export function ProjectInfoPanel({
           {showUrlInput && (
             <div className="space-y-1 mb-2 p-2 rounded border bg-muted/30">
               <Input placeholder="表示名" className="h-7 text-xs" value={newUrlName} onChange={(e) => setNewUrlName(e.target.value)} autoFocus />
-              <Input placeholder="https://..." className="h-7 text-xs" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddUrl() }} />
+              <Input placeholder="https://..." className="h-7 text-xs" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleAddUrl() }} />
               <div className="flex gap-1 justify-end">
                 <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setShowUrlInput(false)}>キャンセル</Button>
                 <Button size="sm" className="h-6 text-[10px]" onClick={handleAddUrl} disabled={!newUrlName.trim() || !newUrl.trim()}>追加</Button>
@@ -425,6 +431,22 @@ export function ProjectInfoPanel({
             <p className="text-xs text-muted-foreground">なし</p>
           )}
         </div>
+
+        <Separator />
+        <div>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="w-full"
+            onClick={() => {
+              if (!confirm(`「${node.name}」を削除してよろしいですか？\n配下のタスク・課題も全て削除されます。`)) return
+              deleteProjectMutation.mutate(node.id)
+              onClose()
+            }}
+          >
+            プロジェクトを削除
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -455,7 +477,7 @@ export function ProjectTasksPanel({ tasks, projectId }: { tasks: TaskItem[]; pro
       <div className="flex-1 overflow-y-auto p-3">
         {showAdd && (
           <div className="mb-2 p-2 rounded border bg-muted/30 space-y-1">
-            <Input placeholder="タスク名" className="h-7 text-xs" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === "Enter") handleAdd() }} />
+            <Input placeholder="タスク名" className="h-7 text-xs" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleAdd() }} />
             <div className="flex gap-1 justify-end">
               <Button variant="ghost" size="sm" className="h-6 text-[10px] cursor-pointer" onClick={() => { setShowAdd(false); setNewTitle("") }}>キャンセル</Button>
               <Button size="sm" className="h-6 text-[10px] cursor-pointer" onClick={handleAdd} disabled={!newTitle.trim()}>追加</Button>
@@ -519,7 +541,7 @@ export function ProjectIssuesPanel({ issues, projectId }: { issues: IssueItem[];
       <div className="flex-1 overflow-y-auto p-3">
         {showAdd && (
           <div className="mb-2 p-2 rounded border bg-muted/30 space-y-1">
-            <Input placeholder="課題名" className="h-7 text-xs" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === "Enter") handleAdd() }} />
+            <Input placeholder="課題名" className="h-7 text-xs" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleAdd() }} />
             <div className="flex gap-1 justify-end">
               <Button variant="ghost" size="sm" className="h-6 text-[10px] cursor-pointer" onClick={() => { setShowAdd(false); setNewTitle("") }}>キャンセル</Button>
               <Button size="sm" className="h-6 text-[10px] cursor-pointer" onClick={handleAdd} disabled={!newTitle.trim()}>追加</Button>

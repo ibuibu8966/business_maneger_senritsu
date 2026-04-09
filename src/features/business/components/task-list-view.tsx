@@ -581,7 +581,7 @@ function TaskChecklistSection({ task }: { task: TaskItem }) {
                       value={newTemplateName}
                       onChange={(e) => setNewTemplateName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" && newTemplateName.trim() && items.length > 0) {
+                        if (e.key === "Enter" && !e.nativeEvent.isComposing && newTemplateName.trim() && items.length > 0) {
                           createTemplateMutation.mutate({
                             name: newTemplateName.trim(),
                             businessId: task.businessId,
@@ -663,7 +663,7 @@ function TaskChecklistSection({ task }: { task: TaskItem }) {
             placeholder="テンプレート名"
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSaveTemplate()}
+            onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleSaveTemplate()}
           />
           <Button size="sm" className="h-7 text-xs cursor-pointer" onClick={handleSaveTemplate}>保存</Button>
           <Button size="sm" variant="ghost" className="h-7 text-xs cursor-pointer" onClick={() => setShowSaveTemplate(false)}>
@@ -688,7 +688,7 @@ function TaskChecklistSection({ task }: { task: TaskItem }) {
                 value={editingTitle}
                 onChange={(e) => setEditingTitle(e.target.value)}
                 onBlur={() => handleEditSave(item.id)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleEditSave(item.id); if (e.key === "Escape") setEditingId(null) }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleEditSave(item.id); if (e.key === "Escape") setEditingId(null) }}
                 autoFocus
               />
             ) : (
@@ -716,7 +716,7 @@ function TaskChecklistSection({ task }: { task: TaskItem }) {
           placeholder="項目を追加..."
           value={newItemTitle}
           onChange={(e) => setNewItemTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAddItem()}
+          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleAddItem()}
         />
         <Button size="sm" className="h-7 text-xs cursor-pointer" onClick={handleAddItem} disabled={!newItemTitle.trim()}>
           <Plus className="w-3 h-3" />

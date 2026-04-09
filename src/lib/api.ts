@@ -627,6 +627,11 @@ export async function deleteProject(id: string): Promise<void> {
   if (!res.ok) throw new Error("プロジェクトの削除に失敗")
 }
 
+export async function deleteBusiness(id: string): Promise<void> {
+  const res = await fetch(`${BUSINESS_BASE}/businesses/${id}`, { method: "DELETE" })
+  if (!res.ok) throw new Error("事業の削除に失敗")
+}
+
 // --- タスク ---
 export async function fetchBusinessTasks(params?: { projectId?: string; assigneeId?: string }): Promise<BusinessTaskDTO[]> {
   const url = new URL(`${BUSINESS_BASE}/tasks`, window.location.origin)

@@ -163,7 +163,7 @@ export function TagManagement() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="タグ名を入力"
-                onKeyDown={(e) => { if (e.key === "Enter") handleSave() }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleSave() }}
               />
             </div>
             <div>

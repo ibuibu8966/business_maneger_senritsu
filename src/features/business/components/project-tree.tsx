@@ -51,6 +51,7 @@ import {
   useBusinessDetails,
   useCreateBusiness,
   useUpdateBusiness,
+  useDeleteBusiness,
   useProjects,
   useCreateProject,
   useUpdateProject,
@@ -60,6 +61,7 @@ import {
 import { ProjectInfoPanel, ProjectTasksPanel, ProjectIssuesPanel } from "./project-detail-panel"
 import { useEmployees } from "@/hooks/use-schedule"
 import { useContacts, usePartners } from "@/hooks/use-crm"
+import { useFileUpload } from "../hooks/use-file-upload"
 
 // ===== ユーティリティ =====
 
@@ -963,7 +965,7 @@ function ProjectTreeInner() {
                 placeholder={dialogType === "business" ? "事業名を入力" : "プロジェクト名を入力"}
                 value={dialogName}
                 onChange={(e) => setDialogName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !dialogShowDetail) handleAdd() }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing && !dialogShowDetail) handleAdd() }}
                 autoFocus
               />
             </div>
@@ -1132,6 +1134,7 @@ const bizStatusLabel: Record<string, { label: string; color: string }> = {
 
 function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects: ProjectNode[]; onClose: () => void }) {
   const updateBusinessMutation = useUpdateBusiness()
+  const deleteBusinessMutation = useDeleteBusiness()
 
   const update = useCallback((patch: Partial<Business>) => {
     updateBusinessMutation.mutate({ id: biz.id, data: patch as Record<string, unknown> })
@@ -1170,10 +1173,14 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
     setNewUrlName(""); setNewUrl(""); setShowUrlInput(false)
   }
 
-  const handleAddFile = () => {
-    const next = [...attachments, { id: `att-${Date.now()}`, name: `添付ファイル_${attachments.length + 1}.pdf`, url: `/files/dummy-${Date.now()}.pdf`, type: "file" as const }]
+  const { openFilePicker } = useFileUpload((result) => {
+    const next = [...attachments, { id: `att-${Date.now()}`, name: result.name, url: result.url, type: "file" as const }]
     setAttachments(next)
     update({ attachments: next })
+  })
+
+  const handleAddFile = () => {
+    openFilePicker()
   }
 
   const removeAttachment = (id: string) => {
@@ -1433,7 +1440,7 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
           {showUrlInput && (
             <div className="space-y-1 mb-2 p-2 rounded border bg-muted/30">
               <Input placeholder="表示名" className="h-7 text-xs" value={newUrlName} onChange={(e) => setNewUrlName(e.target.value)} autoFocus />
-              <Input placeholder="https://..." className="h-7 text-xs" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddUrl() }} />
+              <Input placeholder="https://..." className="h-7 text-xs" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleAddUrl() }} />
               <div className="flex gap-1 justify-end">
                 <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setShowUrlInput(false)}>キャンセル</Button>
                 <Button size="sm" className="h-6 text-[10px]" onClick={handleAddUrl} disabled={!newUrlName.trim() || !newUrl.trim()}>追加</Button>
@@ -1475,6 +1482,22 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
               </div>
             )
           })}
+        </div>
+
+        <Separator />
+        <div>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="w-full"
+            onClick={() => {
+              if (!confirm(`「${biz.name}」を削除してよろしいですか？\n配下のプロジェクト・タスク・課題は残りますが、事業一覧には表示されなくなります。`)) return
+              deleteBusinessMutation.mutate(biz.id)
+              onClose()
+            }}
+          >
+            事業を削除
+          </Button>
         </div>
       </div>
     </div>

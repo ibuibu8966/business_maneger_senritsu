@@ -172,9 +172,26 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
 
   const [showNoteForm, setShowNoteForm] = useState(false)
   const [noteContent, setNoteContent] = useState("")
+  const [title, setTitle] = useState(issue.title)
+  const [detail, setDetail] = useState(issue.detail)
+  const [deadline, setDeadline] = useState(issue.deadline ?? "")
+  const [assigneeId, setAssigneeId] = useState(issue.assigneeId ?? "")
   const addNoteMutation = useAddBusinessIssueNote()
   const updateIssueMutation = useUpdateBusinessIssue()
   const deleteIssueMutation = useDeleteBusinessIssue()
+  const { data: employees = [] } = useEmployees()
+
+  // issue が切り替わった時にローカルstateを同期
+  const [prevId, setPrevId] = useState(issue.id)
+  if (issue.id !== prevId) {
+    setPrevId(issue.id)
+    setTitle(issue.title)
+    setDetail(issue.detail)
+    setDeadline(issue.deadline ?? "")
+    setAssigneeId(issue.assigneeId ?? "")
+  }
+
+  const inlineInput = "bg-transparent border-0 border-b border-transparent hover:border-border focus:border-primary focus:ring-0 rounded-none px-0 transition-colors"
 
   const handleAddNote = () => {
     if (!noteContent.trim()) return
@@ -192,11 +209,30 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
 
   return (
     <div className="border-l bg-card h-full overflow-y-auto w-[380px]">
-      <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
-        <h3 className="text-sm font-bold truncate">{issue.title}</h3>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none cursor-pointer">
-          &times;
-        </button>
+      <div className="p-4 border-b sticky top-0 bg-card z-10">
+        <div className="flex items-center justify-between">
+          <input
+            className={cn("text-sm font-bold truncate flex-1 mr-2", inlineInput)}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) e.currentTarget.blur() }}
+          />
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none cursor-pointer">
+            &times;
+          </button>
+        </div>
+        {title.trim() && title !== issue.title && (
+          <div className="flex gap-1 justify-end mt-1">
+            <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setTitle(issue.title)}>
+              キャンセル
+            </Button>
+            <Button size="sm" className="h-6 text-[10px]" disabled={updateIssueMutation.isPending} onClick={() => {
+              updateIssueMutation.mutate({ id: issue.id, data: { title: title.trim() } })
+            }}>
+              保存
+            </Button>
+          </div>
+        )}
       </div>
       <div className="p-4 space-y-4">
         <div className="flex items-center gap-2">
@@ -229,13 +265,54 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
 
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">詳細</p>
-          <p className="text-sm whitespace-pre-wrap bg-muted/50 rounded p-2">{issue.detail}</p>
+          <Textarea
+            className="text-sm min-h-[60px] bg-muted/50"
+            value={detail}
+            onChange={(e) => setDetail(e.target.value)}
+          />
+          {detail !== issue.detail && (
+            <div className="flex gap-1 justify-end mt-1">
+              <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setDetail(issue.detail)}>
+                キャンセル
+              </Button>
+              <Button size="sm" className="h-6 text-[10px]" disabled={updateIssueMutation.isPending} onClick={() => {
+                updateIssueMutation.mutate({ id: issue.id, data: { detail: detail.trim() } })
+              }}>
+                保存
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1">旗振り役</p>
-            <p className="text-sm">{issue.assigneeName ?? "未割当"}</p>
+            <select
+              className={cn("text-sm w-full cursor-pointer", inlineInput, "py-0.5")}
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value)}
+            >
+              <option value="">未割当</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>{emp.name}</option>
+              ))}
+            </select>
+            {assigneeId !== (issue.assigneeId ?? "") && (
+              <div className="flex gap-1 justify-end mt-1">
+                <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setAssigneeId(issue.assigneeId ?? "")}>
+                  キャンセル
+                </Button>
+                <Button size="sm" className="h-6 text-[10px]" disabled={updateIssueMutation.isPending} onClick={() => {
+                  const emp = employees.find((em) => em.id === assigneeId)
+                  updateIssueMutation.mutate({
+                    id: issue.id,
+                    data: { assigneeId: assigneeId || null, assigneeName: emp?.name ?? null },
+                  })
+                }}>
+                  保存
+                </Button>
+              </div>
+            )}
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1">作成者</p>
@@ -250,7 +327,24 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1">期限</p>
-            <p className="text-sm">{issue.deadline ?? "なし"}</p>
+            <input
+              type="date"
+              className={cn("text-sm w-full", inlineInput, "py-0.5")}
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
+            {deadline !== (issue.deadline ?? "") && (
+              <div className="flex gap-1 justify-end mt-1">
+                <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setDeadline(issue.deadline ?? "")}>
+                  キャンセル
+                </Button>
+                <Button size="sm" className="h-6 text-[10px]" disabled={updateIssueMutation.isPending} onClick={() => {
+                  updateIssueMutation.mutate({ id: issue.id, data: { deadline: deadline || null } })
+                }}>
+                  保存
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
