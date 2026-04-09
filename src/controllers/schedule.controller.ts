@@ -10,6 +10,7 @@ import {
   deleteEvent,
   type GCalEvent,
 } from "@/lib/google-calendar"
+import { prisma } from "@/lib/prisma"
 import type { ScheduleEventDTO } from "@/types/dto"
 
 const createSchema = z.object({
@@ -20,6 +21,7 @@ const createSchema = z.object({
   allDay: z.boolean().optional(),
   eventType: z.enum(["meeting", "holiday", "outing", "work", "other"]).optional(),
   employeeId: z.string(),
+  participantIds: z.array(z.string()).optional(), // 追加参加者
 })
 
 const updateSchema = z.object({
@@ -30,6 +32,10 @@ const updateSchema = z.object({
   allDay: z.boolean().optional(),
   eventType: z.enum(["meeting", "holiday", "outing", "work", "other"]).optional(),
   employeeId: z.string().optional(),
+})
+
+const updateParticipantsSchema = z.object({
+  participantIds: z.array(z.string()),
 })
 
 // イベントIDはフロントに「calendarId::googleEventId」の形式で渡す
@@ -49,7 +55,8 @@ function decodeEventId(compositeId: string): { calendarId: string; googleEventId
 // GCalEvent → ScheduleEventDTO 変換
 function toDTO(
   event: GCalEvent,
-  employee: { id: string; name: string; color: string }
+  employee: { id: string; name: string; color: string },
+  extra?: { groupId?: string; participants?: { id: string; name: string; color: string }[] }
 ): ScheduleEventDTO {
   return {
     id: encodeEventId(event.calendarId, event.id),
@@ -64,6 +71,8 @@ function toDTO(
     employeeColor: employee.color,
     googleEventId: event.id,
     createdAt: "",
+    groupId: extra?.groupId,
+    participants: extra?.participants,
   }
 }
 
@@ -96,15 +105,54 @@ export class ScheduleController {
       const calMap = new Map(
         targets.map((e) => [e.googleCalId!, { id: e.id, name: e.name, color: e.color }])
       )
+      // 全従業員マップ（参加者表示用）
+      const allEmpMap = new Map(
+        withCal.map((e) => [e.id, { id: e.id, name: e.name, color: e.color }])
+      )
 
       // Google Calendar APIから並行取得
       const calendarIds = targets.map((e) => e.googleCalId!)
       const gcalEvents = await listEventsMulti(calendarIds, startFrom, startTo)
 
-      // DTO変換
+      // 参加者情報を取得（compositeEventIdで一括検索）
+      const compositeIds = gcalEvents.map((ev) => encodeEventId(ev.calendarId, ev.id))
+      const participantRecords = compositeIds.length > 0
+        ? await prisma.eventParticipant.findMany({
+            where: { compositeEventId: { in: compositeIds } },
+          })
+        : []
+
+      // compositeEventId → groupId マッピング
+      const compositeToGroup = new Map<string, string>()
+      for (const p of participantRecords) {
+        compositeToGroup.set(p.compositeEventId, p.groupId)
+      }
+
+      // groupId → 参加者リスト マッピング
+      const groupIds = [...new Set(participantRecords.map((p) => p.groupId))]
+      const allGroupParticipants = groupIds.length > 0
+        ? await prisma.eventParticipant.findMany({
+            where: { groupId: { in: groupIds } },
+          })
+        : []
+      const groupToParticipants = new Map<string, { id: string; name: string; color: string }[]>()
+      for (const p of allGroupParticipants) {
+        const emp = allEmpMap.get(p.employeeId)
+        if (!emp) continue
+        const list = groupToParticipants.get(p.groupId) ?? []
+        if (!list.some((x) => x.id === emp.id)) {
+          list.push(emp)
+        }
+        groupToParticipants.set(p.groupId, list)
+      }
+
+      // DTO変換（参加者情報付き）
       const dtos: ScheduleEventDTO[] = gcalEvents.map((ev) => {
         const emp = calMap.get(ev.calendarId)!
-        return toDTO(ev, emp)
+        const compositeId = encodeEventId(ev.calendarId, ev.id)
+        const groupId = compositeToGroup.get(compositeId)
+        const participants = groupId ? groupToParticipants.get(groupId) : undefined
+        return toDTO(ev, emp, { groupId, participants })
       })
 
       return NextResponse.json(dtos)
@@ -114,7 +162,6 @@ export class ScheduleController {
         stack: (e as Error)?.stack,
         error: e,
       })
-      // OAuthトークン失効等の場合は空配列を返す（フロントがクラッシュしないように）
       return NextResponse.json([])
     }
   }
@@ -126,7 +173,7 @@ export class ScheduleController {
       const body = await req.json()
       const data = createSchema.parse(body)
 
-      // 従業員のgoogleCalIdを取得
+      // メイン従業員のgoogleCalIdを取得
       const employee = await EmployeeRepository.findById(data.employeeId)
       if (!employee || !employee.googleCalId) {
         return NextResponse.json(
@@ -135,20 +182,73 @@ export class ScheduleController {
         )
       }
 
-      const gcalEvent = await createEvent(employee.googleCalId, {
+      const eventPayload = {
         title: data.title,
         description: data.description,
         startAt: data.startAt,
         endAt: data.endAt,
         allDay: data.allDay,
         eventType: data.eventType,
-      })
+      }
 
-      const dto = toDTO(gcalEvent, {
-        id: employee.id,
-        name: employee.name,
-        color: employee.color,
-      })
+      // メイン従業員のカレンダーにイベント作成
+      const gcalEvent = await createEvent(employee.googleCalId, eventPayload)
+      const mainCompositeId = encodeEventId(gcalEvent.calendarId, gcalEvent.id)
+
+      // 追加参加者がいる場合
+      const allParticipantIds = [data.employeeId, ...(data.participantIds ?? [])].filter(
+        (id, i, arr) => arr.indexOf(id) === i // 重複除去
+      )
+
+      let groupId: string | undefined
+      let participants: { id: string; name: string; color: string }[] | undefined
+
+      if (allParticipantIds.length > 1) {
+        // グループID生成
+        const crypto = await import("crypto")
+        groupId = crypto.randomUUID()
+
+        // 全参加者のカレンダーにイベント作成 & EventParticipant レコード作成
+        const allEmployees = await EmployeeRepository.findMany({ isActive: true })
+        const participantData: { compositeEventId: string; employeeId: string }[] = [
+          { compositeEventId: mainCompositeId, employeeId: data.employeeId },
+        ]
+
+        for (const pid of allParticipantIds) {
+          if (pid === data.employeeId) continue // メイン従業員は既に作成済み
+          const emp = allEmployees.find((e) => e.id === pid)
+          if (!emp || !emp.googleCalId) continue
+
+          const ev = await createEvent(emp.googleCalId, eventPayload)
+          participantData.push({
+            compositeEventId: encodeEventId(ev.calendarId, ev.id),
+            employeeId: pid,
+          })
+        }
+
+        // EventParticipant レコード一括作成
+        const gid = groupId!
+        await prisma.eventParticipant.createMany({
+          data: participantData.map((p) => ({
+            groupId: gid,
+            employeeId: p.employeeId,
+            compositeEventId: p.compositeEventId,
+          })),
+        })
+
+        participants = allParticipantIds
+          .map((id) => {
+            const emp = allEmployees.find((e) => e.id === id)
+            return emp ? { id: emp.id, name: emp.name, color: emp.color } : null
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null)
+      }
+
+      const dto = toDTO(
+        gcalEvent,
+        { id: employee.id, name: employee.name, color: employee.color },
+        { groupId, participants }
+      )
 
       return NextResponse.json(dto, { status: 201 })
     } catch (e) {
@@ -185,7 +285,6 @@ export class ScheduleController {
         }
 
         if (newEmployee.googleCalId !== calendarId) {
-          // 別カレンダーへの移動: 旧を削除→新規作成
           await deleteEvent(calendarId, googleEventId)
           const newEvent = await createEvent(newEmployee.googleCalId, {
             title: data.title ?? "(無題)",
@@ -214,7 +313,31 @@ export class ScheduleController {
         eventType: data.eventType,
       })
 
-      // 現在の従業員情報を取得
+      // グループに属するイベントも同時更新
+      const participantRecord = await prisma.eventParticipant.findFirst({
+        where: { compositeEventId: compositeId },
+      })
+      if (participantRecord) {
+        const siblings = await prisma.eventParticipant.findMany({
+          where: { groupId: participantRecord.groupId, compositeEventId: { not: compositeId } },
+        })
+        for (const sib of siblings) {
+          try {
+            const sibDecoded = decodeEventId(sib.compositeEventId)
+            await updateEvent(sibDecoded.calendarId, sibDecoded.googleEventId, {
+              title: data.title,
+              description: data.description,
+              startAt: data.startAt,
+              endAt: data.endAt,
+              allDay: data.allDay,
+              eventType: data.eventType,
+            })
+          } catch (sibErr) {
+            logger.error("Failed to update sibling event:", sibErr)
+          }
+        }
+      }
+
       const employees = await EmployeeRepository.findMany({ isActive: true })
       const emp = employees.find((e) => e.googleCalId === calendarId)
       const dto = toDTO(gcalEvent, {
@@ -244,11 +367,146 @@ export class ScheduleController {
         return NextResponse.json({ error: "Invalid event ID format" }, { status: 400 })
       }
       const { calendarId, googleEventId } = decoded
+
+      // グループに属するイベントも全て削除
+      const participantRecord = await prisma.eventParticipant.findFirst({
+        where: { compositeEventId: compositeId },
+      })
+      if (participantRecord) {
+        const siblings = await prisma.eventParticipant.findMany({
+          where: { groupId: participantRecord.groupId },
+        })
+        for (const sib of siblings) {
+          if (sib.compositeEventId === compositeId) continue
+          try {
+            const sibDecoded = decodeEventId(sib.compositeEventId)
+            await deleteEvent(sibDecoded.calendarId, sibDecoded.googleEventId)
+          } catch (sibErr) {
+            logger.error("Failed to delete sibling event:", sibErr)
+          }
+        }
+        await prisma.eventParticipant.deleteMany({
+          where: { groupId: participantRecord.groupId },
+        })
+      }
+
       await deleteEvent(calendarId, googleEventId)
       return NextResponse.json({ success: true })
     } catch (e) {
       logger.error("Google Calendar delete error:", e)
       return NextResponse.json({ error: "予定の削除に失敗しました" }, { status: 500 })
+    }
+  }
+
+  // 参加者の追加・削除（既存イベントに後から人を追加）
+  static async updateParticipants(req: NextRequest, compositeId: string) {
+    try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
+      const body = await req.json()
+      const data = updateParticipantsSchema.parse(body)
+
+      let decoded
+      try {
+        decoded = decodeEventId(compositeId)
+      } catch {
+        return NextResponse.json({ error: "Invalid event ID format" }, { status: 400 })
+      }
+      const { calendarId, googleEventId } = decoded
+
+      const allEmployees = await EmployeeRepository.findMany({ isActive: true })
+      const currentEmp = allEmployees.find((e) => e.googleCalId === calendarId)
+      if (!currentEmp) {
+        return NextResponse.json({ error: "従業員が見つかりません" }, { status: 404 })
+      }
+
+      // 既存のグループを取得 or 新規作成
+      let participantRecord = await prisma.eventParticipant.findFirst({
+        where: { compositeEventId: compositeId },
+      })
+
+      let groupId: string
+      if (participantRecord) {
+        groupId = participantRecord.groupId
+      } else {
+        const crypto = await import("crypto")
+        groupId = crypto.randomUUID()
+        // 現在のイベント主を参加者として登録
+        await prisma.eventParticipant.create({
+          data: { groupId, employeeId: currentEmp.id, compositeEventId: compositeId },
+        })
+      }
+
+      // 既存の参加者一覧
+      const existingParticipants = await prisma.eventParticipant.findMany({
+        where: { groupId },
+      })
+      const existingEmpIds = existingParticipants.map((p) => p.employeeId)
+
+      // 元イベントの情報を取得（新規参加者のカレンダーに同じイベントを作るため）
+      const newParticipantIds = data.participantIds.filter((id) => !existingEmpIds.includes(id))
+      const removedParticipantIds = existingEmpIds.filter((id) => !data.participantIds.includes(id))
+
+      // 追加する参加者のカレンダーにイベント作成
+      if (newParticipantIds.length > 0) {
+        // 元イベントの情報を取得するために一覧から探す
+        const events = await listEventsMulti([calendarId], new Date(0).toISOString(), new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString())
+        const sourceEvent = events.find((e) => e.id === googleEventId)
+
+        for (const pid of newParticipantIds) {
+          const emp = allEmployees.find((e) => e.id === pid)
+          if (!emp || !emp.googleCalId) continue
+
+          const ev = await createEvent(emp.googleCalId, {
+            title: sourceEvent?.title ?? "(無題)",
+            description: sourceEvent?.description,
+            startAt: sourceEvent?.startAt ?? new Date().toISOString(),
+            endAt: sourceEvent?.endAt ?? new Date().toISOString(),
+            allDay: sourceEvent?.allDay,
+            eventType: sourceEvent?.eventType,
+          })
+
+          await prisma.eventParticipant.create({
+            data: {
+              groupId,
+              employeeId: pid,
+              compositeEventId: encodeEventId(ev.calendarId, ev.id),
+            },
+          })
+        }
+      }
+
+      // 削除する参加者のカレンダーからイベント削除
+      for (const pid of removedParticipantIds) {
+        const record = existingParticipants.find((p) => p.employeeId === pid)
+        if (!record) continue
+        try {
+          const sibDecoded = decodeEventId(record.compositeEventId)
+          await deleteEvent(sibDecoded.calendarId, sibDecoded.googleEventId)
+        } catch (sibErr) {
+          logger.error("Failed to delete participant event:", sibErr)
+        }
+        await prisma.eventParticipant.delete({ where: { id: record.id } })
+      }
+
+      // 更新後の参加者一覧を返す
+      const updatedParticipants = await prisma.eventParticipant.findMany({
+        where: { groupId },
+      })
+      const participants = updatedParticipants
+        .map((p) => {
+          const emp = allEmployees.find((e) => e.id === p.employeeId)
+          return emp ? { id: emp.id, name: emp.name, color: emp.color } : null
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null)
+
+      return NextResponse.json({ groupId, participants })
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return NextResponse.json({ errors: e.issues }, { status: 400 })
+      }
+      logger.error("Update participants error:", e)
+      return NextResponse.json({ error: "参加者の更新に失敗しました" }, { status: 500 })
     }
   }
 }

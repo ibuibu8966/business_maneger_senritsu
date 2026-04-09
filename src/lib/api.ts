@@ -45,6 +45,16 @@ export async function deleteScheduleEvent(id: string): Promise<void> {
   if (!res.ok) throw new Error("予定の削除に失敗")
 }
 
+export async function updateEventParticipants(id: string, participantIds: string[]): Promise<{ groupId: string; participants: { id: string; name: string; color: string }[] }> {
+  const res = await fetch(`${SCHEDULE_BASE}/events/${id}/participants`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ participantIds }),
+  })
+  if (!res.ok) throw new Error("参加者の更新に失敗")
+  return res.json()
+}
+
 export async function fetchEmployees(): Promise<EmployeeDTO[]> {
   const res = await fetch(`${SCHEDULE_BASE}/employees`)
   if (!res.ok) throw new Error("従業員一覧の取得に失敗")

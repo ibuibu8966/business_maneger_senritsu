@@ -131,6 +131,8 @@ export interface ScheduleEventDTO {
   employeeColor: string
   googleEventId: string | null
   createdAt: string
+  groupId?: string       // 複数人参加の場合のグループID
+  participants?: { id: string; name: string; color: string }[]
 }
 
 // ========== CRM ==========

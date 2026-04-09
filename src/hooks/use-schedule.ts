@@ -4,6 +4,7 @@ import {
   createScheduleEvent,
   updateScheduleEvent,
   deleteScheduleEvent,
+  updateEventParticipants,
   fetchEmployees,
   createEmployee,
   updateEmployee,
@@ -64,6 +65,17 @@ export function useDeleteScheduleEvent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => deleteScheduleEvent(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.events.all })
+    },
+  })
+}
+
+export function useUpdateEventParticipants() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, participantIds }: { id: string; participantIds: string[] }) =>
+      updateEventParticipants(id, participantIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.events.all })
     },

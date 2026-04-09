@@ -754,7 +754,11 @@ function DayView({
               >
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: ev.employeeColor }} />
                 <span className="truncate">{ev.title}</span>
-                <span className="text-[10px] opacity-70 ml-auto">{ev.employeeName}</span>
+                <span className="text-[10px] opacity-70 ml-auto">
+                  {ev.participants && ev.participants.length > 1
+                    ? ev.participants.map((p) => p.name).join(", ")
+                    : ev.employeeName}
+                </span>
               </div>
             ))}
           </div>
@@ -792,7 +796,9 @@ function DayView({
                     />
                     <span className="truncate">{ev.title}</span>
                     <span className="text-[10px] opacity-70 ml-auto">
-                      {ev.employeeName}
+                      {ev.participants && ev.participants.length > 1
+                        ? ev.participants.map((p) => p.name).join(", ")
+                        : ev.employeeName}
                     </span>
                   </div>
                 ))}

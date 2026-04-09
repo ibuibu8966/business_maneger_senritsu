@@ -428,6 +428,7 @@ model Employee {
   createdAt       DateTime        @default(now())      // 作成日時
   updatedAt     DateTime        @updatedAt           // 更新日時
   scheduleEvents ScheduleEvent[]                     // この従業員の予定
+  eventParticipations EventParticipant[]              // 参加しているイベント
   tickets        Ticket[]                            // CRM: 担当チケット
   ticketComments TicketComment[]                     // CRM: チケットコメント
 
@@ -500,6 +501,22 @@ model ScheduleEvent {
   @@index([eventType])    // 種別検索用
   @@index([employeeId, startAt])
   @@map("schedule_events")
+}
+
+// ========== スケジュール参加者（Googleカレンダーのイベントをグループ化） ==========
+model EventParticipant {
+  id               String   @id @default(cuid())
+  groupId          String                              // グループID（同じ予定の参加者を紐付け）
+  employeeId       String                              // 参加者（従業員ID）
+  employee         Employee @relation(fields: [employeeId], references: [id])
+  compositeEventId String                              // "calendarId::googleEventId"
+  createdAt        DateTime @default(now())
+
+  @@unique([groupId, employeeId])
+  @@index([groupId])
+  @@index([employeeId])
+  @@index([compositeEventId])
+  @@map("event_participants")
 }
 
 // ========== CRM: 顧客・連絡先 ==========
