@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { requireRole } from "@/lib/auth-guard"
 import { EmployeeRepository } from "@/repositories/employee.repository"
 import {
   listEventsMulti,
@@ -69,6 +70,8 @@ function toDTO(
 export class ScheduleController {
   static async list(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
       const startFrom = url.searchParams.get("startFrom") ?? new Date().toISOString()
       const startTo =
@@ -106,7 +109,11 @@ export class ScheduleController {
 
       return NextResponse.json(dtos)
     } catch (e) {
-      logger.error("Google Calendar list error:", e)
+      logger.error("Google Calendar list error:", {
+        message: (e as Error)?.message,
+        stack: (e as Error)?.stack,
+        error: e,
+      })
       // OAuthトークン失効等の場合は空配列を返す（フロントがクラッシュしないように）
       return NextResponse.json([])
     }
@@ -114,6 +121,8 @@ export class ScheduleController {
 
   static async create(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createSchema.parse(body)
 
@@ -153,9 +162,17 @@ export class ScheduleController {
 
   static async update(req: NextRequest, compositeId: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateSchema.parse(body)
-      const { calendarId, googleEventId } = decodeEventId(compositeId)
+      let decoded
+      try {
+        decoded = decodeEventId(compositeId)
+      } catch {
+        return NextResponse.json({ error: "Invalid event ID format" }, { status: 400 })
+      }
+      const { calendarId, googleEventId } = decoded
 
       // employeeId変更（別の人のカレンダーに移動）の場合
       if (data.employeeId) {
@@ -218,7 +235,15 @@ export class ScheduleController {
 
   static async delete(_req: NextRequest, compositeId: string) {
     try {
-      const { calendarId, googleEventId } = decodeEventId(compositeId)
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
+      let decoded
+      try {
+        decoded = decodeEventId(compositeId)
+      } catch {
+        return NextResponse.json({ error: "Invalid event ID format" }, { status: 400 })
+      }
+      const { calendarId, googleEventId } = decoded
       await deleteEvent(calendarId, googleEventId)
       return NextResponse.json({ success: true })
     } catch (e) {

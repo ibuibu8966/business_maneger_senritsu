@@ -103,8 +103,12 @@ export async function createEvent(
   }
 
   if (event.allDay) {
+    // Google Calendar APIの仕様: 終日の end.date は exclusive（翌日）
+    const endDatePlus1 = new Date(event.endAt.slice(0, 10))
+    endDatePlus1.setDate(endDatePlus1.getDate() + 1)
+    const endDateStr = `${endDatePlus1.getFullYear()}-${String(endDatePlus1.getMonth() + 1).padStart(2, "0")}-${String(endDatePlus1.getDate()).padStart(2, "0")}`
     body.start = { date: event.startAt.slice(0, 10) }
-    body.end = { date: event.endAt.slice(0, 10) }
+    body.end = { date: endDateStr }
   } else {
     body.start = { dateTime: event.startAt, timeZone: "Asia/Tokyo" }
     body.end = { dateTime: event.endAt, timeZone: "Asia/Tokyo" }
@@ -146,7 +150,13 @@ export async function updateEvent(
     const allDay = event.allDay ?? !existing.data.start?.dateTime
     if (allDay) {
       if (event.startAt) body.start = { date: event.startAt.slice(0, 10) }
-      if (event.endAt) body.end = { date: event.endAt.slice(0, 10) }
+      if (event.endAt) {
+        // Google Calendar APIの仕様: 終日の end.date は exclusive（翌日）
+        const endDatePlus1 = new Date(event.endAt.slice(0, 10))
+        endDatePlus1.setDate(endDatePlus1.getDate() + 1)
+        const endDateStr = `${endDatePlus1.getFullYear()}-${String(endDatePlus1.getMonth() + 1).padStart(2, "0")}-${String(endDatePlus1.getDate()).padStart(2, "0")}`
+        body.end = { date: endDateStr }
+      }
     } else {
       if (event.startAt)
         body.start = { dateTime: event.startAt, timeZone: "Asia/Tokyo" }

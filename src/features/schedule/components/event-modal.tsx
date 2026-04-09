@@ -104,8 +104,9 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
     }
 
     // 終日イベントはUTC変換すると日付がズレるので、日付文字列をそのまま送る
+    // 終了日はサーバー側で Google API の exclusive 仕様に合わせて +1日される
     const startISO = allDay ? `${startAt}T00:00:00` : new Date(startAt).toISOString()
-    const endISO = allDay ? `${endAt}T23:59:59` : new Date(endAt).toISOString()
+    const endISO = allDay ? `${endAt}T00:00:00` : new Date(endAt).toISOString()
 
     if (isEdit && event) {
       updateMutation.mutate(
