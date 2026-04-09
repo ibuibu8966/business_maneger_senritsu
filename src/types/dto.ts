@@ -361,6 +361,9 @@ export interface BusinessTaskDTO {
   todayFlaggedAt: string | null
   // 実行時刻
   executionTime: string | null
+  // 通知設定
+  notifyEnabled: boolean
+  notifyMinutesBefore: number
   // プロジェクト情報
   projectPurpose: string
   projectDeadline: string | null

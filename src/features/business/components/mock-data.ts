@@ -133,6 +133,9 @@ export interface TaskItem {
   todayFlaggedAt: string | null
   // 実行時刻（"HH:MM"）
   executionTime: string | null
+  // 通知設定
+  notifyEnabled: boolean
+  notifyMinutesBefore: number
   // プロジェクト情報
   projectPurpose: string
   projectDeadline: string | null

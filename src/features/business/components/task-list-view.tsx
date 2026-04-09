@@ -92,6 +92,7 @@ function TaskCreateDialog({
   const [assigneeId, setAssigneeId] = useState("s1") // デフォルト: ログインユーザー
   const [deadline, setDeadline] = useState("")
   const [executionTime, setExecutionTime] = useState("09:00")
+  const [notifyMinutesBefore, setNotifyMinutesBefore] = useState(10) // 0=なし, 5/10/15/30/60
   const [recurring, setRecurring] = useState(false)
   const [recurringPattern, setRecurringPattern] = useState("")
   const [recurringDay, setRecurringDay] = useState("")
@@ -129,6 +130,8 @@ function TaskCreateDialog({
       priority: priority || "medium",
       tool: tool || null,
       executionTime: executionTime || null,
+      notifyEnabled: notifyMinutesBefore !== 0,
+      notifyMinutesBefore: notifyMinutesBefore === 0 ? 0 : notifyMinutesBefore,
     })
     onClose()
     setTitle("")
@@ -136,6 +139,7 @@ function TaskCreateDialog({
     setProjectId("")
     setDeadline("")
     setExecutionTime("09:00")
+    setNotifyMinutesBefore(10)
     setRecurring(false)
     setRecurringPattern("")
     setRecurringDay("")
@@ -197,14 +201,31 @@ function TaskCreateDialog({
               <Input type="date" className="mt-1 h-8 text-sm" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
             </div>
           </div>
-          <div>
-            <Label className="text-xs">実行時刻（LINE通知の対象）</Label>
-            <Input
-              type="time"
-              className="mt-1 h-8 text-sm w-[120px]"
-              value={executionTime}
-              onChange={(e) => setExecutionTime(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">実行時刻（LINE通知の対象）</Label>
+              <Input
+                type="time"
+                className="mt-1 h-8 text-sm w-[120px]"
+                value={executionTime}
+                onChange={(e) => setExecutionTime(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">事前通知</Label>
+              <select
+                className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background"
+                value={notifyMinutesBefore}
+                onChange={(e) => setNotifyMinutesBefore(Number(e.target.value))}
+              >
+                <option value={0}>なし</option>
+                <option value={5}>5分前</option>
+                <option value={10}>10分前</option>
+                <option value={15}>15分前</option>
+                <option value={30}>30分前</option>
+                <option value={60}>1時間前</option>
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -1316,6 +1337,30 @@ function TaskDetailPanel({
               updateTaskMutation.mutate({ id: task.id, data: { executionTime: e.target.value || null } })
             }}
           />
+        </div>
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">事前通知</p>
+          <select
+            className="h-7 text-xs border rounded-md px-2 bg-background"
+            value={task.notifyEnabled === false ? 0 : (task.notifyMinutesBefore ?? 10)}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              updateTaskMutation.mutate({
+                id: task.id,
+                data: {
+                  notifyEnabled: v !== 0,
+                  notifyMinutesBefore: v === 0 ? 0 : v,
+                },
+              })
+            }}
+          >
+            <option value={0}>なし</option>
+            <option value={5}>5分前</option>
+            <option value={10}>10分前</option>
+            <option value={15}>15分前</option>
+            <option value={30}>30分前</option>
+            <option value={60}>1時間前</option>
+          </select>
         </div>
       </div>
 

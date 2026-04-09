@@ -129,6 +129,8 @@ model BusinessTask {
   todayFlag       Boolean   @default(false)           // 今日やるフラグ（深夜2時リセット）
   todayFlaggedAt  DateTime?                           // 今日やるフラグを立てた日時
   executionTime   String?                             // 実行時刻（"HH:MM"形式、デフォルト09:00）
+  notifyEnabled       Boolean @default(true)          // 事前通知ON/OFF
+  notifyMinutesBefore Int     @default(10)            // 実行時刻の何分前に通知するか（0=なし扱い, 5/10/15/30/60）
   notifiedExecAt  String?                             // 最後にLINE通知済みの "YYYY-MM-DD HH:MM" 文字列（重複防止）
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt

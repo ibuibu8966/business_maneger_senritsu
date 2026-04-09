@@ -38,6 +38,9 @@ export class GetBusinessTasks {
       todayFlaggedAt: t.todayFlaggedAt ? t.todayFlaggedAt.toISOString() : null,
       // 実行時刻
       executionTime: t.executionTime ?? null,
+      // 通知設定
+      notifyEnabled: t.notifyEnabled ?? true,
+      notifyMinutesBefore: t.notifyMinutesBefore ?? 10,
       // プロジェクト情報
       projectPurpose: t.project?.purpose ?? "",
       projectDeadline: t.project?.deadline ? t.project.deadline.toISOString().split("T")[0] : null,

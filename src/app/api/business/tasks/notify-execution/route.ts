@@ -5,15 +5,17 @@ import { logger } from "@/lib/logger"
 
 /**
  * 1分ごとに実行されるCron。
- * - 現在JST時刻 + 10分後 のタスク（10分前リマインド）
- * - 現在JST時刻 ちょうどのタスク（開始時刻リマインド）
+ * - 各タスクの notifyMinutesBefore (5/10/15/30/60) 分前に事前リマインド（notifyEnabled=true のみ）
+ * - 現在JST時刻 ちょうどのタスク（開始時刻リマインド、常時）
  * を抽出してLINE送信。
  *
- * 重複防止: notifiedExecAt に "YYYY-MM-DD HH:MM kind" を保存（kind = "10min"|"now"）
+ * 重複防止: notifiedExecAt に "YYYY-MM-DD HH:MM kind" を保存（kind = "preNN"|"now"）
  *
  * Vercel Cron schedule: "* * * * *"
  * 認証: Authorization: Bearer ${CRON_SECRET}
  */
+
+const NOTIFY_MINUTES_OPTIONS = [5, 10, 15, 30, 60] as const
 export async function POST(req: NextRequest) {
   return run(req)
 }
@@ -38,15 +40,19 @@ async function run(req: NextRequest) {
     const dateStr = `${jstNow.getUTCFullYear()}-${pad2(jstNow.getUTCMonth() + 1)}-${pad2(jstNow.getUTCDate())}`
     const nowHHMM = `${pad2(jstNow.getUTCHours())}:${pad2(jstNow.getUTCMinutes())}`
 
-    // 10分後の HH:MM
-    const plus10 = new Date(jstNow.getTime() + 10 * 60 * 1000)
-    const plus10HHMM = `${pad2(plus10.getUTCHours())}:${pad2(plus10.getUTCMinutes())}`
+    // N分後の HH:MM マップ（N -> "HH:MM"）
+    const plusMap = new Map<number, string>()
+    for (const n of NOTIFY_MINUTES_OPTIONS) {
+      const p = new Date(jstNow.getTime() + n * 60 * 1000)
+      plusMap.set(n, `${pad2(p.getUTCHours())}:${pad2(p.getUTCMinutes())}`)
+    }
 
-    // 対象タスクを取得（executionTime が nowHHMM か plus10HHMM、status != DONE、active project、担当者あり）
-    const tasks = await prisma.businessTask.findMany({
+    // 対象タスクを取得：現在時刻と一致（開始時刻通知）、または N分後と一致かつ notifyMinutesBefore===N かつ notifyEnabled
+    const candidateHHMMs = Array.from(new Set<string>([nowHHMM, ...plusMap.values()]))
+    const rawTasks = await prisma.businessTask.findMany({
       where: {
         status: { not: "DONE" },
-        executionTime: { in: [nowHHMM, plus10HHMM] },
+        executionTime: { in: candidateHHMMs },
         assigneeId: { not: null },
         project: { status: "ACTIVE" },
       },
@@ -55,10 +61,31 @@ async function run(req: NextRequest) {
         title: true,
         executionTime: true,
         notifiedExecAt: true,
+        notifyEnabled: true,
+        notifyMinutesBefore: true,
         project: { select: { name: true } },
         assignee: { select: { id: true, name: true, lineUserId: true, isActive: true } },
       },
     })
+
+    // 各タスクについて「今このminute送るべき kind」を決める
+    // kind: "now" | "preNN"（NN=分数）
+    type Decided = (typeof rawTasks)[number] & { kind: string; minutesBefore: number }
+    const tasks: Decided[] = []
+    for (const t of rawTasks) {
+      if (t.executionTime === nowHHMM) {
+        tasks.push({ ...t, kind: "now", minutesBefore: 0 })
+        continue
+      }
+      if (t.notifyEnabled) {
+        const n = t.notifyMinutesBefore
+        if (NOTIFY_MINUTES_OPTIONS.includes(n as (typeof NOTIFY_MINUTES_OPTIONS)[number])) {
+          if (t.executionTime === plusMap.get(n)) {
+            tasks.push({ ...t, kind: `pre${n}`, minutesBefore: n })
+          }
+        }
+      }
+    }
 
     let sent = 0
     let skipped = 0
@@ -72,7 +99,7 @@ async function run(req: NextRequest) {
         continue
       }
 
-      const kind = t.executionTime === nowHHMM ? "now" : "10min"
+      const kind = t.kind
       const tag = `${dateStr} ${t.executionTime} ${kind}`
 
       // 重複チェック
@@ -84,9 +111,9 @@ async function run(req: NextRequest) {
 
       const proj = t.project?.name ? `[${t.project.name}] ` : ""
       const message =
-        kind === "10min"
-          ? `⏰ あと10分で実行時刻です\n${proj}${t.title}\n実行時刻: ${t.executionTime}`
-          : `🚨 実行時刻になりました\n${proj}${t.title}\n今、やってください`
+        kind === "now"
+          ? `🚨 実行時刻になりました\n${proj}${t.title}\n今、やってください`
+          : `⏰ あと${t.minutesBefore}分で実行時刻です\n${proj}${t.title}\n実行時刻: ${t.executionTime}`
 
       const r = await pushLineMessage(t.assignee.lineUserId, message)
       if (r.ok) {
@@ -106,7 +133,6 @@ async function run(req: NextRequest) {
     return NextResponse.json({
       success: true,
       now: nowHHMM,
-      plus10: plus10HHMM,
       candidates: tasks.length,
       sent,
       skipped,

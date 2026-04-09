@@ -91,6 +91,8 @@ const createTaskSchema = z.object({
   sortOrder: z.number().int().optional(),
   todayFlag: z.boolean().optional(),
   executionTime: z.string().nullable().optional(), // "HH:MM"
+  notifyEnabled: z.boolean().optional(),
+  notifyMinutesBefore: z.number().int().optional(), // 0/5/10/15/30/60
 })
 
 const updateTaskSchema = createTaskSchema.partial()

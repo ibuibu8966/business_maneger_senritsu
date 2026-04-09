@@ -24,6 +24,8 @@ export class CreateBusinessTask {
     tool?: string | null
     priority?: string
     executionTime?: string | null
+    notifyEnabled?: boolean
+    notifyMinutesBefore?: number
   }) {
     const result = await BusinessTaskRepository.create({
       projectId: data.projectId,
@@ -44,6 +46,8 @@ export class CreateBusinessTask {
       tool: data.tool ?? null,
       priority: data.priority ? PRIORITY_TO_DB[data.priority] ?? "MEDIUM" : "MEDIUM",
       executionTime: data.executionTime !== undefined ? data.executionTime : "09:00",
+      notifyEnabled: data.notifyEnabled ?? true,
+      notifyMinutesBefore: data.notifyMinutesBefore ?? 10,
     })
 
     try {

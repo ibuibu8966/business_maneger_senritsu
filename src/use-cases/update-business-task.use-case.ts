@@ -32,6 +32,14 @@ export class UpdateBusinessTask {
       // 実行時刻が変わったら通知済みフラグもリセット
       dbData.notifiedExecAt = null
     }
+    if (data.notifyEnabled !== undefined) {
+      dbData.notifyEnabled = data.notifyEnabled
+      dbData.notifiedExecAt = null
+    }
+    if (data.notifyMinutesBefore !== undefined) {
+      dbData.notifyMinutesBefore = data.notifyMinutesBefore
+      dbData.notifiedExecAt = null
+    }
     const result = await BusinessTaskRepository.update(id, dbData)
 
     try {
