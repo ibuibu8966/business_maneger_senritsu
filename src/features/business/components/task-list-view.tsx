@@ -77,6 +77,7 @@ function TaskCreateDialog({
   contacts,
   partners,
   taskCount,
+  currentUserName,
 }: {
   open: boolean
   onClose: () => void
@@ -86,6 +87,7 @@ function TaskCreateDialog({
   contacts: { id: string; name: string }[]
   partners: { id: string; name: string }[]
   taskCount: number
+  currentUserName: string
 }) {
   const [title, setTitle] = useState("")
   const [detail, setDetail] = useState("")
@@ -124,7 +126,7 @@ function TaskCreateDialog({
       recurringDay: recurring && recurringDay !== "" ? Number(recurringDay) : null,
       recurringWeek: recurring && recurringWeek !== "" ? Number(recurringWeek) : null,
       recurringEndDate: recurring && recurringEndDate ? recurringEndDate : null,
-      createdBy: "野田",
+      createdBy: currentUserName,
       sortOrder: taskCount + 1,
       contactId: contactId || null,
       partnerId: partnerId || null,
@@ -1130,6 +1132,7 @@ function TaskDetailPanel({
   partners: { id: string; name: string }[]
 }) {
   const [showRecurring, setShowRecurring] = useState(false)
+  const { data: employees = [] } = useEmployees()
 
   const WEEKDAY_LABELS: Record<number, string> = { 0: "日曜日", 1: "月曜日", 2: "火曜日", 3: "水曜日", 4: "木曜日", 5: "金曜日", 6: "土曜日" }
   const PATTERN_LABELS: Record<string, string> = { daily: "毎日", weekly: "毎週", monthly_date: "毎月（日付）", monthly_weekday: "毎月（曜日）" }
@@ -1318,7 +1321,20 @@ function TaskDetailPanel({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">担当者</p>
-          <p className="text-sm">{task.assigneeName ?? "未割当"}</p>
+          <select
+            className="text-sm w-full border rounded-md px-2 py-1 bg-background cursor-pointer"
+            value={task.assigneeId ?? ""}
+            onChange={(e) => {
+              const emp = employees.find((em) => em.id === e.target.value)
+              updateTaskMutation.mutate({
+                id: task.id,
+                data: { assigneeId: e.target.value || null, assigneeName: emp?.name ?? null },
+              })
+            }}
+          >
+            <option value="">未割当</option>
+            {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+          </select>
         </div>
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">作成者</p>
@@ -1727,6 +1743,7 @@ export function TaskListView() {
         contacts={contactsList as unknown as { id: string; name: string }[]}
         partners={partnersList as unknown as { id: string; name: string }[]}
         taskCount={allTasks.length}
+        currentUserName={session?.user?.name ?? "野田"}
       />
     </div>
   )
