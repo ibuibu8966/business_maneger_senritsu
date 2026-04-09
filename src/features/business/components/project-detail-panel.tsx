@@ -12,6 +12,7 @@ import { MemoSection } from "./memo-section"
 import { ISSUE_STATUS_CONFIG, TASK_STATUS_CONFIG, PRIORITY_CONFIG } from "./mock-data"
 import { useCreateBusinessTask, useCreateBusinessIssue, useDeleteProject } from "@/hooks/use-business"
 import { useEmployees } from "@/hooks/use-schedule"
+import { useSession } from "next-auth/react"
 import { useContacts, usePartners } from "@/hooks/use-crm"
 import { useFileUpload } from "../hooks/use-file-upload"
 
@@ -461,12 +462,23 @@ export function ProjectInfoPanel({
 export function ProjectTasksPanel({ tasks, projectId }: { tasks: TaskItem[]; projectId: string }) {
   const [showAdd, setShowAdd] = useState(false)
   const [newTitle, setNewTitle] = useState("")
+  const [newAssigneeId, setNewAssigneeId] = useState("")
   const createTaskMutation = useCreateBusinessTask()
+  const { data: employees = [] } = useEmployees()
+  const { data: session } = useSession()
+  const currentUserName = session?.user?.name ?? "野田"
 
   const handleAdd = () => {
     if (!newTitle.trim()) return
-    createTaskMutation.mutate({ projectId, title: newTitle.trim(), status: "todo", createdBy: "野田" })
+    createTaskMutation.mutate({
+      projectId,
+      title: newTitle.trim(),
+      status: "todo",
+      createdBy: currentUserName,
+      assigneeId: newAssigneeId || null,
+    })
     setNewTitle("")
+    setNewAssigneeId("")
     setShowAdd(false)
   }
 
@@ -482,8 +494,12 @@ export function ProjectTasksPanel({ tasks, projectId }: { tasks: TaskItem[]; pro
         {showAdd && (
           <div className="mb-2 p-2 rounded border bg-muted/30 space-y-1">
             <Input placeholder="タスク名" className="h-7 text-xs" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleAdd() }} />
+            <select className="w-full h-7 text-xs border rounded px-2 bg-background" value={newAssigneeId} onChange={(e) => setNewAssigneeId(e.target.value)}>
+              <option value="">担当者（未設定）</option>
+              {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+            </select>
             <div className="flex gap-1 justify-end">
-              <Button variant="ghost" size="sm" className="h-6 text-[10px] cursor-pointer" onClick={() => { setShowAdd(false); setNewTitle("") }}>キャンセル</Button>
+              <Button variant="ghost" size="sm" className="h-6 text-[10px] cursor-pointer" onClick={() => { setShowAdd(false); setNewTitle(""); setNewAssigneeId("") }}>キャンセル</Button>
               <Button size="sm" className="h-6 text-[10px] cursor-pointer" onClick={handleAdd} disabled={!newTitle.trim()}>追加</Button>
             </div>
           </div>
@@ -525,12 +541,24 @@ export function ProjectTasksPanel({ tasks, projectId }: { tasks: TaskItem[]; pro
 export function ProjectIssuesPanel({ issues, projectId }: { issues: IssueItem[]; projectId: string }) {
   const [showAdd, setShowAdd] = useState(false)
   const [newTitle, setNewTitle] = useState("")
+  const [newAssigneeId, setNewAssigneeId] = useState("")
   const createIssueMutation = useCreateBusinessIssue()
+  const { data: employees = [] } = useEmployees()
+  const { data: session } = useSession()
+  const currentUserName = session?.user?.name ?? "野田"
 
   const handleAdd = () => {
     if (!newTitle.trim()) return
-    createIssueMutation.mutate({ projectId, title: newTitle.trim(), status: "unresolved", priority: "medium", createdBy: "野田" })
+    createIssueMutation.mutate({
+      projectId,
+      title: newTitle.trim(),
+      status: "unresolved",
+      priority: "medium",
+      createdBy: currentUserName,
+      assigneeId: newAssigneeId || null,
+    })
     setNewTitle("")
+    setNewAssigneeId("")
     setShowAdd(false)
   }
 
@@ -546,8 +574,12 @@ export function ProjectIssuesPanel({ issues, projectId }: { issues: IssueItem[];
         {showAdd && (
           <div className="mb-2 p-2 rounded border bg-muted/30 space-y-1">
             <Input placeholder="課題名" className="h-7 text-xs" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleAdd() }} />
+            <select className="w-full h-7 text-xs border rounded px-2 bg-background" value={newAssigneeId} onChange={(e) => setNewAssigneeId(e.target.value)}>
+              <option value="">旗振り役（未設定）</option>
+              {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+            </select>
             <div className="flex gap-1 justify-end">
-              <Button variant="ghost" size="sm" className="h-6 text-[10px] cursor-pointer" onClick={() => { setShowAdd(false); setNewTitle("") }}>キャンセル</Button>
+              <Button variant="ghost" size="sm" className="h-6 text-[10px] cursor-pointer" onClick={() => { setShowAdd(false); setNewTitle(""); setNewAssigneeId("") }}>キャンセル</Button>
               <Button size="sm" className="h-6 text-[10px] cursor-pointer" onClick={handleAdd} disabled={!newTitle.trim()}>追加</Button>
             </div>
           </div>
