@@ -62,6 +62,7 @@ model Business {
   assignees         BusinessAssignee[]               // 担当者（複数）
   contactBusinesses  ContactBusiness[]                // CRM: 直接紐づく顧客
   checklistTemplates ChecklistTemplate[]              // チェックリストテンプレート
+  memos              BusinessMemo[]                   // メモ（複数）
 
   @@map("businesses")
 }
@@ -94,6 +95,7 @@ model Project {
   partnerProjects   PartnerProject[]
   assignees         ProjectAssignee[]                // 担当者（複数）
   contactProjects   ContactProject[]                 // CRM: 直接紐づく顧客
+  memos             BusinessMemo[]                   // メモ（複数）
 
   @@index([businessId])
   @@index([parentId])
@@ -205,6 +207,23 @@ model BusinessIssueNote {
 
   @@index([issueId])
   @@map("business_issue_notes")
+}
+
+// ========== 事業・プロジェクト メモ ==========
+model BusinessMemo {
+  id         String   @id @default(cuid())
+  businessId String?                                   // 事業に紐づく場合
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  projectId  String?                                   // プロジェクトに紐づく場合
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date       DateTime  @db.Date                        // 記録日
+  content    String                                    // 内容
+  author     String    @default("")                    // 記入者名
+  createdAt  DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([projectId])
+  @@map("business_memos")
 }
 
 // ========== 口座 ==========

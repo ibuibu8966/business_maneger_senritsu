@@ -69,6 +69,10 @@ export const queryKeys = {
     all: ["businessIssues"] as const,
     list: (params?: Record<string, string>) => ["businessIssues", params] as const,
   },
+  businessMemos: {
+    all: ["businessMemos"] as const,
+    list: (params?: Record<string, string>) => ["businessMemos", params] as const,
+  },
   checklistTemplates: {
     all: ["checklistTemplates"] as const,
     list: (params?: Record<string, string>) =>

@@ -393,6 +393,16 @@ export interface ChecklistTemplateDTO {
   createdAt: string
 }
 
+export interface BusinessMemoDTO {
+  id: string
+  businessId: string | null
+  projectId: string | null
+  date: string
+  content: string
+  author: string
+  createdAt: string
+}
+
 export interface BusinessIssueNoteDTO {
   id: string
   date: string

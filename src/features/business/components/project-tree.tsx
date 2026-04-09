@@ -59,6 +59,7 @@ import {
   useBusinessIssues,
 } from "@/hooks/use-business"
 import { ProjectInfoPanel, ProjectTasksPanel, ProjectIssuesPanel } from "./project-detail-panel"
+import { MemoSection } from "./memo-section"
 import { useEmployees } from "@/hooks/use-schedule"
 import { useContacts, usePartners } from "@/hooks/use-crm"
 import { useFileUpload } from "../hooks/use-file-upload"
@@ -936,6 +937,7 @@ function ProjectTreeInner() {
             />
             <ProjectTasksPanel tasks={tasksForDetail} projectId={selectedProject.id} />
             <ProjectIssuesPanel issues={issuesForDetail} projectId={selectedProject.id} />
+            <MemoSection projectId={selectedProject.id} />
           </>
         )}
 
@@ -945,6 +947,7 @@ function ProjectTreeInner() {
             <BusinessInfoPanel biz={selectedBusiness} projects={projects} onClose={() => setSelectedBusinessId(null)} />
             <BusinessTasksPanel biz={selectedBusiness} projects={projectDTOs} tasks={tasks} />
             <BusinessIssuesPanel biz={selectedBusiness} projects={projectDTOs} issues={issues} />
+            <MemoSection businessId={selectedBusiness.id} />
           </>
         )}
       </div>

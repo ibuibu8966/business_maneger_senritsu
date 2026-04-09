@@ -5,6 +5,7 @@ import {
   fetchProjects, fetchProjectById, createProject, updateProject, deleteProject,
   fetchBusinessTasks, createBusinessTask, updateBusinessTask, deleteBusinessTask, reorderBusinessTasks,
   fetchBusinessIssues, createBusinessIssue, updateBusinessIssue, deleteBusinessIssue, addBusinessIssueNote,
+  fetchBusinessMemos, createBusinessMemo, deleteBusinessMemo,
   addTaskChecklistItem, updateTaskChecklistItem, deleteTaskChecklistItem,
   fetchChecklistTemplates, createChecklistTemplate, updateChecklistTemplate, deleteChecklistTemplate, applyChecklistTemplate,
 } from "@/lib/api"
@@ -228,6 +229,45 @@ export function useAddBusinessIssueNote() {
       addBusinessIssueNote(issueId, data),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.businessIssues.all })
+    },
+  })
+}
+
+// ========== Business Memos ==========
+
+export function useBusinessMemos(params?: { businessId?: string; projectId?: string }) {
+  const keyParams: Record<string, string> | undefined = params
+    ? Object.fromEntries(
+        Object.entries(params)
+          .filter(([, v]) => v !== undefined)
+          .map(([k, v]) => [k, String(v)])
+      )
+    : undefined
+
+  return useQuery({
+    queryKey: queryKeys.businessMemos.list(keyParams),
+    queryFn: () => fetchBusinessMemos(params),
+    enabled: !!(params?.businessId || params?.projectId),
+  })
+}
+
+export function useCreateBusinessMemo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { businessId?: string; projectId?: string; date: string; content: string; author?: string }) =>
+      createBusinessMemo(data),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.businessMemos.all })
+    },
+  })
+}
+
+export function useDeleteBusinessMemo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteBusinessMemo(id),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.businessMemos.all })
     },
   })
 }

@@ -64,6 +64,7 @@ import {
 import { useEmployees } from "@/hooks/use-schedule"
 import { useContacts, usePartners } from "@/hooks/use-crm"
 import { useSession } from "next-auth/react"
+import { MemoSection } from "./memo-section"
 
 // ===== タスク登録ダイアログ =====
 
@@ -868,6 +869,9 @@ function ProjectTreeNode({
             </div>
           )}
 
+          {/* メモ */}
+          <MemoSection projectId={proj.id} compact />
+
           {/* タスク一覧 */}
           {tasks.length > 0 && (
             <div>
@@ -1076,6 +1080,9 @@ function ProjectSidePanel({
                       <p className="text-xs"><span className="text-muted-foreground">課題:</span> <span className={bizUnresolved > 0 ? "text-red-600 font-medium" : ""}>{bizUnresolved}件未解決</span> / {bizIssues.length}件</p>
                     )
                   })()}
+
+                  {/* メモ */}
+                  <MemoSection businessId={biz.id} compact />
 
                   {/* 配下のプロジェクト（再帰ツリー） */}
                   {topProjects.map((proj) => (

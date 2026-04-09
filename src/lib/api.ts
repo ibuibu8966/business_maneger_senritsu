@@ -550,7 +550,7 @@ export async function addTicketComment(ticketId: string, data: { content: string
 
 // ========== 事業管理 ==========
 
-import type { BusinessDetailDTO, ProjectDTO, BusinessTaskDTO, BusinessIssueDTO, BusinessIssueNoteDTO } from "@/types/dto"
+import type { BusinessDetailDTO, ProjectDTO, BusinessTaskDTO, BusinessIssueDTO, BusinessIssueNoteDTO, BusinessMemoDTO } from "@/types/dto"
 
 const BUSINESS_BASE = "/api/business"
 
@@ -792,6 +792,32 @@ export async function updateChecklistTemplate(id: string, data: { name: string; 
 export async function deleteChecklistTemplate(id: string) {
   const res = await fetch(`${BUSINESS_BASE}/checklist-templates/${id}`, { method: "DELETE" })
   if (!res.ok) throw new Error("テンプレートの削除に失敗")
+}
+
+// ========== メモ ==========
+
+export async function fetchBusinessMemos(params?: { businessId?: string; projectId?: string }): Promise<BusinessMemoDTO[]> {
+  const url = new URL(`${BUSINESS_BASE}/memos`, window.location.origin)
+  if (params?.businessId) url.searchParams.set("businessId", params.businessId)
+  if (params?.projectId) url.searchParams.set("projectId", params.projectId)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error("メモ一覧の取得に失敗")
+  return res.json()
+}
+
+export async function createBusinessMemo(data: { businessId?: string; projectId?: string; date: string; content: string; author?: string }): Promise<BusinessMemoDTO> {
+  const res = await fetch(`${BUSINESS_BASE}/memos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error("メモの作成に失敗")
+  return res.json()
+}
+
+export async function deleteBusinessMemo(id: string): Promise<void> {
+  const res = await fetch(`${BUSINESS_BASE}/memos/${id}`, { method: "DELETE" })
+  if (!res.ok) throw new Error("メモの削除に失敗")
 }
 
 // ========== 操作履歴 ==========

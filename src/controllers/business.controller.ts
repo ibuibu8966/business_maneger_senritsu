@@ -19,6 +19,9 @@ import { CreateBusinessIssue } from "@/use-cases/create-business-issue.use-case"
 import { UpdateBusinessIssue } from "@/use-cases/update-business-issue.use-case"
 import { DeleteBusinessIssue } from "@/use-cases/delete-business-issue.use-case"
 import { AddIssueNote } from "@/use-cases/add-issue-note.use-case"
+import { GetBusinessMemos } from "@/use-cases/get-business-memos.use-case"
+import { CreateBusinessMemo } from "@/use-cases/create-business-memo.use-case"
+import { DeleteBusinessMemo } from "@/use-cases/delete-business-memo.use-case"
 import { AddTaskChecklistItem } from "@/use-cases/add-task-checklist-item.use-case"
 import { UpdateTaskChecklistItem } from "@/use-cases/update-task-checklist-item.use-case"
 import { DeleteTaskChecklistItem } from "@/use-cases/delete-task-checklist-item.use-case"
@@ -112,6 +115,14 @@ const createIssueSchema = z.object({
 const updateIssueSchema = createIssueSchema.partial()
 
 const addNoteSchema = z.object({
+  date: z.string(),
+  content: z.string().min(1),
+  author: z.string().optional(),
+})
+
+const createMemoSchema = z.object({
+  businessId: z.string().optional(),
+  projectId: z.string().optional(),
   date: z.string(),
   content: z.string().min(1),
   author: z.string().optional(),
@@ -372,6 +383,45 @@ export class BusinessIssueController {
       if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
       logger.error("メモの追加に失敗しました", e)
       return NextResponse.json({ error: "メモの追加に失敗しました" }, { status: 500 })
+    }
+  }
+}
+
+// ===== BusinessMemoController =====
+export class BusinessMemoController {
+  static async list(req: NextRequest) {
+    try {
+      const url = new URL(req.url)
+      const businessId = url.searchParams.get("businessId") ?? undefined
+      const projectId = url.searchParams.get("projectId") ?? undefined
+      const data = await GetBusinessMemos.execute({ businessId, projectId })
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("メモ一覧の取得に失敗しました", e)
+      return NextResponse.json({ error: "メモ一覧の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async create(req: NextRequest) {
+    try {
+      const body = await req.json()
+      const data = createMemoSchema.parse(body)
+      const r = await CreateBusinessMemo.execute(data)
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("メモの作成に失敗しました", e)
+      return NextResponse.json({ error: "メモの作成に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async delete(_req: NextRequest, id: string) {
+    try {
+      await DeleteBusinessMemo.execute(id)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("メモの削除に失敗しました", e)
+      return NextResponse.json({ error: "メモの削除に失敗しました" }, { status: 500 })
     }
   }
 }

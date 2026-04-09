@@ -34,6 +34,7 @@ import {
   useAddBusinessIssueNote,
 } from "@/hooks/use-business"
 import { useEmployees } from "@/hooks/use-schedule"
+import { MemoSection } from "./memo-section"
 
 type StatusFilter = "all" | IssueStatus
 
@@ -401,6 +402,11 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
             </div>
           )}
         </div>
+
+        <Separator />
+
+        {/* プロジェクトメモ */}
+        <MemoSection projectId={issue.projectId} compact />
 
         <Separator />
 
