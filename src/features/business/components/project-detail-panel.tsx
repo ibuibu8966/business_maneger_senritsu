@@ -332,6 +332,9 @@ export function ProjectInfoPanel({
           />
         </div>
 
+        {/* メモ */}
+        <MemoSection projectId={node.id} compact />
+
         <Separator />
 
         {/* 添付ファイル・URL */}
@@ -432,11 +435,6 @@ export function ProjectInfoPanel({
             <p className="text-xs text-muted-foreground">なし</p>
           )}
         </div>
-
-        <Separator />
-
-        {/* メモ */}
-        <MemoSection projectId={node.id} compact />
 
         <Separator />
         <div>

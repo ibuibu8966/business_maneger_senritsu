@@ -1317,6 +1317,9 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
           />
         </div>
 
+        {/* メモ */}
+        <MemoSection businessId={biz.id} compact />
+
         {/* 関連取引先・顧客 */}
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -1484,11 +1487,6 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
             )
           })}
         </div>
-
-        <Separator />
-
-        {/* メモ */}
-        <MemoSection businessId={biz.id} compact />
 
         <Separator />
         <div>
