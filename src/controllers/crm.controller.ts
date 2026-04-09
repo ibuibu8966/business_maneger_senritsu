@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { requireRole } from "@/lib/auth-guard"
 import { ContactRepository } from "@/repositories/contact.repository"
 import { SalonRepository } from "@/repositories/salon.repository"
 import { SubscriptionRepository } from "@/repositories/subscription.repository"
@@ -111,6 +112,8 @@ const createCommentSchema = z.object({
 export class ContactController {
   static async list(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
       const type = url.searchParams.get("type")?.toUpperCase() as "SALON_MEMBER" | "PARTNER_CONTACT" | undefined
       const isArchived = url.searchParams.has("isArchived") ? url.searchParams.get("isArchived") === "true" : undefined
@@ -130,6 +133,8 @@ export class ContactController {
 
   static async getById(_req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const c = await ContactRepository.findById(id)
       if (!c) return NextResponse.json({ error: "Not found" }, { status: 404 })
       return NextResponse.json(c)
@@ -138,6 +143,8 @@ export class ContactController {
 
   static async create(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createContactSchema.parse(body)
       const r = await ContactRepository.create({ ...data, type: data.type.toUpperCase() as "SALON_MEMBER" | "PARTNER_CONTACT", memberpayId: data.memberpayId, robotpayId: data.robotpayId, paypalId: data.paypalId, nextMeetingDate: data.nextMeetingDate ? new Date(data.nextMeetingDate) : null, isFinalMeeting: data.isFinalMeeting, tags: data.tags })
@@ -150,6 +157,8 @@ export class ContactController {
 
   static async update(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateContactSchema.parse(body)
       const updateData: Record<string, unknown> = { ...data }
@@ -169,6 +178,8 @@ export class ContactController {
 export class SalonController {
   static async list(_req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const data = await SalonRepository.findMany()
       return NextResponse.json(data.map(s => ({
         id: s.id, name: s.name, isActive: s.isActive,
@@ -179,6 +190,8 @@ export class SalonController {
 
   static async create(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createSalonSchema.parse(body)
       const r = await SalonRepository.create(data)
@@ -191,6 +204,8 @@ export class SalonController {
 
   static async update(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateSalonSchema.parse(body)
       const r = await SalonRepository.update(id, data)
@@ -203,6 +218,8 @@ export class SalonController {
 
   static async createCourse(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createCourseSchema.parse(body)
       const r = await SalonRepository.createCourse(data)
@@ -215,6 +232,8 @@ export class SalonController {
 
   static async updateCourse(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateCourseSchema.parse(body)
       const r = await SalonRepository.updateCourse(id, data)
@@ -230,6 +249,8 @@ export class SalonController {
 export class SubscriptionController {
   static async list(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
       const params = {
         contactId: url.searchParams.get("contactId") ?? undefined,
@@ -251,6 +272,8 @@ export class SubscriptionController {
 
   static async create(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createSubscriptionSchema.parse(body)
       const r = await SubscriptionRepository.create({
@@ -273,6 +296,8 @@ export class SubscriptionController {
 
   static async update(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateSubscriptionSchema.parse(body)
       const updateData: Record<string, unknown> = { ...data }
@@ -300,9 +325,16 @@ export class SubscriptionController {
 export class PaymentCheckController {
   static async list(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
-      const year = parseInt(url.searchParams.get("year") ?? new Date().getFullYear().toString())
-      const month = parseInt(url.searchParams.get("month") ?? (new Date().getMonth() + 1).toString())
+      const yearRaw = parseInt(url.searchParams.get("year") ?? new Date().getFullYear().toString())
+      const monthRaw = parseInt(url.searchParams.get("month") ?? (new Date().getMonth() + 1).toString())
+      if (isNaN(yearRaw) || isNaN(monthRaw) || monthRaw < 1 || monthRaw > 12) {
+        return NextResponse.json({ error: "Invalid year or month parameter" }, { status: 400 })
+      }
+      const year = yearRaw
+      const month = monthRaw
       const isConfirmed = url.searchParams.has("isConfirmed") ? url.searchParams.get("isConfirmed") === "true" : undefined
       const data = await PaymentCheckRepository.findMany({ year, month, isConfirmed })
       return NextResponse.json(data.map(p => ({
@@ -324,6 +356,8 @@ export class PaymentCheckController {
 
   static async upsert(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = upsertPaymentCheckSchema.parse(body)
       const r = await PaymentCheckRepository.upsert(data)
@@ -349,6 +383,8 @@ export class PaymentCheckController {
 
   static async generate(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const { year, month } = z.object({ year: z.number().int(), month: z.number().int().min(1).max(12) }).parse(body)
       const count = await PaymentCheckRepository.generateForMonth(year, month)
@@ -364,6 +400,8 @@ export class PaymentCheckController {
 export class PartnerController {
   static async list(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
       const isArchived = url.searchParams.has("isArchived") ? url.searchParams.get("isArchived") === "true" : undefined
       const data = await PartnerRepository.findMany({ isArchived })
@@ -379,6 +417,8 @@ export class PartnerController {
 
   static async getById(_req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const p = await PartnerRepository.findById(id)
       if (!p) return NextResponse.json({ error: "Not found" }, { status: 404 })
       return NextResponse.json({
@@ -393,6 +433,8 @@ export class PartnerController {
 
   static async create(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createPartnerSchema.parse(body)
       const r = await PartnerRepository.create(data)
@@ -407,6 +449,8 @@ export class PartnerController {
 
   static async update(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updatePartnerSchema.parse(body)
       const r = await PartnerRepository.update(id, data)
@@ -425,6 +469,8 @@ export class PartnerController {
 
   static async addContact(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = partnerContactSchema.parse(body)
       await PartnerRepository.addContact(id, data.contactId, data.role)
@@ -437,6 +483,8 @@ export class PartnerController {
 
   static async addBusiness(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = partnerBusinessSchema.parse(body)
       await PartnerRepository.addBusiness(id, data.businessId)
@@ -452,6 +500,8 @@ export class PartnerController {
 export class TicketController {
   static async list(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
       const params = {
         contactId: url.searchParams.get("contactId") ?? undefined,
@@ -475,6 +525,8 @@ export class TicketController {
 
   static async getById(_req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const t = await TicketRepository.findById(id)
       if (!t) return NextResponse.json({ error: "Not found" }, { status: 404 })
       return NextResponse.json({
@@ -495,6 +547,8 @@ export class TicketController {
 
   static async create(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createTicketSchema.parse(body)
       const r = await TicketRepository.create({
@@ -521,6 +575,8 @@ export class TicketController {
 
   static async update(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateTicketSchema.parse(body)
       const updateData: Record<string, unknown> = { ...data }
@@ -549,6 +605,8 @@ export class TicketController {
 
   static async addComment(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createCommentSchema.parse(body)
       const r = await TicketRepository.addComment({ ticketId: id, ...data })
@@ -567,6 +625,8 @@ export class TicketController {
 export class ContactMeetingController {
   static async list(_req: NextRequest, contactId: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const data = await ContactMeetingRepository.findByContactId(contactId)
       return NextResponse.json(data.map(m => ({
         id: m.id, contactId: m.contactId, date: m.date.toISOString(),
@@ -577,6 +637,8 @@ export class ContactMeetingController {
 
   static async create(req: NextRequest, contactId: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const schema = z.object({ date: z.string(), summary: z.string().optional() })
       const data = schema.parse(body)

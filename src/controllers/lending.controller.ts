@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { requireRole } from "@/lib/auth-guard"
 import { GetAccountDetails } from "@/use-cases/get-account-details.use-case"
 import { CreateAccount } from "@/use-cases/create-account.use-case"
 import { UpdateAccount } from "@/use-cases/update-account.use-case"
@@ -111,6 +112,8 @@ export class LendingController {
   // --- 口座 ---
   static async listAccounts(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
       const params = {
         ownerType: url.searchParams.get("ownerType")?.toUpperCase() as "INTERNAL" | "EXTERNAL" | undefined,
@@ -131,6 +134,8 @@ export class LendingController {
 
   static async getAccount(id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const data = await GetAccountDetails.executeOne(id)
       if (!data) return NextResponse.json({ error: "口座が見つかりません" }, { status: 404 })
       return NextResponse.json(data)
@@ -141,6 +146,8 @@ export class LendingController {
 
   static async getSummary() {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const data = await GetAccountDetails.getSummary()
       return NextResponse.json(data)
     } catch (e) {
@@ -151,6 +158,8 @@ export class LendingController {
 
   static async createAccount(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createAccountSchema.parse(body)
       const result = await CreateAccount.execute(data)
@@ -165,6 +174,8 @@ export class LendingController {
 
   static async updateAccount(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateAccountSchema.parse(body)
       const result = await UpdateAccount.execute(id, data)
@@ -180,6 +191,8 @@ export class LendingController {
   // --- 口座取引 ---
   static async listTransactions(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
       const params = {
         accountId: url.searchParams.get("accountId") ?? undefined,
@@ -199,6 +212,8 @@ export class LendingController {
 
   static async createTransaction(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createTransactionSchema.parse(body)
 
@@ -228,6 +243,8 @@ export class LendingController {
 
   static async updateTransaction(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateTransactionSchema.parse(body)
       const result = await UpdateAccountTransaction.execute(id, data)
@@ -243,6 +260,8 @@ export class LendingController {
   // --- 貸借 ---
   static async listLendings(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const url = new URL(req.url)
       const params = {
         accountId: url.searchParams.get("accountId") ?? undefined,
@@ -261,6 +280,8 @@ export class LendingController {
 
   static async createLending(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createLendingSchema.parse(body)
       const result = await CreateLending.execute(data)
@@ -276,6 +297,8 @@ export class LendingController {
 
   static async updateLending(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = updateLendingSchema.parse(body)
       const result = await UpdateLending.execute(id, data)
@@ -291,6 +314,8 @@ export class LendingController {
   // --- 返済 ---
   static async createPayment(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = createPaymentSchema.parse(body)
       const result = await CreateLendingPayment.execute(data)
@@ -307,6 +332,8 @@ export class LendingController {
 
   static async listTags() {
     try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
       const result = await AccountTagUseCase.list()
       return NextResponse.json(result)
     } catch {
@@ -316,6 +343,8 @@ export class LendingController {
 
   static async createTag(req: NextRequest) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = z.object({
         name: z.string().min(1),
@@ -333,6 +362,8 @@ export class LendingController {
 
   static async updateTag(req: NextRequest, id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       const body = await req.json()
       const data = z.object({
         name: z.string().min(1).optional(),
@@ -350,6 +381,8 @@ export class LendingController {
 
   static async deleteTag(id: string) {
     try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
       await AccountTagUseCase.delete(id)
       return NextResponse.json({ ok: true })
     } catch {

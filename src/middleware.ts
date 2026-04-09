@@ -34,7 +34,7 @@ let lastCleanup = Date.now()
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // API ルートへのレート制限（/api/auth は除外）
+  // API ルートへのレート制限 + 認証チェック（/api/auth は除外）
   if (pathname.startsWith("/api") && !pathname.startsWith("/api/auth")) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
 
@@ -49,6 +49,25 @@ export async function middleware(req: NextRequest) {
         { error: "リクエストが多すぎます。しばらくお待ちください。" },
         { status: 429 },
       )
+    }
+
+    // API ルートの認証チェック（cron エンドポイント等の例外は Authorization ヘッダーで判定）
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // CSRF 対策: 書き込み操作の Origin 検証
+    const method = req.method
+    if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+      const origin = req.headers.get("origin")
+      const host = req.headers.get("host")
+      if (origin) {
+        const originHost = new URL(origin).host
+        if (originHost !== host) {
+          return NextResponse.json({ error: "CSRF validation failed" }, { status: 403 })
+        }
+      }
     }
 
     return NextResponse.next()

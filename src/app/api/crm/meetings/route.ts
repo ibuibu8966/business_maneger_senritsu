@@ -7,6 +7,11 @@ export async function GET(req: NextRequest) {
     const date = searchParams.get("date")
     if (!date) return NextResponse.json({ error: "date is required" }, { status: 400 })
 
+    // 日付フォーマットの検証（YYYY-MM-DD）
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) {
+      return NextResponse.json({ error: "Invalid date format. Use YYYY-MM-DD" }, { status: 400 })
+    }
+
     const from = new Date(date + "T00:00:00")
     const to = new Date(date + "T00:00:00")
     to.setDate(to.getDate() + 1)
