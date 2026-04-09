@@ -937,7 +937,6 @@ function ProjectTreeInner() {
             />
             <ProjectTasksPanel tasks={tasksForDetail} projectId={selectedProject.id} />
             <ProjectIssuesPanel issues={issuesForDetail} projectId={selectedProject.id} />
-            <MemoSection projectId={selectedProject.id} />
           </>
         )}
 
@@ -947,7 +946,6 @@ function ProjectTreeInner() {
             <BusinessInfoPanel biz={selectedBusiness} projects={projects} onClose={() => setSelectedBusinessId(null)} />
             <BusinessTasksPanel biz={selectedBusiness} projects={projectDTOs} tasks={tasks} />
             <BusinessIssuesPanel biz={selectedBusiness} projects={projectDTOs} issues={issues} />
-            <MemoSection businessId={selectedBusiness.id} />
           </>
         )}
       </div>
@@ -1486,6 +1484,11 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
             )
           })}
         </div>
+
+        <Separator />
+
+        {/* メモ */}
+        <MemoSection businessId={biz.id} compact />
 
         <Separator />
         <div>

@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { ProjectNode, TaskItem, IssueItem, Priority } from "./mock-data"
+import { MemoSection } from "./memo-section"
 import { ISSUE_STATUS_CONFIG, TASK_STATUS_CONFIG, PRIORITY_CONFIG } from "./mock-data"
 import { useCreateBusinessTask, useCreateBusinessIssue, useDeleteProject } from "@/hooks/use-business"
 import { useEmployees } from "@/hooks/use-schedule"
@@ -431,6 +432,11 @@ export function ProjectInfoPanel({
             <p className="text-xs text-muted-foreground">なし</p>
           )}
         </div>
+
+        <Separator />
+
+        {/* メモ */}
+        <MemoSection projectId={node.id} compact />
 
         <Separator />
         <div>
