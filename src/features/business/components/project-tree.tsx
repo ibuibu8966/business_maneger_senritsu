@@ -69,7 +69,7 @@ import { useFileUpload } from "../hooks/use-file-upload"
 const statusDot: Record<string, string> = {
   active: "bg-green-500",
   "on-hold": "bg-yellow-500",
-  completed: "bg-gray-400",
+  completed: "bg-gray-400 dark:bg-gray-500",
 }
 
 function formatCompact(n: number): string {
@@ -989,7 +989,7 @@ function ProjectTreeInner() {
                     <Label className="text-xs">有効/無効</Label>
                     <select
                       className={`mt-1 w-full rounded-md border px-2 py-1.5 text-sm cursor-pointer ${
-                        dialogStatus === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                        dialogStatus === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                       }`}
                       value={dialogStatus}
                       onChange={(e) => setDialogStatus(e.target.value)}
@@ -1128,9 +1128,9 @@ export function ProjectTree() {
 // ===== 事業パネル1: 事業情報 =====
 
 const bizStatusLabel: Record<string, { label: string; color: string }> = {
-  active: { label: "進行中", color: "bg-green-100 text-green-800" },
-  "on-hold": { label: "保留", color: "bg-yellow-100 text-yellow-800" },
-  completed: { label: "完了", color: "bg-gray-100 text-gray-800" },
+  active: { label: "進行中", color: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
+  "on-hold": { label: "保留", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
+  completed: { label: "完了", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
 }
 
 function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects: ProjectNode[]; onClose: () => void }) {
@@ -1209,7 +1209,7 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
           <div>
             <p className="text-[10px] text-muted-foreground mb-1">有効/無効</p>
             <select
-              className={`w-full text-xs border rounded-md px-2 py-1.5 cursor-pointer ${status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
+              className={`w-full text-xs border rounded-md px-2 py-1.5 cursor-pointer ${status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"} [&>option]:bg-background [&>option]:text-foreground`}
               value={status === "active" ? "active" : "completed"}
               onChange={(e) => { const v = e.target.value as typeof status; setStatus(v); update({ status: v }) }}
             >

@@ -247,7 +247,7 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
               onChange={(e) => {
                 if (e.target.value) toggleParticipant(e.target.value)
               }}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:text-foreground [&>option]:bg-background [&>option]:text-foreground"
             >
               <option value="">参加者を追加...</option>
               {employees
@@ -264,7 +264,7 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
             <select
               value={eventType}
               onChange={(e) => { if (e.target.value) setEventType(e.target.value) }}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:text-foreground [&>option]:bg-background [&>option]:text-foreground"
             >
               {EVENT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -288,7 +288,7 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
                   setEndAt(`${endAt || startAt}T10:00`)
                 }
               }}
-              className="rounded border-gray-300"
+              className="rounded border-gray-300 dark:border-gray-600"
             />
             <Label htmlFor="allDay" className="text-sm">終日</Label>
           </div>

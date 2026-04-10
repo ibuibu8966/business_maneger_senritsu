@@ -19,11 +19,11 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 }
 
 const EVENT_TYPE_STYLES: Record<string, string> = {
-  meeting: "bg-blue-500/20 text-blue-700 border-blue-500/30",
-  holiday: "bg-red-500/20 text-red-700 border-red-500/30",
-  outing: "bg-green-500/20 text-green-700 border-green-500/30",
-  work: "bg-purple-500/20 text-purple-700 border-purple-500/30",
-  other: "bg-gray-500/20 text-gray-700 border-gray-500/30",
+  meeting: "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  holiday: "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30",
+  outing: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30",
+  work: "bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30",
+  other: "bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30",
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -309,12 +309,13 @@ interface SpanEvent {
 }
 
 function getEventTypeColor(eventType: string): { bg: string; text: string; border: string } {
+  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark")
   const colors: Record<string, { bg: string; text: string; border: string }> = {
-    meeting: { bg: "rgba(59,130,246,0.2)", text: "#1d4ed8", border: "rgba(59,130,246,0.3)" },
-    holiday: { bg: "rgba(239,68,68,0.2)", text: "#b91c1c", border: "rgba(239,68,68,0.3)" },
-    outing: { bg: "rgba(34,197,94,0.2)", text: "#15803d", border: "rgba(34,197,94,0.3)" },
-    work: { bg: "rgba(168,85,247,0.2)", text: "#7e22ce", border: "rgba(168,85,247,0.3)" },
-    other: { bg: "rgba(107,114,128,0.2)", text: "#374151", border: "rgba(107,114,128,0.3)" },
+    meeting: { bg: "rgba(59,130,246,0.2)", text: isDark ? "#93c5fd" : "#1d4ed8", border: "rgba(59,130,246,0.3)" },
+    holiday: { bg: "rgba(239,68,68,0.2)", text: isDark ? "#fca5a5" : "#b91c1c", border: "rgba(239,68,68,0.3)" },
+    outing: { bg: "rgba(34,197,94,0.2)", text: isDark ? "#86efac" : "#15803d", border: "rgba(34,197,94,0.3)" },
+    work: { bg: "rgba(168,85,247,0.2)", text: isDark ? "#d8b4fe" : "#7e22ce", border: "rgba(168,85,247,0.3)" },
+    other: { bg: "rgba(107,114,128,0.2)", text: isDark ? "#d1d5db" : "#374151", border: "rgba(107,114,128,0.3)" },
   }
   return colors[eventType] ?? colors.other
 }
@@ -452,8 +453,8 @@ function MonthView({
             key={day}
             className={cn(
               "text-center text-xs font-medium py-2",
-              i === 0 && "text-red-500",
-              i === 6 && "text-blue-500"
+              i === 0 && "text-red-500 dark:text-red-400",
+              i === 6 && "text-blue-500 dark:text-blue-400"
             )}
           >
             {day}
@@ -482,8 +483,8 @@ function MonthView({
                       className={cn(
                         "inline-flex items-center justify-center w-6 h-6 text-xs rounded-full",
                         isToday && "bg-primary text-primary-foreground font-bold",
-                        !isToday && col === 0 && "text-red-500",
-                        !isToday && col === 6 && "text-blue-500",
+                        !isToday && col === 0 && "text-red-500 dark:text-red-400",
+                        !isToday && col === 6 && "text-blue-500 dark:text-blue-400",
                         !cell.isCurrentMonth && "text-muted-foreground"
                       )}
                     >
@@ -603,7 +604,7 @@ function WeekView({
           const isToday = dateStr === today
           return (
             <div key={i} className="text-center py-2 border-l">
-              <div className={cn("text-xs", i === 0 && "text-red-500", i === 6 && "text-blue-500")}>
+              <div className={cn("text-xs", i === 0 && "text-red-500 dark:text-red-400", i === 6 && "text-blue-500 dark:text-blue-400")}>
                 {WEEKDAYS[i]}
               </div>
               <div

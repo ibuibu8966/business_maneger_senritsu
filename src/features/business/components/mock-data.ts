@@ -13,16 +13,16 @@ export const PRIORITY_CONFIG: Record<Priority, { label: string; className: strin
 }
 
 export const ISSUE_STATUS_CONFIG: Record<IssueStatus, { label: string; className: string }> = {
-  unresolved: { label: "未対応", className: "border-red-200 bg-red-100 text-red-700" },
-  "in-progress": { label: "対応中", className: "border-amber-200 bg-amber-100 text-amber-700" },
-  resolved: { label: "対応済み", className: "border-emerald-200 bg-emerald-100 text-emerald-700" },
+  unresolved: { label: "未対応", className: "border-red-200 bg-red-100 text-red-700 dark:border-red-800 dark:bg-red-900/40 dark:text-red-300" },
+  "in-progress": { label: "対応中", className: "border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
+  resolved: { label: "対応済み", className: "border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
 }
 
 export const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; variant: "default" | "secondary" | "outline"; className: string }> = {
-  todo: { label: "未着手", variant: "outline", className: "bg-gray-100 text-gray-700 border-gray-300" },
-  "in-progress": { label: "進行中", variant: "default", className: "bg-blue-100 text-blue-700 border-blue-300" },
-  waiting: { label: "待ち", variant: "outline", className: "bg-amber-100 text-amber-700 border-amber-300" },
-  done: { label: "完了", variant: "secondary", className: "bg-green-100 text-green-700 border-green-300" },
+  todo: { label: "未着手", variant: "outline", className: "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600" },
+  "in-progress": { label: "進行中", variant: "default", className: "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700" },
+  waiting: { label: "待ち", variant: "outline", className: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700" },
+  done: { label: "完了", variant: "secondary", className: "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700" },
 }
 
 export const TOOL_CONFIG: Record<TicketTool, { label: string; emoji: string }> = {

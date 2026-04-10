@@ -507,10 +507,10 @@ export function PartnerDetailView({ partnerId }: Props) {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn("text-xs",
-                      t.status === "open" && "border-gray-300",
-                      t.status === "waiting" && "border-yellow-300 text-yellow-700",
-                      t.status === "in_progress" && "border-blue-300 text-blue-700",
-                      t.status === "completed" && "border-emerald-300 text-emerald-700",
+                      t.status === "open" && "border-gray-300 dark:border-gray-600",
+                      t.status === "waiting" && "border-yellow-300 text-yellow-700 dark:border-yellow-700 dark:text-yellow-300",
+                      t.status === "in_progress" && "border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-300",
+                      t.status === "completed" && "border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300",
                     )}>
                       {t.status === "open" ? "未着手" : t.status === "waiting" ? "確認待ち" : t.status === "in_progress" ? "対応中" : "完了"}
                     </Badge>

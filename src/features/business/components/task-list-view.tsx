@@ -734,7 +734,7 @@ function TaskChecklistSection({ task }: { task: TaskItem }) {
 const STATUS_DOT: Record<string, string> = {
   active: "bg-emerald-500",
   "on-hold": "bg-yellow-500",
-  completed: "bg-gray-400",
+  completed: "bg-gray-400 dark:bg-gray-500",
 }
 const STATUS_CYCLE: Record<string, string> = {
   active: "completed",
@@ -800,7 +800,7 @@ function ProjectTreeNode({
         <button
           type="button"
           title={STATUS_TOOLTIP[proj.status] ?? proj.status}
-          className={`w-2 h-2 rounded-full shrink-0 ml-1 cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-gray-300 ${STATUS_DOT[proj.status] ?? "bg-gray-300"}`}
+          className={`w-2 h-2 rounded-full shrink-0 ml-1 cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-gray-300 dark:hover:ring-gray-600 ${STATUS_DOT[proj.status] ?? "bg-gray-300 dark:bg-gray-500"}`}
           onClick={(e) => { e.stopPropagation(); onUpdateProject(proj.id, { status: STATUS_CYCLE[proj.status] ?? "active" }) }}
         />
         {proj.priority && proj.priority !== "medium" && (
@@ -1015,7 +1015,7 @@ function ProjectSidePanel({
                 className="flex items-center gap-1 py-1.5 px-1 rounded hover:bg-muted/50 cursor-pointer"
               >
                 {isExpanded ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
-                <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[biz.status] ?? "bg-gray-300"}`} />
+                <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[biz.status] ?? "bg-gray-300 dark:bg-gray-500"}`} />
                 <span className="text-sm font-bold truncate">{biz.name}</span>
               </div>
 

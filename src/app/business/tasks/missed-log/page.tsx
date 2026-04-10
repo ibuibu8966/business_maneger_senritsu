@@ -34,10 +34,10 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STATUS_CLASS: Record<string, string> = {
-  TODO: "bg-gray-100 text-gray-700",
-  IN_PROGRESS: "bg-blue-100 text-blue-700",
-  WAITING: "bg-yellow-100 text-yellow-700",
-  DONE: "bg-green-100 text-green-700",
+  TODO: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  IN_PROGRESS: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  WAITING: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  DONE: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
 }
 
 async function fetchMissedLogs(date: string): Promise<MissedLog[]> {

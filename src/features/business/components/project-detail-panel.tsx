@@ -17,9 +17,9 @@ import { useContacts, usePartners } from "@/hooks/use-crm"
 import { useFileUpload } from "../hooks/use-file-upload"
 
 const statusLabel: Record<string, { label: string; color: string }> = {
-  active: { label: "有効", color: "bg-green-100 text-green-800" },
-  "on-hold": { label: "保留", color: "bg-yellow-100 text-yellow-800" },
-  completed: { label: "無効", color: "bg-gray-100 text-gray-800" },
+  active: { label: "有効", color: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
+  "on-hold": { label: "保留", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
+  completed: { label: "無効", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
 }
 
 const inlineInput = "bg-transparent border-0 border-b border-transparent hover:border-border focus:border-primary focus:ring-0 rounded-none px-0 transition-colors"
@@ -105,7 +105,7 @@ export function ProjectInfoPanel({
           <div>
             <p className="text-[10px] text-muted-foreground mb-0.5">有効/無効</p>
             <select
-              className={`text-xs border rounded px-1.5 py-1 cursor-pointer w-full ${status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
+              className={`text-xs border rounded px-1.5 py-1 cursor-pointer w-full ${status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"} [&>option]:bg-background [&>option]:text-foreground`}
               value={status}
               onChange={(e) => { const v = e.target.value as ProjectNode["status"]; setLocalStatus(v); update({ status: v }) }}
             >
@@ -393,7 +393,7 @@ export function ProjectInfoPanel({
               <p className="text-[10px] text-muted-foreground mb-1">親プロジェクト</p>
               <div className="text-xs p-2 rounded-md border bg-muted/20">
                 <div className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${statusLabel[parentProject.status]?.color.split(" ")[0] ?? "bg-gray-400"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${statusLabel[parentProject.status]?.color.split(" ")[0] ?? "bg-gray-400 dark:bg-gray-500"}`} />
                   <span className="font-medium">{parentProject.name}</span>
                   <Badge variant="outline" className="text-[10px] h-4 px-1 ml-auto">
                     {statusLabel[parentProject.status]?.label}
@@ -410,7 +410,7 @@ export function ProjectInfoPanel({
                   return (
                     <div key={cp.id} className="text-xs p-2 rounded-md border bg-muted/20">
                       <div className="flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${cp.status === "active" ? "bg-emerald-500" : "bg-gray-400"}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${cp.status === "active" ? "bg-emerald-500" : "bg-gray-400 dark:bg-gray-500"}`} />
                         <span className="font-medium truncate">{cp.name}</span>
                       </div>
                     </div>
@@ -425,7 +425,7 @@ export function ProjectInfoPanel({
               <div className="space-y-1">
                 {siblingProjects.map((sp) => (
                   <div key={sp.id} className="text-xs p-1.5 rounded-md bg-muted/20 flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${statusLabel[sp.status]?.color.split(" ")[0] ?? "bg-gray-400"}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${statusLabel[sp.status]?.color.split(" ")[0] ?? "bg-gray-400 dark:bg-gray-500"}`} />
                     <span className="truncate">{sp.name}</span>
                   </div>
                 ))}

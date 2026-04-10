@@ -66,7 +66,7 @@ function BusinessTreeGroup({
         onClick={() => setExpanded(!expanded)}
       >
         {expanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
-        <span className={`w-2 h-2 rounded-full shrink-0 ${(biz as { status?: string }).status === "completed" ? "bg-gray-400" : "bg-emerald-500"}`} />
+        <span className={`w-2 h-2 rounded-full shrink-0 ${(biz as { status?: string }).status === "completed" ? "bg-gray-400 dark:bg-gray-500" : "bg-emerald-500"}`} />
         <span className="text-xs font-bold truncate flex-1">{biz.name}</span>
         {bizIssueCount > 0 && (
           <span className="text-[10px] text-muted-foreground shrink-0">{bizIssueCount}</span>
@@ -621,7 +621,7 @@ export function IssueListView() {
             <span className="text-[9px] text-muted-foreground">有効</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500" />
             <span className="text-[9px] text-muted-foreground">無効</span>
           </div>
         </div>
