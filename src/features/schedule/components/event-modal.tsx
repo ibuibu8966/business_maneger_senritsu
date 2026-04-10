@@ -90,8 +90,8 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
       setDescription("")
       setAllDay(false)
       setEventType("meeting")
-      setEmployeeId(employees[0]?.id ?? "")
-      setParticipantIds([employees[0]?.id ?? ""].filter(Boolean))
+      setEmployeeId("")
+      setParticipantIds([])
       if (defaultDate) {
         if (defaultDate.includes("T")) {
           setStartAt(toDatetimeLocal(defaultDate))
