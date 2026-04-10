@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,9 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
   const [employeeId, setEmployeeId] = useState("")
   const [participantIds, setParticipantIds] = useState<string[]>([])
 
+  const { data: session } = useSession()
+  const currentUserId = (session?.user as { id?: string })?.id
+
   const createMutation = useCreateScheduleEvent()
   const updateMutation = useUpdateScheduleEvent()
   const deleteMutation = useDeleteScheduleEvent()
@@ -90,8 +94,9 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
       setDescription("")
       setAllDay(false)
       setEventType("meeting")
-      setEmployeeId("")
-      setParticipantIds([])
+      const me = currentUserId && employees.find((e) => e.id === currentUserId)
+      setEmployeeId(me ? me.id : "")
+      setParticipantIds(me ? [me.id] : [])
       if (defaultDate) {
         if (defaultDate.includes("T")) {
           setStartAt(toDatetimeLocal(defaultDate))
@@ -106,7 +111,7 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
         }
       }
     }
-  }, [event, defaultDate, employees])
+  }, [event, defaultDate, employees, currentUserId])
 
   const toggleParticipant = (empId: string) => {
     setParticipantIds((prev) => {
