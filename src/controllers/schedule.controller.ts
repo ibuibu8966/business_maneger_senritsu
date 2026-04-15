@@ -22,6 +22,7 @@ const createSchema = z.object({
   eventType: z.enum(["meeting", "holiday", "outing", "work", "other"]).optional(),
   employeeId: z.string(),
   participantIds: z.array(z.string()).optional(), // 追加参加者
+  taskId: z.string().nullable().optional(), // 紐づくタスク
 })
 
 const updateSchema = z.object({
@@ -56,7 +57,7 @@ function decodeEventId(compositeId: string): { calendarId: string; googleEventId
 function toDTO(
   event: GCalEvent,
   employee: { id: string; name: string; color: string },
-  extra?: { groupId?: string; participants?: { id: string; name: string; color: string }[] }
+  extra?: { groupId?: string; participants?: { id: string; name: string; color: string }[]; taskId?: string | null; taskTitle?: string | null }
 ): ScheduleEventDTO {
   return {
     id: encodeEventId(event.calendarId, event.id),
@@ -73,6 +74,8 @@ function toDTO(
     createdAt: "",
     groupId: extra?.groupId,
     participants: extra?.participants,
+    taskId: extra?.taskId ?? null,
+    taskTitle: extra?.taskTitle ?? null,
   }
 }
 
@@ -146,13 +149,26 @@ export class ScheduleController {
         groupToParticipants.set(p.groupId, list)
       }
 
-      // DTO変換（参加者情報付き）
+      // タスク紐づけ情報を取得（googleEventIdでマッチ）
+      const googleEventIds = gcalEvents.map((ev) => ev.id)
+      const taskLinkedEvents = googleEventIds.length > 0
+        ? await prisma.scheduleEvent.findMany({
+            where: { googleEventId: { in: googleEventIds }, taskId: { not: null } },
+            select: { googleEventId: true, taskId: true, task: { select: { title: true } } },
+          })
+        : []
+      const taskMap = new Map(
+        taskLinkedEvents.map((e) => [e.googleEventId!, { taskId: e.taskId, taskTitle: e.task?.title ?? null }])
+      )
+
+      // DTO変換（参加者情報+タスク情報付き）
       const dtos: ScheduleEventDTO[] = gcalEvents.map((ev) => {
         const emp = calMap.get(ev.calendarId)!
         const compositeId = encodeEventId(ev.calendarId, ev.id)
         const groupId = compositeToGroup.get(compositeId)
         const participants = groupId ? groupToParticipants.get(groupId) : undefined
-        return toDTO(ev, emp, { groupId, participants })
+        const taskInfo = taskMap.get(ev.id)
+        return toDTO(ev, emp, { groupId, participants, taskId: taskInfo?.taskId, taskTitle: taskInfo?.taskTitle })
       })
 
       return NextResponse.json(dtos)
@@ -244,10 +260,30 @@ export class ScheduleController {
           .filter((x): x is NonNullable<typeof x> => x !== null)
       }
 
+      // タスク紐づけがある場合、DBのschedule_eventsにレコード保存
+      let taskTitle: string | null = null
+      if (data.taskId) {
+        const task = await prisma.businessTask.findUnique({ where: { id: data.taskId }, select: { title: true } })
+        taskTitle = task?.title ?? null
+        await prisma.scheduleEvent.create({
+          data: {
+            title: data.title,
+            description: data.description ?? "",
+            startAt: new Date(data.startAt),
+            endAt: new Date(data.endAt),
+            allDay: data.allDay ?? false,
+            eventType: (data.eventType ?? "work").toUpperCase() as any,
+            employeeId: data.employeeId,
+            googleEventId: gcalEvent.id,
+            taskId: data.taskId,
+          },
+        })
+      }
+
       const dto = toDTO(
         gcalEvent,
         { id: employee.id, name: employee.name, color: employee.color },
-        { groupId, participants }
+        { groupId, participants, taskId: data.taskId ?? null, taskTitle }
       )
 
       return NextResponse.json(dto, { status: 201 })

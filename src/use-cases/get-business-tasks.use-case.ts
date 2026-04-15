@@ -58,6 +58,15 @@ export class GetBusinessTasks {
       businessPurpose: t.project?.business?.purpose ?? "",
       businessStatus: STATUS_MAP[t.project?.business?.status] ?? "active",
       businessPriority: PRIORITY_MAP[t.project?.business?.priority] ?? "medium",
+      // スケジュール紐づけ
+      scheduleEvents: (t.scheduleEvents ?? []).map((se: any) => ({
+        id: se.id,
+        title: se.title,
+        startAt: se.startAt instanceof Date ? se.startAt.toISOString() : se.startAt,
+        endAt: se.endAt instanceof Date ? se.endAt.toISOString() : se.endAt,
+        allDay: se.allDay,
+        googleEventId: se.googleEventId ?? null,
+      })),
       // 課題紐づけ
       issueId: t.issueId ?? null,
       issueTitle: t.issue?.title ?? null,

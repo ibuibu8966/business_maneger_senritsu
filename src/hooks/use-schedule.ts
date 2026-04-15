@@ -46,6 +46,7 @@ export function useCreateScheduleEvent() {
     mutationFn: (data: Record<string, unknown>) => createScheduleEvent(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.events.all })
+      queryClient.invalidateQueries({ queryKey: ["businessTasks"] })
     },
   })
 }

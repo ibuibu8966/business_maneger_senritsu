@@ -153,6 +153,8 @@ export interface TaskItem {
   businessPurpose: string
   businessStatus: "active" | "on-hold" | "completed"
   businessPriority: Priority
+  // スケジュール紐づけ
+  scheduleEvents: { id: string; title: string; startAt: string; endAt: string; allDay: boolean; googleEventId: string | null }[]
   // 課題紐づけ
   issueId: string | null
   issueTitle: string | null

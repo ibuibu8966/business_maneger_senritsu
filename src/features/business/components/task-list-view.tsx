@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star, AlertCircle } from "lucide-react"
+import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star, AlertCircle, CalendarDays } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -61,7 +61,7 @@ import {
   useBusinessIssues,
   useUpdateProject,
 } from "@/hooks/use-business"
-import { useEmployees } from "@/hooks/use-schedule"
+import { useEmployees, useCreateScheduleEvent } from "@/hooks/use-schedule"
 import { useContacts, usePartners } from "@/hooks/use-crm"
 import { useSession } from "next-auth/react"
 import { MemoSection } from "./memo-section"
@@ -1153,6 +1153,16 @@ function TaskDetailPanel({
   issues: { id: string; title: string; projectId: string }[]
 }) {
   const [showRecurring, setShowRecurring] = useState(false)
+  const [showScheduleForm, setShowScheduleForm] = useState(false)
+  const [schedDate, setSchedDate] = useState(task.deadline ?? new Date().toISOString().split("T")[0])
+  const [schedStartTime, setSchedStartTime] = useState(task.executionTime ?? "09:00")
+  const [schedEndTime, setSchedEndTime] = useState(() => {
+    const start = task.executionTime ?? "09:00"
+    const [h, m] = start.split(":").map(Number)
+    return `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+  })
+  const [schedTitle, setSchedTitle] = useState(task.title)
+  const createScheduleMutation = useCreateScheduleEvent()
   const { data: employees = [] } = useEmployees()
 
   const WEEKDAY_LABELS: Record<number, string> = { 0: "日曜日", 1: "月曜日", 2: "火曜日", 3: "水曜日", 4: "木曜日", 5: "金曜日", 6: "土曜日" }
@@ -1211,6 +1221,90 @@ function TaskDetailPanel({
             <option key={i.id} value={i.id}>{i.title}</option>
           ))}
         </select>
+      </div>
+
+      {/* スケジュール */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+            <CalendarDays className="w-3 h-3" />スケジュール
+          </div>
+          <button
+            className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
+            onClick={() => setShowScheduleForm(!showScheduleForm)}
+          >
+            {showScheduleForm ? "閉じる" : "+ 登録"}
+          </button>
+        </div>
+
+        {/* 登録済みスケジュール一覧 */}
+        {task.scheduleEvents && task.scheduleEvents.length > 0 && (
+          <div className="space-y-1">
+            {task.scheduleEvents.map((se: any) => (
+              <div key={se.id} className="text-[10px] p-1.5 rounded bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-400 flex items-center gap-2">
+                <CalendarDays className="w-3 h-3 text-blue-500 shrink-0" />
+                <span className="truncate flex-1">{se.title}</span>
+                <span className="text-muted-foreground shrink-0">
+                  {se.allDay
+                    ? new Date(se.startAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })
+                    : `${new Date(se.startAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })} ${new Date(se.startAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* スケジュール登録フォーム */}
+        {showScheduleForm && (
+          <div className="space-y-2 border rounded-md p-3 bg-blue-50/50 dark:bg-blue-900/10">
+            <div>
+              <Label className="text-xs">タイトル</Label>
+              <Input className="mt-1 h-7 text-xs" value={schedTitle} onChange={(e) => setSchedTitle(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs">日付</Label>
+                <Input type="date" className="mt-1 h-7 text-xs" value={schedDate} onChange={(e) => setSchedDate(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">開始</Label>
+                <Input type="time" className="mt-1 h-7 text-xs" value={schedStartTime} onChange={(e) => setSchedStartTime(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">終了</Label>
+                <Input type="time" className="mt-1 h-7 text-xs" value={schedEndTime} onChange={(e) => setSchedEndTime(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-1 justify-end">
+              <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setShowScheduleForm(false)}>
+                キャンセル
+              </Button>
+              <Button
+                size="sm"
+                className="h-6 text-[10px]"
+                disabled={!schedTitle.trim() || !schedDate || createScheduleMutation.isPending}
+                onClick={() => {
+                  const startAt = `${schedDate}T${schedStartTime}:00`
+                  const endAt = `${schedDate}T${schedEndTime}:00`
+                  createScheduleMutation.mutate({
+                    title: schedTitle.trim(),
+                    startAt: new Date(startAt).toISOString(),
+                    endAt: new Date(endAt).toISOString(),
+                    employeeId: task.assigneeId ?? employees[0]?.id ?? "",
+                    eventType: "work",
+                    taskId: task.id,
+                  }, {
+                    onSuccess: () => {
+                      setShowScheduleForm(false)
+                    },
+                  })
+                }}
+              >
+                {createScheduleMutation.isPending ? "登録中..." : "スケジュール登録"}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 繰り返し設定セクション */}

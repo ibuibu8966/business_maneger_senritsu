@@ -37,6 +37,7 @@ export class BusinessTaskRepository {
         contact: { select: { id: true, name: true } },
         partner: { select: { id: true, name: true } },
         issue: { select: { id: true, title: true, status: true, priority: true } },
+        scheduleEvents: { select: { id: true, title: true, startAt: true, endAt: true, allDay: true, googleEventId: true }, orderBy: { startAt: "asc" } },
         checklistItems: { orderBy: { sortOrder: "asc" } },
       },
       orderBy: { sortOrder: "asc" },

@@ -133,6 +133,8 @@ export interface ScheduleEventDTO {
   createdAt: string
   groupId?: string       // 複数人参加の場合のグループID
   participants?: { id: string; name: string; color: string }[]
+  taskId?: string | null  // 紐づくタスクID
+  taskTitle?: string | null // 紐づくタスク名
 }
 
 // ========== CRM ==========
@@ -383,6 +385,8 @@ export interface BusinessTaskDTO {
   businessPurpose: string
   businessStatus: "active" | "on-hold" | "completed"
   businessPriority: "highest" | "high" | "medium" | "low"
+  // スケジュール紐づけ
+  scheduleEvents: { id: string; title: string; startAt: string; endAt: string; allDay: boolean; googleEventId: string | null }[]
   // 課題紐づけ
   issueId: string | null
   issueTitle: string | null
