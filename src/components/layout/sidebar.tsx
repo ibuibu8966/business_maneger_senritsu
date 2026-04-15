@@ -12,6 +12,8 @@ import {
   UserCog,
   LogOut,
   Store,
+  CheckSquare,
+  AlertCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useMyBadgeCounts } from "@/hooks/use-my-badge-counts"
@@ -23,6 +25,8 @@ const menuItems = [
   { href: "/salon", label: "サロン管理", icon: Store, roles: ["master_admin", "admin"] },
   { href: "/balance", label: "貸借・口座", icon: Wallet, roles: ["master_admin", "admin"] },
   { href: "/business", label: "事業管理", icon: Building2, roles: ["master_admin", "admin", "employee"] },
+  { href: "/business/tasks", label: "タスク", icon: CheckSquare, roles: ["master_admin", "admin", "employee"] },
+  { href: "/business/issues", label: "課題", icon: AlertCircle, roles: ["master_admin", "admin", "employee"] },
   { href: "/crm", label: "顧客・取引先管理", icon: Users, roles: ["master_admin", "admin"] },
   { href: "/users", label: "ユーザー管理", icon: UserCog, roles: ["master_admin", "admin"] },
 ]
@@ -42,7 +46,9 @@ export function Sidebar() {
           const role = session?.user?.role
           return role ? item.roles.includes(role) : true
         }).map((item) => {
-          const isActive = pathname.startsWith(item.href)
+          const isActive = item.href === "/business"
+            ? pathname === "/business" || pathname === "/business/"
+            : pathname.startsWith(item.href)
           const badgeCount = item.href === "/business" ? total : 0
           return (
             <Link
