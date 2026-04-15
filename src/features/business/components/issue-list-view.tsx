@@ -32,9 +32,13 @@ import {
   useUpdateBusinessIssue,
   useDeleteBusinessIssue,
   useAddBusinessIssueNote,
+  useBusinessTasks,
+  useCreateBusinessTask,
+  useUpdateBusinessTask,
 } from "@/hooks/use-business"
 import { useEmployees } from "@/hooks/use-schedule"
 import { MemoSection } from "./memo-section"
+import { TASK_STATUS_CONFIG, type TaskStatus } from "./mock-data"
 
 type StatusFilter = "all" | IssueStatus
 
@@ -177,9 +181,14 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
   const [detail, setDetail] = useState(issue.detail)
   const [deadline, setDeadline] = useState(issue.deadline ?? "")
   const [assigneeId, setAssigneeId] = useState(issue.assigneeId ?? "")
+  const [newTaskTitle, setNewTaskTitle] = useState("")
+  const [showTaskForm, setShowTaskForm] = useState(false)
   const addNoteMutation = useAddBusinessIssueNote()
   const updateIssueMutation = useUpdateBusinessIssue()
   const deleteIssueMutation = useDeleteBusinessIssue()
+  const createTaskMutation = useCreateBusinessTask()
+  const updateTaskMutation = useUpdateBusinessTask()
+  const { data: issueTasks = [] } = useBusinessTasks({ issueId: issue.id })
   const { data: employees = [] } = useEmployees()
 
   // issue が切り替わった時にローカルstateを同期
@@ -347,6 +356,83 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
               </div>
             )}
           </div>
+        </div>
+
+        <Separator />
+
+        {/* 紐づくタスク */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-muted-foreground">紐づくタスク</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-[10px] cursor-pointer"
+              onClick={() => setShowTaskForm(true)}
+            >
+              <Plus className="w-3 h-3 mr-1" />追加
+            </Button>
+          </div>
+
+          {showTaskForm && (
+            <div className="mb-3 p-2 rounded border bg-muted/30 space-y-2">
+              <Input
+                className="text-xs h-7"
+                placeholder="タスク名を入力..."
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing && newTaskTitle.trim()) {
+                    createTaskMutation.mutate({
+                      projectId: issue.projectId,
+                      title: newTaskTitle.trim(),
+                      issueId: issue.id,
+                    }, { onSuccess: () => { setNewTaskTitle(""); setShowTaskForm(false) } })
+                  }
+                }}
+              />
+              <div className="flex gap-1 justify-end">
+                <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setShowTaskForm(false); setNewTaskTitle("") }}>
+                  キャンセル
+                </Button>
+                <Button size="sm" className="h-6 text-[10px]" disabled={!newTaskTitle.trim() || createTaskMutation.isPending} onClick={() => {
+                  createTaskMutation.mutate({
+                    projectId: issue.projectId,
+                    title: newTaskTitle.trim(),
+                    issueId: issue.id,
+                  }, { onSuccess: () => { setNewTaskTitle(""); setShowTaskForm(false) } })
+                }}>
+                  追加
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {issueTasks.length === 0 ? (
+            <p className="text-xs text-muted-foreground">タスクなし</p>
+          ) : (
+            <div className="space-y-1">
+              {(issueTasks as any[]).map((task) => {
+                const ts = TASK_STATUS_CONFIG[task.status as TaskStatus]
+                return (
+                  <div key={task.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/30 border-l-2 border-primary/30">
+                    <select
+                      className={cn("text-[10px] font-semibold border rounded px-1 py-0.5 cursor-pointer", ts?.className)}
+                      value={task.status}
+                      onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { status: e.target.value } })}
+                    >
+                      {Object.entries(TASK_STATUS_CONFIG).map(([k, v]) => (
+                        <option key={k} value={k}>{v.label}</option>
+                      ))}
+                    </select>
+                    <span className="truncate flex-1">{task.title}</span>
+                    {task.assigneeName && <span className="text-[10px] text-muted-foreground shrink-0">{task.assigneeName}</span>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <Separator />

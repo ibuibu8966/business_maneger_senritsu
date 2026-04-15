@@ -40,6 +40,7 @@ export class UpdateBusinessTask {
       dbData.notifyMinutesBefore = data.notifyMinutesBefore
       dbData.notifiedExecAt = null
     }
+    if (data.issueId !== undefined) dbData.issueId = data.issueId || null
     const result = await BusinessTaskRepository.update(id, dbData)
 
     try {

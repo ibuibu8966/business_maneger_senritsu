@@ -153,6 +153,10 @@ export interface TaskItem {
   businessPurpose: string
   businessStatus: "active" | "on-hold" | "completed"
   businessPriority: Priority
+  // 課題紐づけ
+  issueId: string | null
+  issueTitle: string | null
+  issueStatus: IssueStatus | null
   // チェックリスト
   checklistItems: ChecklistItem[]
 }

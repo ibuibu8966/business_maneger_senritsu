@@ -383,6 +383,10 @@ export interface BusinessTaskDTO {
   businessPurpose: string
   businessStatus: "active" | "on-hold" | "completed"
   businessPriority: "highest" | "high" | "medium" | "low"
+  // 課題紐づけ
+  issueId: string | null
+  issueTitle: string | null
+  issueStatus: "unresolved" | "in-progress" | "resolved" | null
   // チェックリスト
   checklistItems: TaskChecklistItemDTO[]
 }

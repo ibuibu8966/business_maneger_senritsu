@@ -5,7 +5,7 @@ const STATUS_MAP: Record<string, string> = { ACTIVE: "active", ON_HOLD: "on-hold
 const PRIORITY_MAP: Record<string, string> = { HIGHEST: "highest", HIGH: "high", MEDIUM: "medium", LOW: "low" }
 
 export class GetBusinessTasks {
-  static async execute(params?: { projectId?: string; assigneeId?: string; status?: string; contactId?: string }) {
+  static async execute(params?: { projectId?: string; assigneeId?: string; status?: string; contactId?: string; issueId?: string }) {
     const tasks = await BusinessTaskRepository.findMany(params)
     return tasks.map((t: any) => ({
       id: t.id,
@@ -58,6 +58,10 @@ export class GetBusinessTasks {
       businessPurpose: t.project?.business?.purpose ?? "",
       businessStatus: STATUS_MAP[t.project?.business?.status] ?? "active",
       businessPriority: PRIORITY_MAP[t.project?.business?.priority] ?? "medium",
+      // 課題紐づけ
+      issueId: t.issueId ?? null,
+      issueTitle: t.issue?.title ?? null,
+      issueStatus: t.issue?.status ? (({ UNRESOLVED: "unresolved", IN_PROGRESS: "in-progress", RESOLVED: "resolved" } as Record<string, string>)[t.issue.status] ?? null) : null,
       // チェックリスト
       checklistItems: (t.checklistItems ?? []).map((ci: any) => ({
         id: ci.id,

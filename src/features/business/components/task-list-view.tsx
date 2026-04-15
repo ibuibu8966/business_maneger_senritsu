@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star } from "lucide-react"
+import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star, AlertCircle } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -76,6 +76,7 @@ function TaskCreateDialog({
   employees,
   contacts,
   partners,
+  issues,
   taskCount,
   currentUserName,
 }: {
@@ -86,6 +87,7 @@ function TaskCreateDialog({
   employees: { id: string; name: string }[]
   contacts: { id: string; name: string }[]
   partners: { id: string; name: string }[]
+  issues: { id: string; title: string; projectId: string }[]
   taskCount: number
   currentUserName: string
 }) {
@@ -105,6 +107,7 @@ function TaskCreateDialog({
   const [partnerId, setPartnerId] = useState("")
   const [priority, setPriority] = useState("medium")
   const [tool, setTool] = useState("")
+  const [issueId, setIssueId] = useState("")
   const createTaskMutation = useCreateBusinessTask()
 
   const handleCreate = () => {
@@ -135,6 +138,7 @@ function TaskCreateDialog({
       executionTime: executionTime || null,
       notifyEnabled: notifyMinutesBefore !== 0,
       notifyMinutesBefore: notifyMinutesBefore === 0 ? 0 : notifyMinutesBefore,
+      issueId: issueId || null,
     })
     onClose()
     setTitle("")
@@ -152,6 +156,7 @@ function TaskCreateDialog({
     setPartnerId("")
     setPriority("medium")
     setTool("")
+    setIssueId("")
   }
 
   return (
@@ -270,6 +275,15 @@ function TaskCreateDialog({
                 <option value="IN_PERSON">対面</option>
               </select>
             </div>
+          </div>
+          <div>
+            <Label className="text-xs">紐づく課題</Label>
+            <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={issueId} onChange={(e) => setIssueId(e.target.value)}>
+              <option value="">なし</option>
+              {issues.filter((i) => !projectId || i.projectId === projectId).map((i) => (
+                <option key={i.id} value={i.id}>{i.title}</option>
+              ))}
+            </select>
           </div>
           <label className="flex items-center gap-2 text-xs cursor-pointer">
             <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="rounded" />
@@ -446,6 +460,11 @@ function SortableTaskRow({
         </div>
         <div className="flex items-center gap-2 text-muted-foreground mt-0.5">
           {task.projectName && <span className="text-[10px]">{task.businessName} / {task.projectName}</span>}
+          {task.issueTitle && (
+            <span className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">
+              課題: {task.issueTitle}
+            </span>
+          )}
           {task.contactName && (
             <span className="text-[10px]">
               {task.tool && TOOL_CONFIG[task.tool] ? TOOL_CONFIG[task.tool].emoji + " " : ""}
@@ -1122,6 +1141,7 @@ function TaskDetailPanel({
   memoRef,
   contacts,
   partners,
+  issues,
 }: {
   task: TaskItem
   onClose: () => void
@@ -1130,6 +1150,7 @@ function TaskDetailPanel({
   memoRef: React.RefObject<HTMLTextAreaElement | null>
   contacts: { id: string; name: string }[]
   partners: { id: string; name: string }[]
+  issues: { id: string; title: string; projectId: string }[]
 }) {
   const [showRecurring, setShowRecurring] = useState(false)
   const { data: employees = [] } = useEmployees()
@@ -1175,6 +1196,21 @@ function TaskDetailPanel({
           </button>
         )}
         <span className="text-[10px] text-muted-foreground ml-auto">{task.businessName} &gt; {task.projectName}</span>
+      </div>
+
+      {/* 紐づく課題 */}
+      <div className="flex items-center gap-2">
+        <AlertCircle className="w-3 h-3 text-orange-500 shrink-0" />
+        <select
+          className="text-xs border rounded px-1.5 py-0.5 bg-background cursor-pointer flex-1"
+          value={task.issueId ?? ""}
+          onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { issueId: e.target.value || null } })}
+        >
+          <option value="">課題なし</option>
+          {issues.filter((i) => i.projectId === task.projectId).map((i) => (
+            <option key={i.id} value={i.id}>{i.title}</option>
+          ))}
+        </select>
       </div>
 
       {/* 繰り返し設定セクション */}
@@ -1720,6 +1756,7 @@ export function TaskListView() {
           memoRef={memoRef}
           contacts={contactsList as unknown as { id: string; name: string }[]}
           partners={partnersList as unknown as { id: string; name: string }[]}
+          issues={(issues as unknown as { id: string; title: string; projectId: string }[])}
         />
       )}
 
@@ -1742,6 +1779,7 @@ export function TaskListView() {
         employees={allEmployees}
         contacts={contactsList as unknown as { id: string; name: string }[]}
         partners={partnersList as unknown as { id: string; name: string }[]}
+        issues={(issues as unknown as { id: string; title: string; projectId: string }[])}
         taskCount={allTasks.length}
         currentUserName={session?.user?.name ?? "野田"}
       />

@@ -26,6 +26,7 @@ export class CreateBusinessTask {
     executionTime?: string | null
     notifyEnabled?: boolean
     notifyMinutesBefore?: number
+    issueId?: string | null
   }) {
     const result = await BusinessTaskRepository.create({
       projectId: data.projectId,
@@ -48,6 +49,7 @@ export class CreateBusinessTask {
       executionTime: data.executionTime !== undefined ? data.executionTime : "09:00",
       notifyEnabled: data.notifyEnabled ?? true,
       notifyMinutesBefore: data.notifyMinutesBefore ?? 10,
+      issueId: data.issueId ?? null,
     })
 
     try {

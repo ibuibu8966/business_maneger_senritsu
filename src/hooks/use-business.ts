@@ -117,7 +117,7 @@ export function useDeleteProject() {
 
 // ========== Business Tasks ==========
 
-export function useBusinessTasks(params?: { projectId?: string; assigneeId?: string; contactId?: string }) {
+export function useBusinessTasks(params?: { projectId?: string; assigneeId?: string; contactId?: string; issueId?: string }) {
   const keyParams: Record<string, string> | undefined = params
     ? Object.fromEntries(
         Object.entries(params)

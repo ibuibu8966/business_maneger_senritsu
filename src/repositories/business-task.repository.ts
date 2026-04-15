@@ -6,6 +6,7 @@ export class BusinessTaskRepository {
     assigneeId?: string
     status?: string
     contactId?: string
+    issueId?: string
   }) {
     return prisma.businessTask.findMany({
       where: {
@@ -13,6 +14,7 @@ export class BusinessTaskRepository {
         ...(params?.assigneeId && { assigneeId: params.assigneeId }),
         ...(params?.status && { status: params.status as any }),
         ...(params?.contactId && { contactId: params.contactId }),
+        ...(params?.issueId && { issueId: params.issueId }),
         project: { status: "ACTIVE" },
       },
       include: {
@@ -34,6 +36,7 @@ export class BusinessTaskRepository {
         assignee: { select: { id: true, name: true } },
         contact: { select: { id: true, name: true } },
         partner: { select: { id: true, name: true } },
+        issue: { select: { id: true, title: true, status: true, priority: true } },
         checklistItems: { orderBy: { sortOrder: "asc" } },
       },
       orderBy: { sortOrder: "asc" },

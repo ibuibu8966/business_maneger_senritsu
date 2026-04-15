@@ -97,6 +97,7 @@ const createTaskSchema = z.object({
   executionTime: z.string().nullable().optional(), // "HH:MM"
   notifyEnabled: z.boolean().optional(),
   notifyMinutesBefore: z.number().int().optional(), // 0/5/10/15/30/60
+  issueId: z.string().nullable().optional(),
 })
 
 const updateTaskSchema = createTaskSchema.partial()
@@ -263,7 +264,8 @@ export class BusinessTaskController {
       const projectId = url.searchParams.get("projectId") ?? undefined
       const assigneeId = url.searchParams.get("assigneeId") ?? undefined
       const contactId = url.searchParams.get("contactId") ?? undefined
-      const data = await GetBusinessTasks.execute({ projectId, assigneeId, contactId })
+      const issueId = url.searchParams.get("issueId") ?? undefined
+      const data = await GetBusinessTasks.execute({ projectId, assigneeId, contactId, issueId })
       return NextResponse.json(data)
     } catch (e) {
       logger.error("タスク一覧の取得に失敗しました", e)

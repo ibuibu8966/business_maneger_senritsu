@@ -643,10 +643,11 @@ export async function deleteBusiness(id: string): Promise<void> {
 }
 
 // --- タスク ---
-export async function fetchBusinessTasks(params?: { projectId?: string; assigneeId?: string }): Promise<BusinessTaskDTO[]> {
+export async function fetchBusinessTasks(params?: { projectId?: string; assigneeId?: string; issueId?: string }): Promise<BusinessTaskDTO[]> {
   const url = new URL(`${BUSINESS_BASE}/tasks`, window.location.origin)
   if (params?.projectId) url.searchParams.set("projectId", params.projectId)
   if (params?.assigneeId) url.searchParams.set("assigneeId", params.assigneeId)
+  if (params?.issueId) url.searchParams.set("issueId", params.issueId)
   const res = await fetch(url)
   if (!res.ok) throw new Error("タスク一覧の取得に失敗")
   return res.json()
