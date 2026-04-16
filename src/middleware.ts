@@ -52,9 +52,15 @@ export async function middleware(req: NextRequest) {
     }
 
     // API ルートの認証チェック（cron エンドポイント等の例外は Authorization ヘッダーで判定）
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const authHeader = req.headers.get("authorization") ?? ""
+    const isCronRequest =
+      process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`
+
+    if (!isCronRequest) {
+      const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+      if (!token) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
     }
 
     // CSRF 対策: 書き込み操作の Origin 検証
