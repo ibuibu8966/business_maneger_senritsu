@@ -804,8 +804,8 @@ function ProjectTreeNode({
 }) {
   const isExpanded = expandedIds.has(proj.id)
   const children = allProjects.filter((p) => p.parentId === proj.id)
-  const tasks = allTasks.filter((t) => t.projectId === proj.id)
-  const issues = allIssues.filter((i) => i.projectId === proj.id)
+  const tasks = allTasks.filter((t) => t.projectId === proj.id && t.status !== "done")
+  const issues = allIssues.filter((i) => i.projectId === proj.id && i.status !== "resolved")
   const unresolvedCount = issues.filter((i) => i.status !== "resolved").length
   return (
     <div style={{ paddingLeft: depth > 0 ? 12 : 0 }}>
@@ -1717,7 +1717,9 @@ export function TaskListView() {
   // フィルタリング
   const filteredTasks = allTasks.filter((t) => {
     if (filterStaffId !== "all" && t.assigneeId !== filterStaffId) return false
-    if (filterStatus !== "all" && t.status !== filterStatus) return false
+    if (filterStatus === "all") {
+      if (t.status === "done") return false // 「すべて」でも完了は除外
+    } else if (t.status !== filterStatus) return false
     if (showTodayOnly && !t.todayFlag) return false
     return true
   }).sort((a, b) => a.sortOrder - b.sortOrder)

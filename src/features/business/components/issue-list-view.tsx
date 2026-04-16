@@ -183,6 +183,7 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
   const [deadline, setDeadline] = useState(issue.deadline ?? "")
   const [assigneeId, setAssigneeId] = useState(issue.assigneeId ?? "")
   const [newTaskTitle, setNewTaskTitle] = useState("")
+  const [newTaskAssigneeId, setNewTaskAssigneeId] = useState(issue.assigneeId ?? "")
   const [showTaskForm, setShowTaskForm] = useState(false)
   const addNoteMutation = useAddBusinessIssueNote()
   const updateIssueMutation = useUpdateBusinessIssue()
@@ -390,10 +391,21 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
                       projectId: issue.projectId,
                       title: newTaskTitle.trim(),
                       issueId: issue.id,
+                      assigneeId: newTaskAssigneeId || null,
                     }, { onSuccess: () => { setNewTaskTitle(""); setShowTaskForm(false) } })
                   }
                 }}
               />
+              <select
+                className="text-xs border rounded px-1.5 py-0.5 bg-background cursor-pointer w-full h-7"
+                value={newTaskAssigneeId}
+                onChange={(e) => setNewTaskAssigneeId(e.target.value)}
+              >
+                <option value="">担当者未割当</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>{emp.name}</option>
+                ))}
+              </select>
               <div className="flex gap-1 justify-end">
                 <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setShowTaskForm(false); setNewTaskTitle("") }}>
                   キャンセル
@@ -403,6 +415,7 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
                     projectId: issue.projectId,
                     title: newTaskTitle.trim(),
                     issueId: issue.id,
+                    assigneeId: newTaskAssigneeId || null,
                   }, { onSuccess: () => { setNewTaskTitle(""); setShowTaskForm(false) } })
                 }}>
                   追加
@@ -411,11 +424,13 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
             </div>
           )}
 
-          {issueTasks.length === 0 ? (
-            <p className="text-xs text-muted-foreground">タスクなし</p>
-          ) : (
+          {(() => {
+            const activeTasks = (issueTasks as any[]).filter((t) => t.status !== "done")
+            return activeTasks.length === 0 ? (
+              <p className="text-xs text-muted-foreground">タスクなし</p>
+            ) : (
             <div className="space-y-1">
-              {(issueTasks as any[]).map((task) => {
+              {activeTasks.map((task) => {
                 const ts = TASK_STATUS_CONFIG[task.status as TaskStatus]
                 return (
                   <div key={task.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-muted/30 border-l-2 border-primary/30">
@@ -434,7 +449,8 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
                 )
               })}
             </div>
-          )}
+            )
+          })()}
         </div>
 
         <Separator />
@@ -670,7 +686,9 @@ export function IssueListView() {
   const priorityOrder: Priority[] = ["highest", "high", "medium", "low"]
   const filtered = allIssues.filter((issue) => {
     if (selectedProjectId && issue.projectId !== selectedProjectId) return false
-    if (statusFilter !== "all" && issue.status !== statusFilter) return false
+    if (statusFilter === "all") {
+      if (issue.status === "resolved") return false // 「すべて」でも解決済みは除外
+    } else if (issue.status !== statusFilter) return false
     if (assigneeFilter !== "all" && issue.assigneeId !== assigneeFilter) return false
     return true
   }).sort((a, b) => priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority))
