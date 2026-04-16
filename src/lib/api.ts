@@ -807,16 +807,17 @@ export async function deleteChecklistTemplate(id: string) {
 
 // ========== メモ ==========
 
-export async function fetchBusinessMemos(params?: { businessId?: string; projectId?: string }): Promise<BusinessMemoDTO[]> {
+export async function fetchBusinessMemos(params?: { businessId?: string; projectId?: string; issueId?: string }): Promise<BusinessMemoDTO[]> {
   const url = new URL(`${BUSINESS_BASE}/memos`, window.location.origin)
   if (params?.businessId) url.searchParams.set("businessId", params.businessId)
   if (params?.projectId) url.searchParams.set("projectId", params.projectId)
+  if (params?.issueId) url.searchParams.set("issueId", params.issueId)
   const res = await fetch(url)
   if (!res.ok) throw new Error("メモ一覧の取得に失敗")
   return res.json()
 }
 
-export async function createBusinessMemo(data: { businessId?: string; projectId?: string; date: string; content: string; author?: string }): Promise<BusinessMemoDTO> {
+export async function createBusinessMemo(data: { businessId?: string; projectId?: string; issueId?: string; date: string; content: string; author?: string }): Promise<BusinessMemoDTO> {
   const res = await fetch(`${BUSINESS_BASE}/memos`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

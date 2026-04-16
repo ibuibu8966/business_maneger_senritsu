@@ -408,6 +408,7 @@ export interface BusinessMemoDTO {
   id: string
   businessId: string | null
   projectId: string | null
+  issueId: string | null
   date: string
   content: string
   author: string

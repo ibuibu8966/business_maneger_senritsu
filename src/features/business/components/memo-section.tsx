@@ -35,13 +35,15 @@ function MemoItem({ memo, onDelete }: { memo: BusinessMemoDTO; onDelete: (id: st
 export function MemoSection({
   businessId,
   projectId,
+  issueId,
   compact = false,
 }: {
   businessId?: string
   projectId?: string
+  issueId?: string
   compact?: boolean
 }) {
-  const { data: memos = [] } = useBusinessMemos({ businessId, projectId })
+  const { data: memos = [] } = useBusinessMemos({ businessId, projectId, issueId })
   const createMemo = useCreateBusinessMemo()
   const deleteMemo = useDeleteBusinessMemo()
 
@@ -53,6 +55,7 @@ export function MemoSection({
     createMemo.mutate({
       businessId,
       projectId,
+      issueId,
       date: new Date().toISOString().split("T")[0],
       content: newContent.trim(),
       author: "野田",

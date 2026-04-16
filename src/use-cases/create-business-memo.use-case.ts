@@ -4,6 +4,7 @@ export class CreateBusinessMemo {
   static async execute(data: {
     businessId?: string
     projectId?: string
+    issueId?: string
     date: string
     content: string
     author?: string
@@ -11,6 +12,7 @@ export class CreateBusinessMemo {
     return BusinessMemoRepository.create({
       businessId: data.businessId,
       projectId: data.projectId,
+      issueId: data.issueId,
       date: new Date(data.date),
       content: data.content,
       author: data.author ?? "",

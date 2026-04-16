@@ -15,9 +15,17 @@ export class BusinessMemoRepository {
     })
   }
 
+  static async findByIssueId(issueId: string) {
+    return prisma.businessMemo.findMany({
+      where: { issueId },
+      orderBy: { date: "desc" },
+    })
+  }
+
   static async create(data: {
     businessId?: string
     projectId?: string
+    issueId?: string
     date: Date
     content: string
     author: string

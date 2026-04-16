@@ -235,7 +235,7 @@ export function useAddBusinessIssueNote() {
 
 // ========== Business Memos ==========
 
-export function useBusinessMemos(params?: { businessId?: string; projectId?: string }) {
+export function useBusinessMemos(params?: { businessId?: string; projectId?: string; issueId?: string }) {
   const keyParams: Record<string, string> | undefined = params
     ? Object.fromEntries(
         Object.entries(params)
@@ -254,7 +254,7 @@ export function useBusinessMemos(params?: { businessId?: string; projectId?: str
 export function useCreateBusinessMemo() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { businessId?: string; projectId?: string; date: string; content: string; author?: string }) =>
+    mutationFn: (data: { businessId?: string; projectId?: string; issueId?: string; date: string; content: string; author?: string }) =>
       createBusinessMemo(data),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.businessMemos.all })

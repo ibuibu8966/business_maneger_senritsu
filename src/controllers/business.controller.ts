@@ -124,6 +124,7 @@ const addNoteSchema = z.object({
 const createMemoSchema = z.object({
   businessId: z.string().optional(),
   projectId: z.string().optional(),
+  issueId: z.string().optional(),
   date: z.string(),
   content: z.string().min(1),
   author: z.string().optional(),
@@ -396,7 +397,8 @@ export class BusinessMemoController {
       const url = new URL(req.url)
       const businessId = url.searchParams.get("businessId") ?? undefined
       const projectId = url.searchParams.get("projectId") ?? undefined
-      const data = await GetBusinessMemos.execute({ businessId, projectId })
+      const issueId = url.searchParams.get("issueId") ?? undefined
+      const data = await GetBusinessMemos.execute({ businessId, projectId, issueId })
       return NextResponse.json(data)
     } catch (e) {
       logger.error("メモ一覧の取得に失敗しました", e)

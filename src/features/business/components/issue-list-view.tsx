@@ -509,8 +509,8 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
 
         <Separator />
 
-        {/* プロジェクトメモ */}
-        <MemoSection projectId={issue.projectId} compact />
+        {/* 課題メモ */}
+        <MemoSection issueId={issue.id} compact />
 
         <Separator />
 

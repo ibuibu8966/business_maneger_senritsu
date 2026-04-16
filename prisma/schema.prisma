@@ -194,6 +194,7 @@ model BusinessIssue {
 
   progressNotes BusinessIssueNote[]
   tasks         BusinessTask[]
+  memos         BusinessMemo[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -223,6 +224,8 @@ model BusinessMemo {
   business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
   projectId  String?                                   // プロジェクトに紐づく場合
   project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issueId    String?                                   // 課題に紐づく場合
+  issue      BusinessIssue? @relation(fields: [issueId], references: [id], onDelete: Cascade)
   date       DateTime  @db.Date                        // 記録日
   content    String                                    // 内容
   author     String    @default("")                    // 記入者名
@@ -230,6 +233,7 @@ model BusinessMemo {
 
   @@index([businessId])
   @@index([projectId])
+  @@index([issueId])
   @@map("business_memos")
 }
 
