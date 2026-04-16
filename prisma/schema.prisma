@@ -105,6 +105,7 @@ model Project {
 // ========== 事業タスク ==========
 model BusinessTask {
   id          String             @id @default(cuid())
+  seqNumber   Int?               @unique              // 通し番号（タスク・課題共通シーケンス）
   projectId   String                                  // 所属プロジェクト
   project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   title       String                                  // タスク名
@@ -177,6 +178,7 @@ model TaskMissedLog {
 // ========== 事業課題 ==========
 model BusinessIssue {
   id          String              @id @default(cuid())
+  seqNumber   Int?                @unique              // 通し番号（タスク・課題共通シーケンス）
   projectId   String                                   // 所属プロジェクト
   project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   title       String                                   // 課題名

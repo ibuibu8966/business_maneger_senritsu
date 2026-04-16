@@ -1,5 +1,6 @@
 import { BusinessIssueRepository } from "@/repositories/business-issue.repository"
 import { AuditLogRepository } from "@/repositories/audit-log.repository"
+import { prisma } from "@/lib/prisma"
 
 const ISSUE_STATUS_TO_DB: Record<string, string> = { unresolved: "UNRESOLVED", "in-progress": "IN_PROGRESS", resolved: "RESOLVED" }
 const PRIORITY_TO_DB: Record<string, string> = { highest: "HIGHEST", high: "HIGH", medium: "MEDIUM", low: "LOW" }
@@ -15,8 +16,13 @@ export class CreateBusinessIssue {
     priority?: string
     status?: string
   }) {
+    // 通し番号を採番
+    const seqResult = await prisma.$queryRaw<[{ nextval: bigint }]>`SELECT nextval('task_issue_seq')`
+    const seqNumber = Number(seqResult[0].nextval)
+
     const result = await BusinessIssueRepository.create({
       projectId: data.projectId,
+      seqNumber,
       title: data.title,
       detail: data.detail ?? "",
       assigneeId: data.assigneeId ?? null,

@@ -336,6 +336,7 @@ export interface TaskChecklistItemDTO {
 
 export interface BusinessTaskDTO {
   id: string
+  seqNumber: number | null
   projectId: string
   projectName: string
   title: string
@@ -422,6 +423,7 @@ export interface BusinessIssueNoteDTO {
 
 export interface BusinessIssueDTO {
   id: string
+  seqNumber: number | null
   projectId: string
   projectName: string
   title: string

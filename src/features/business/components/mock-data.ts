@@ -105,6 +105,7 @@ export interface ChecklistItem {
 
 export interface TaskItem {
   id: string
+  seqNumber: number | null
   projectId: string
   projectName: string
   title: string
@@ -172,6 +173,7 @@ export interface ProgressNote {
 
 export interface IssueItem {
   id: string
+  seqNumber: number | null
   projectId: string
   projectName: string
   title: string

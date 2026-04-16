@@ -9,6 +9,7 @@ export class GetBusinessTasks {
     const tasks = await BusinessTaskRepository.findMany(params)
     return tasks.map((t: any) => ({
       id: t.id,
+      seqNumber: t.seqNumber ?? null,
       projectId: t.projectId,
       projectName: t.project?.name ?? "",
       title: t.title,

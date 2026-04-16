@@ -8,6 +8,7 @@ export class GetBusinessIssues {
     const issues = await BusinessIssueRepository.findMany(params)
     return issues.map((i) => ({
       id: i.id,
+      seqNumber: i.seqNumber ?? null,
       projectId: i.projectId,
       projectName: i.project?.name ?? null,
       title: i.title,

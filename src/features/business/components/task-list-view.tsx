@@ -456,6 +456,7 @@ function SortableTaskRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           {task.recurring && <Repeat className="w-3 h-3 text-blue-500 shrink-0" />}
+          {task.seqNumber && <span className="text-[10px] text-muted-foreground font-mono shrink-0">#{task.seqNumber}</span>}
           <span className="font-medium truncate">{task.title}</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground mt-0.5">
@@ -1205,7 +1206,10 @@ function TaskDetailPanel({
             <Plus className="w-3 h-3" />繰り返し設定
           </button>
         )}
-        <span className="text-[10px] text-muted-foreground ml-auto">{task.businessName} &gt; {task.projectName}</span>
+        <span className="text-[10px] text-muted-foreground ml-auto">
+          {task.seqNumber && <span className="font-mono font-bold mr-1">#{task.seqNumber}</span>}
+          {task.businessName} &gt; {task.projectName}
+        </span>
       </div>
 
       {/* 紐づく課題 */}
@@ -1677,7 +1681,7 @@ export function TaskListView() {
   const userId = session?.user?.id
   const isAdmin = userRole === "master_admin" || userRole === "admin"
 
-  const [filterStaffId, setFilterStaffId] = useState<string>("all")
+  const [filterStaffId, setFilterStaffId] = useState<string>(userId ?? "all")
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all")
   const [showTodayOnly, setShowTodayOnly] = useState<boolean>(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)

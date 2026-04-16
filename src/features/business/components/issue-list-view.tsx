@@ -37,6 +37,7 @@ import {
   useUpdateBusinessTask,
 } from "@/hooks/use-business"
 import { useEmployees } from "@/hooks/use-schedule"
+import { useSession } from "next-auth/react"
 import { MemoSection } from "./memo-section"
 import { TASK_STATUS_CONFIG, type TaskStatus } from "./mock-data"
 
@@ -221,6 +222,7 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
     <div className="border-l bg-card h-full overflow-y-auto w-[380px]">
       <div className="p-4 border-b sticky top-0 bg-card z-10">
         <div className="flex items-center justify-between">
+          {issue.seqNumber && <span className="text-xs text-muted-foreground font-mono font-bold mr-1.5 shrink-0">#{issue.seqNumber}</span>}
           <input
             className={cn("text-sm font-bold truncate flex-1 mr-2", inlineInput)}
             value={title}
@@ -637,8 +639,12 @@ function IssueCreateDialog({
 // ===== メインコンポーネント =====
 
 export function IssueListView() {
+  const { data: session } = useSession()
+  const userId = session?.user?.id
+
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [assigneeFilter, setAssigneeFilter] = useState<string>(userId ?? "all")
   const [selectedIssue, setSelectedIssue] = useState<IssueItem | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
@@ -665,6 +671,7 @@ export function IssueListView() {
   const filtered = allIssues.filter((issue) => {
     if (selectedProjectId && issue.projectId !== selectedProjectId) return false
     if (statusFilter !== "all" && issue.status !== statusFilter) return false
+    if (assigneeFilter !== "all" && issue.assigneeId !== assigneeFilter) return false
     return true
   }).sort((a, b) => priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority))
 
@@ -755,6 +762,16 @@ export function IssueListView() {
             )
           })}
           <div className="flex-1" />
+          <select
+            className="text-xs border rounded-md px-2 py-1 bg-background cursor-pointer"
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+          >
+            <option value="all">全員</option>
+            {allEmployees.map((emp) => (
+              <option key={emp.id} value={emp.id}>{emp.name}</option>
+            ))}
+          </select>
           <Button size="sm" className="h-7 text-xs cursor-pointer" onClick={() => setCreateDialogOpen(true)}>
             <Plus className="w-3 h-3 mr-1" />課題登録
           </Button>
@@ -784,6 +801,7 @@ export function IssueListView() {
                     <Badge variant="outline" className={cn("text-[10px] shrink-0 mt-0.5", s.className)}>{s.label}</Badge>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
+                        {issue.seqNumber && <span className="text-[10px] text-muted-foreground font-mono shrink-0">#{issue.seqNumber}</span>}
                         <span className="text-sm font-medium truncate">{issue.title}</span>
                         <span className={cn("text-[10px] shrink-0 px-1.5 py-0.5 rounded-full font-medium", p.bgClassName)}>{p.label}</span>
                       </div>
