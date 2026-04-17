@@ -160,8 +160,27 @@ export function useUpdateSubscription() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       updateSubscription(id, data),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all })
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.subscriptions.all })
+      await queryClient.cancelQueries({ queryKey: queryKeys.contacts.all })
+      const subsSnaps = queryClient.getQueriesData<unknown>({ queryKey: queryKeys.subscriptions.all })
+      const contactSnaps = queryClient.getQueriesData<unknown>({ queryKey: queryKeys.contacts.all })
+      const patchSub = (s: Record<string, unknown>) => (s.id === id ? { ...s, ...data } : s)
+      queryClient.setQueriesData({ queryKey: queryKeys.subscriptions.all }, (old: unknown) =>
+        Array.isArray(old) ? (old as Array<Record<string, unknown>>).map(patchSub) : old,
+      )
+      queryClient.setQueriesData({ queryKey: queryKeys.contacts.all }, (old: unknown) => {
+        if (old && typeof old === "object" && Array.isArray((old as { subscriptions?: unknown[] }).subscriptions)) {
+          const c = old as Record<string, unknown> & { subscriptions: Array<Record<string, unknown>> }
+          return { ...c, subscriptions: c.subscriptions.map(patchSub) }
+        }
+        return old
+      })
+      return { subsSnaps, contactSnaps }
+    },
+    onError: (_err, _vars, ctx) => {
+      ctx?.subsSnaps.forEach(([k, d]) => queryClient.setQueryData(k, d))
+      ctx?.contactSnaps.forEach(([k, d]) => queryClient.setQueryData(k, d))
     },
   })
 }

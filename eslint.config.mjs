@@ -5,6 +5,16 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-debugger": "error",
+      "prefer-const": "error",
+      "eqeqeq": ["error", "smart"],
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -12,6 +22,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "src/generated/**",
+    "prisma/migrations/**",
+    "tests/**",
+    "scripts/**",
   ]),
 ]);
 

@@ -577,6 +577,8 @@ model Contact {
 
   @@index([type])
   @@index([isArchived])
+  @@index([realName])
+  @@index([nicknames], type: Gin)
   @@map("contacts")
 }
 

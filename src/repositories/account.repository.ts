@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { idNameSelect } from "@/lib/prisma-selects"
 import type { OwnerType, AccountType } from "@/generated/prisma/client"
 
 export class AccountRepository {
@@ -30,7 +31,7 @@ export class AccountRepository {
         ...(params.isActive !== undefined && { isActive: params.isActive }),
       },
       include: {
-        business: { select: { id: true, name: true } },
+        business: { select: idNameSelect },
       },
       orderBy: { createdAt: "asc" },
     })
@@ -40,7 +41,7 @@ export class AccountRepository {
     return prisma.account.findUnique({
       where: { id },
       include: {
-        business: { select: { id: true, name: true } },
+        business: { select: idNameSelect },
       },
     })
   }
@@ -67,7 +68,7 @@ export class AccountRepository {
         tags: data.tags ?? [],
       },
       include: {
-        business: { select: { id: true, name: true } },
+        business: { select: idNameSelect },
       },
     })
   }
@@ -91,7 +92,7 @@ export class AccountRepository {
       where: { id },
       data,
       include: {
-        business: { select: { id: true, name: true } },
+        business: { select: idNameSelect },
       },
     })
   }

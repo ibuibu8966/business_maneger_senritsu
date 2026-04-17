@@ -7,9 +7,6 @@ export class ContactRepository {
         ...(params.type && { type: params.type }),
         isArchived: params.isArchived ?? false,
       },
-      include: {
-        meetings: { orderBy: { date: "desc" }, take: 1, select: { date: true } },
-      },
       orderBy: { createdAt: "desc" },
     })
   }
@@ -20,21 +17,19 @@ export class ContactRepository {
       include: {
         subscriptions: {
           include: {
-            course: { include: { salon: true } },
+            course: {
+              select: {
+                id: true,
+                name: true,
+                discordRoleName: true,
+                salon: { select: { id: true, name: true } },
+              },
+            },
             paymentChecks: { orderBy: [{ year: "desc" }, { month: "desc" }], take: 12 },
           },
         },
-        tickets: {
-          include: { assignee: { select: { id: true, name: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        },
         partnerContacts: {
-          include: { partner: true },
-        },
-        meetings: {
-          orderBy: { date: "desc" },
-          take: 20,
+          include: { partner: { select: { id: true, name: true } } },
         },
       },
     })

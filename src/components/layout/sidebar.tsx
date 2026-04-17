@@ -54,6 +54,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={cn(
                 "relative flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
                 isActive
@@ -77,7 +78,7 @@ export function Sidebar() {
         <div className="border-t p-3 space-y-2">
           <ThemeToggle />
           <div className="flex items-center justify-between">
-            <Link href="/profile" className="min-w-0 flex-1 hover:opacity-80">
+            <Link href="/profile" prefetch={false} className="min-w-0 flex-1 hover:opacity-80">
               <p className="text-sm font-medium truncate">{session.user.name}</p>
               <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
             </Link>

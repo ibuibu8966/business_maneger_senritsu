@@ -127,7 +127,7 @@ export class ContactController {
         discordId: c.discordId, email: c.email, phone: c.phone, memo: c.memo,
         memberpayId: c.memberpayId, robotpayId: c.robotpayId, paypalId: c.paypalId,
         nextMeetingDate: c.nextMeetingDate?.toISOString() ?? null,
-        lastMeetingDate: c.lastMeetingDate?.toISOString() ?? c.meetings?.[0]?.date?.toISOString() ?? null,
+        lastMeetingDate: c.lastMeetingDate?.toISOString() ?? null,
         isFinalMeeting: c.isFinalMeeting, tags: c.tags,
         isArchived: c.isArchived, createdAt: c.createdAt.toISOString(),
       })))
@@ -140,7 +140,53 @@ export class ContactController {
       if (error) return error
       const c = await ContactRepository.findById(id)
       if (!c) return NextResponse.json({ error: "Not found" }, { status: 404 })
-      return NextResponse.json(c)
+      return NextResponse.json({
+        id: c.id,
+        name: c.name,
+        realName: c.realName,
+        nicknames: c.nicknames,
+        type: c.type.toLowerCase(),
+        occupation: c.occupation,
+        age: c.age,
+        interests: c.interests,
+        mindset: c.mindset,
+        lineId: c.lineId,
+        discordId: c.discordId,
+        email: c.email,
+        phone: c.phone,
+        memo: c.memo,
+        memberpayId: c.memberpayId,
+        robotpayId: c.robotpayId,
+        paypalId: c.paypalId,
+        nextMeetingDate: c.nextMeetingDate?.toISOString() ?? null,
+        lastMeetingDate: c.lastMeetingDate?.toISOString() ?? null,
+        isFinalMeeting: c.isFinalMeeting,
+        tags: c.tags,
+        isArchived: c.isArchived,
+        createdAt: c.createdAt.toISOString(),
+        subscriptions: c.subscriptions.map((s) => ({
+          id: s.id,
+          contactId: s.contactId,
+          contactName: c.name,
+          courseId: s.courseId,
+          courseName: s.course.name,
+          salonName: s.course.salon.name,
+          paymentMethod: s.paymentMethod.toLowerCase(),
+          paymentServiceId: s.paymentServiceId,
+          startDate: s.startDate.toISOString(),
+          endDate: s.endDate?.toISOString() ?? null,
+          status: s.status.toLowerCase(),
+          isExempt: s.isExempt,
+          discordRoleAssigned: s.discordRoleAssigned,
+          discordRoleName: s.course.discordRoleName,
+          paymentChecks: s.paymentChecks,
+        })),
+        partnerAffiliations: c.partnerContacts.map((pc) => ({
+          partnerId: pc.partnerId,
+          partnerName: pc.partner.name,
+          role: pc.role ?? "",
+        })),
+      })
     } catch { return NextResponse.json({ error: "連絡先の取得に失敗しました" }, { status: 500 }) }
   }
 

@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma"
+import { idNameSelect } from "@/lib/prisma-selects"
 
 export class PartnerRepository {
   static async findMany(params: { isArchived?: boolean } = {}) {
     return prisma.partner.findMany({
       where: { isArchived: params.isArchived ?? false },
       include: {
-        partnerContacts: { include: { contact: { select: { id: true, name: true } } } },
-        partnerBusinesses: { include: { business: { select: { id: true, name: true } } } },
+        partnerContacts: { include: { contact: { select: idNameSelect } } },
+        partnerBusinesses: { include: { business: { select: idNameSelect } } },
       },
       orderBy: { name: "asc" },
     })
@@ -16,8 +17,8 @@ export class PartnerRepository {
     return prisma.partner.findUnique({
       where: { id },
       include: {
-        partnerContacts: { include: { contact: { select: { id: true, name: true } } } },
-        partnerBusinesses: { include: { business: { select: { id: true, name: true } } } },
+        partnerContacts: { include: { contact: { select: idNameSelect } } },
+        partnerBusinesses: { include: { business: { select: idNameSelect } } },
       },
     })
   }
@@ -25,14 +26,14 @@ export class PartnerRepository {
   static async create(data: { name: string; memo?: string; tags?: string[] }) {
     return prisma.partner.create({
       data: { name: data.name, memo: data.memo ?? "", tags: data.tags ?? [] },
-      include: { partnerContacts: { include: { contact: { select: { id: true, name: true } } } }, partnerBusinesses: { include: { business: { select: { id: true, name: true } } } } },
+      include: { partnerContacts: { include: { contact: { select: idNameSelect } } }, partnerBusinesses: { include: { business: { select: idNameSelect } } } },
     })
   }
 
   static async update(id: string, data: { name?: string; memo?: string; businessDescription?: string; needs?: string; relationshipPlan?: string; tags?: string[]; isArchived?: boolean }) {
     return prisma.partner.update({
       where: { id }, data,
-      include: { partnerContacts: { include: { contact: { select: { id: true, name: true } } } }, partnerBusinesses: { include: { business: { select: { id: true, name: true } } } } },
+      include: { partnerContacts: { include: { contact: { select: idNameSelect } } }, partnerBusinesses: { include: { business: { select: idNameSelect } } } },
     })
   }
 
