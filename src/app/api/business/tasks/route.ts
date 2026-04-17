@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { BusinessTaskController } from "@/controllers/business.controller"
+import { BusinessTaskController } from "@/server/controllers/business.controller"
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)

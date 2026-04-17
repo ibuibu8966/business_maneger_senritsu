@@ -1,0 +1,457 @@
+import { logger } from "@/lib/logger"
+import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+import { GetBusinessDetails } from "@/server/use-cases/get-business-details.use-case"
+import { CreateBusiness } from "@/server/use-cases/create-business.use-case"
+import { UpdateBusinessDetail } from "@/server/use-cases/update-business-detail.use-case"
+import { DeleteBusiness } from "@/server/use-cases/delete-business.use-case"
+import { GetProjects } from "@/server/use-cases/get-projects.use-case"
+import { CreateProject } from "@/server/use-cases/create-project.use-case"
+import { UpdateProject } from "@/server/use-cases/update-project.use-case"
+import { DeleteProject } from "@/server/use-cases/delete-project.use-case"
+import { GetBusinessTasks } from "@/server/use-cases/get-business-tasks.use-case"
+import { CreateBusinessTask } from "@/server/use-cases/create-business-task.use-case"
+import { UpdateBusinessTask } from "@/server/use-cases/update-business-task.use-case"
+import { DeleteBusinessTask } from "@/server/use-cases/delete-business-task.use-case"
+import { ReorderBusinessTasks } from "@/server/use-cases/reorder-business-tasks.use-case"
+import { GetBusinessIssues } from "@/server/use-cases/get-business-issues.use-case"
+import { CreateBusinessIssue } from "@/server/use-cases/create-business-issue.use-case"
+import { UpdateBusinessIssue } from "@/server/use-cases/update-business-issue.use-case"
+import { DeleteBusinessIssue } from "@/server/use-cases/delete-business-issue.use-case"
+import { AddIssueNote } from "@/server/use-cases/add-issue-note.use-case"
+import { GetBusinessMemos } from "@/server/use-cases/get-business-memos.use-case"
+import { CreateBusinessMemo } from "@/server/use-cases/create-business-memo.use-case"
+import { DeleteBusinessMemo } from "@/server/use-cases/delete-business-memo.use-case"
+import { AddTaskChecklistItem } from "@/server/use-cases/add-task-checklist-item.use-case"
+import { UpdateTaskChecklistItem } from "@/server/use-cases/update-task-checklist-item.use-case"
+import { DeleteTaskChecklistItem } from "@/server/use-cases/delete-task-checklist-item.use-case"
+import { GetChecklistTemplates } from "@/server/use-cases/get-checklist-templates.use-case"
+import { CreateChecklistTemplate } from "@/server/use-cases/create-checklist-template.use-case"
+import { DeleteChecklistTemplate } from "@/server/use-cases/delete-checklist-template.use-case"
+import { UpdateChecklistTemplate } from "@/server/use-cases/update-checklist-template.use-case"
+import { ApplyChecklistTemplate } from "@/server/use-cases/apply-checklist-template.use-case"
+import { requireRole } from "@/lib/auth-guard"
+import {
+  createBusinessSchema,
+  updateBusinessSchema,
+  createProjectSchema,
+  createTaskSchema,
+  createIssueSchema,
+  addNoteSchema,
+  createMemoSchema,
+  reorderSchema,
+  addChecklistItemSchema,
+  updateChecklistItemSchema,
+  createChecklistTemplateSchema,
+  applyChecklistTemplateSchema,
+} from "@/server/schemas/business.schema"
+
+const updateProjectSchema = createProjectSchema.partial()
+const updateTaskSchema = createTaskSchema.partial()
+const updateIssueSchema = createIssueSchema.partial()
+
+// ===== BusinessController =====
+export class BusinessController {
+  static async list(_req: NextRequest) {
+    try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
+      const data = await GetBusinessDetails.execute()
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("事業一覧の取得に失敗しました", e)
+      return NextResponse.json({ error: "事業一覧の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async create(req: NextRequest) {
+    try {
+      const body = await req.json()
+      const data = createBusinessSchema.parse(body)
+      const r = await CreateBusiness.execute(data)
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("事業の作成に失敗しました", e)
+      return NextResponse.json({ error: "事業の作成に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async getById(_req: NextRequest, id: string) {
+    try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
+      const data = await GetBusinessDetails.executeOne(id)
+      if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("事業詳細の取得に失敗しました", e)
+      return NextResponse.json({ error: "事業詳細の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async update(req: NextRequest, id: string) {
+    try {
+      const body = await req.json()
+      const data = updateBusinessSchema.parse(body)
+      const r = await UpdateBusinessDetail.execute(id, data)
+      return NextResponse.json(r)
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("事業の更新に失敗しました", e)
+      return NextResponse.json({ error: "事業の更新に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async delete(_req: NextRequest, id: string) {
+    try {
+      await DeleteBusiness.execute(id)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("事業の削除に失敗しました", e)
+      return NextResponse.json({ error: "事業の削除に失敗しました" }, { status: 500 })
+    }
+  }
+}
+
+// ===== ProjectController =====
+export class ProjectController {
+  static async list(req: NextRequest) {
+    try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
+      const url = new URL(req.url)
+      const businessId = url.searchParams.get("businessId") ?? undefined
+      const data = await GetProjects.execute({ businessId })
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("プロジェクト一覧の取得に失敗しました", e)
+      return NextResponse.json({ error: "プロジェクト一覧の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async getById(_req: NextRequest, id: string) {
+    try {
+      const { error } = await requireRole("master_admin", "admin", "employee")
+      if (error) return error
+      const data = await GetProjects.executeOne(id)
+      if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("プロジェクト詳細の取得に失敗しました", e)
+      return NextResponse.json({ error: "プロジェクト詳細の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async create(req: NextRequest) {
+    try {
+      const body = await req.json()
+      const data = createProjectSchema.parse(body)
+      const r = await CreateProject.execute(data)
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("プロジェクトの作成に失敗しました", e)
+      return NextResponse.json({ error: "プロジェクトの作成に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async update(req: NextRequest, id: string) {
+    try {
+      const body = await req.json()
+      const data = updateProjectSchema.parse(body)
+      const r = await UpdateProject.execute(id, data)
+      return NextResponse.json(r)
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("プロジェクトの更新に失敗しました", e)
+      return NextResponse.json({ error: "プロジェクトの更新に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async delete(_req: NextRequest, id: string) {
+    try {
+      await DeleteProject.execute(id)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("プロジェクトの削除に失敗しました", e)
+      return NextResponse.json({ error: "プロジェクトの削除に失敗しました" }, { status: 500 })
+    }
+  }
+}
+
+// ===== BusinessTaskController =====
+export class BusinessTaskController {
+  static async list(req: NextRequest) {
+    try {
+      const url = new URL(req.url)
+      const projectId = url.searchParams.get("projectId") ?? undefined
+      const assigneeId = url.searchParams.get("assigneeId") ?? undefined
+      const contactId = url.searchParams.get("contactId") ?? undefined
+      const issueId = url.searchParams.get("issueId") ?? undefined
+      const data = await GetBusinessTasks.execute({ projectId, assigneeId, contactId, issueId })
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("タスク一覧の取得に失敗しました", e)
+      return NextResponse.json({ error: "タスク一覧の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async create(req: NextRequest) {
+    try {
+      const body = await req.json()
+      const data = createTaskSchema.parse(body)
+      const r = await CreateBusinessTask.execute(data)
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("タスクの作成に失敗しました", e)
+      return NextResponse.json({ error: "タスクの作成に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async update(req: NextRequest, id: string) {
+    try {
+      const body = await req.json()
+      const data = updateTaskSchema.parse(body)
+      const r = await UpdateBusinessTask.execute(id, data)
+      return NextResponse.json(r)
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("タスクの更新に失敗しました", e)
+      return NextResponse.json({ error: "タスクの更新に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async delete(_req: NextRequest, id: string) {
+    try {
+      await DeleteBusinessTask.execute(id)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("タスクの削除に失敗しました", e)
+      return NextResponse.json({ error: "タスクの削除に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async reorder(req: NextRequest) {
+    try {
+      const body = await req.json()
+      const data = reorderSchema.parse(body)
+      const r = await ReorderBusinessTasks.execute(data.taskId, data.newSortOrder)
+      return NextResponse.json(r)
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("タスクの並び替えに失敗しました", e)
+      return NextResponse.json({ error: "タスクの並び替えに失敗しました" }, { status: 500 })
+    }
+  }
+}
+
+// ===== BusinessIssueController =====
+export class BusinessIssueController {
+  static async list(req: NextRequest) {
+    try {
+      const url = new URL(req.url)
+      const projectId = url.searchParams.get("projectId") ?? undefined
+      const status = url.searchParams.get("status") ?? undefined
+      const priority = url.searchParams.get("priority") ?? undefined
+      const data = await GetBusinessIssues.execute({ projectId, status, priority })
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("課題一覧の取得に失敗しました", e)
+      return NextResponse.json({ error: "課題一覧の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async create(req: NextRequest) {
+    try {
+      const body = await req.json()
+      const data = createIssueSchema.parse(body)
+      const r = await CreateBusinessIssue.execute(data)
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("課題の作成に失敗しました", e)
+      return NextResponse.json({ error: "課題の作成に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async update(req: NextRequest, id: string) {
+    try {
+      const body = await req.json()
+      const data = updateIssueSchema.parse(body)
+      const r = await UpdateBusinessIssue.execute(id, data)
+      return NextResponse.json(r)
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("課題の更新に失敗しました", e)
+      return NextResponse.json({ error: "課題の更新に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async delete(_req: NextRequest, id: string) {
+    try {
+      await DeleteBusinessIssue.execute(id)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("課題の削除に失敗しました", e)
+      return NextResponse.json({ error: "課題の削除に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async addNote(req: NextRequest, id: string) {
+    try {
+      const body = await req.json()
+      const data = addNoteSchema.parse(body)
+      const r = await AddIssueNote.execute({ issueId: id, ...data })
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("メモの追加に失敗しました", e)
+      return NextResponse.json({ error: "メモの追加に失敗しました" }, { status: 500 })
+    }
+  }
+}
+
+// ===== BusinessMemoController =====
+export class BusinessMemoController {
+  static async list(req: NextRequest) {
+    try {
+      const url = new URL(req.url)
+      const businessId = url.searchParams.get("businessId") ?? undefined
+      const projectId = url.searchParams.get("projectId") ?? undefined
+      const issueId = url.searchParams.get("issueId") ?? undefined
+      const data = await GetBusinessMemos.execute({ businessId, projectId, issueId })
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("メモ一覧の取得に失敗しました", e)
+      return NextResponse.json({ error: "メモ一覧の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async create(req: NextRequest) {
+    try {
+      const body = await req.json()
+      const data = createMemoSchema.parse(body)
+      const r = await CreateBusinessMemo.execute(data)
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("メモの作成に失敗しました", e)
+      return NextResponse.json({ error: "メモの作成に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async delete(_req: NextRequest, id: string) {
+    try {
+      await DeleteBusinessMemo.execute(id)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("メモの削除に失敗しました", e)
+      return NextResponse.json({ error: "メモの削除に失敗しました" }, { status: 500 })
+    }
+  }
+}
+
+// ===== TaskChecklistController =====
+export class TaskChecklistController {
+  static async addItem(req: NextRequest, taskId: string) {
+    try {
+      const body = await req.json()
+      const data = addChecklistItemSchema.parse(body)
+      const r = await AddTaskChecklistItem.execute({ taskId, ...data })
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("チェックリスト項目の追加に失敗しました", e)
+      return NextResponse.json({ error: "チェックリスト項目の追加に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async updateItem(_req: NextRequest, itemId: string) {
+    try {
+      const body = await _req.json()
+      const data = updateChecklistItemSchema.parse(body)
+      const r = await UpdateTaskChecklistItem.execute(itemId, data)
+      return NextResponse.json(r)
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("チェックリスト項目の更新に失敗しました", e)
+      return NextResponse.json({ error: "チェックリスト項目の更新に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async deleteItem(_req: NextRequest, itemId: string) {
+    try {
+      await DeleteTaskChecklistItem.execute(itemId)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("チェックリスト項目の削除に失敗しました", e)
+      return NextResponse.json({ error: "チェックリスト項目の削除に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async applyTemplate(req: NextRequest, taskId: string) {
+    try {
+      const body = await req.json()
+      const data = applyChecklistTemplateSchema.parse(body)
+      const r = await ApplyChecklistTemplate.execute(taskId, data.templateId)
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("テンプレートの適用に失敗しました", e)
+      return NextResponse.json({ error: "テンプレートの適用に失敗しました" }, { status: 500 })
+    }
+  }
+}
+
+// ===== ChecklistTemplateController =====
+export class ChecklistTemplateController {
+  static async list(req: NextRequest) {
+    try {
+      const url = new URL(req.url)
+      const businessId = url.searchParams.get("businessId") ?? undefined
+      const data = await GetChecklistTemplates.execute(businessId)
+      return NextResponse.json(data)
+    } catch (e) {
+      logger.error("テンプレート一覧の取得に失敗しました", e)
+      return NextResponse.json({ error: "テンプレート一覧の取得に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async create(req: NextRequest) {
+    try {
+      const body = await req.json()
+      const data = createChecklistTemplateSchema.parse(body)
+      const r = await CreateChecklistTemplate.execute(data)
+      return NextResponse.json(r, { status: 201 })
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("テンプレートの作成に失敗しました", e)
+      return NextResponse.json({ error: "テンプレートの作成に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async update(req: NextRequest, id: string) {
+    try {
+      const body = await req.json()
+      const data = createChecklistTemplateSchema.parse(body)
+      const r = await UpdateChecklistTemplate.execute(id, data)
+      return NextResponse.json(r)
+    } catch (e) {
+      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
+      logger.error("テンプレートの更新に失敗しました", e)
+      return NextResponse.json({ error: "テンプレートの更新に失敗しました" }, { status: 500 })
+    }
+  }
+
+  static async delete(_req: NextRequest, id: string) {
+    try {
+      await DeleteChecklistTemplate.execute(id)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      logger.error("テンプレートの削除に失敗しました", e)
+      return NextResponse.json({ error: "テンプレートの削除に失敗しました" }, { status: 500 })
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { ContactMeetingRepository } from "@/repositories/contact-meeting.repository"
+import { ContactMeetingRepository } from "@/server/repositories/contact-meeting.repository"
 
 export async function GET(req: NextRequest) {
   try {

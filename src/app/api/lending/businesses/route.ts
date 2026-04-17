@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { GetBusinesses } from "@/use-cases/get-businesses.use-case"
+import { GetBusinesses } from "@/server/use-cases/get-businesses.use-case"
 
 export async function GET() {
   try {

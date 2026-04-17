@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { ChecklistTemplateController } from "@/controllers/business.controller"
+import { ChecklistTemplateController } from "@/server/controllers/business.controller"
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

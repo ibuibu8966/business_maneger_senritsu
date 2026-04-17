@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { ContactDetailView } from "@/features/crm/components/contact-detail-view"
-import { ContactRepository } from "@/repositories/contact.repository"
+import { ContactRepository } from "@/server/repositories/contact.repository"
 
 export default async function ContactDetailPage({
   params,

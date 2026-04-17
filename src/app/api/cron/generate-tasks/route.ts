@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { GenerateRecurringTasks } from "@/use-cases/generate-recurring-tasks.use-case"
+import { GenerateRecurringTasks } from "@/server/use-cases/generate-recurring-tasks.use-case"
 
 /**
  * 繰り返しタスク自動生成 CRON API

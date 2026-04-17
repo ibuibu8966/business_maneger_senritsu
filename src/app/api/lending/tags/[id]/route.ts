@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { LendingController } from "@/controllers/lending.controller"
+import { LendingController } from "@/server/controllers/lending.controller"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

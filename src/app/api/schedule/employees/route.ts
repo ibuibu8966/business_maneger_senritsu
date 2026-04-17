@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { EmployeeController } from "@/controllers/employee.controller"
+import { EmployeeController } from "@/server/controllers/employee.controller"
 import { requireRole } from "@/lib/auth-guard"
 
 export async function GET() {

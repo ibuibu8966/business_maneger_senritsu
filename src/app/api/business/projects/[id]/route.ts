@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { ProjectController } from "@/controllers/business.controller"
+import { ProjectController } from "@/server/controllers/business.controller"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

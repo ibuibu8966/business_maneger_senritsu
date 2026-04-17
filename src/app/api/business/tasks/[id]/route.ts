@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { BusinessTaskController } from "@/controllers/business.controller"
+import { BusinessTaskController } from "@/server/controllers/business.controller"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

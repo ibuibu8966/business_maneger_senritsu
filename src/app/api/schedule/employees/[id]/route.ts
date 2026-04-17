@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { EmployeeController } from "@/controllers/employee.controller"
+import { EmployeeController } from "@/server/controllers/employee.controller"
 import { requireRole } from "@/lib/auth-guard"
-import { EmployeeRepository } from "@/repositories/employee.repository"
+import { EmployeeRepository } from "@/server/repositories/employee.repository"
 
 export async function PATCH(
   req: NextRequest,

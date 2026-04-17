@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { PartnerDetailView } from "@/features/crm/components/partner-detail-view"
-import { PartnerRepository } from "@/repositories/partner.repository"
+import { PartnerRepository } from "@/server/repositories/partner.repository"
 
 export default async function PartnerDetailPage({
   params,

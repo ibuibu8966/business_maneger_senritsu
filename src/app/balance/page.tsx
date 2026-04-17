@@ -5,9 +5,9 @@ import {
   QueryClient,
 } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
-import { GetAccountDetails } from "@/use-cases/get-account-details.use-case"
-import { GetAccountTransactions } from "@/use-cases/get-account-transactions.use-case"
-import { GetLendings } from "@/use-cases/get-lendings.use-case"
+import { GetAccountDetails } from "@/server/use-cases/get-account-details.use-case"
+import { GetAccountTransactions } from "@/server/use-cases/get-account-transactions.use-case"
+import { GetLendings } from "@/server/use-cases/get-lendings.use-case"
 import { BalanceDashboard } from "@/features/lending/components/balance-dashboard"
 
 export default async function BalancePage() {

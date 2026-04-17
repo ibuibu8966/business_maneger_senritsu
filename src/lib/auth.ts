@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
-import { EmployeeRepository } from "@/repositories/employee.repository"
+import { EmployeeRepository } from "@/server/repositories/employee.repository"
 
 export const authOptions: NextAuthOptions = {
   providers: [

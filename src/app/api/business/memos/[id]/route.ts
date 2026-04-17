@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { BusinessMemoController } from "@/controllers/business.controller"
+import { BusinessMemoController } from "@/server/controllers/business.controller"
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
