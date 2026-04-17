@@ -52,8 +52,27 @@ export function useUpdateContact() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       updateContact(id, data),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all })
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.contacts.all })
+      const snapshots = queryClient.getQueriesData<unknown>({ queryKey: queryKeys.contacts.all })
+      queryClient.setQueriesData(
+        { queryKey: queryKeys.contacts.all },
+        (old: unknown) => {
+          if (Array.isArray(old)) {
+            return (old as Array<Record<string, unknown>>).map((c) =>
+              c.id === id ? { ...c, ...data } : c,
+            )
+          }
+          if (old && typeof old === "object" && (old as { id?: string }).id === id) {
+            return { ...(old as Record<string, unknown>), ...data }
+          }
+          return old
+        },
+      )
+      return { snapshots }
+    },
+    onError: (_err, _vars, context) => {
+      context?.snapshots.forEach(([key, data]) => queryClient.setQueryData(key, data))
     },
   })
 }
