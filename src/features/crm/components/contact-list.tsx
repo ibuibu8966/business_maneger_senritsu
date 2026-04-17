@@ -18,6 +18,8 @@ import type { ContactDTO } from "@/types/dto"
 import { useContacts, useCreateContact, useUpdateContact, useCrmTags, useCreateCrmTag } from "@/hooks/use-crm"
 import { cn } from "@/lib/utils"
 import { TagSelect } from "@/features/lending/components/tag-select"
+import { EditableCell } from "@/components/ui/editable-cell"
+import { toast } from "sonner"
 
 const TYPE_TO_API: Record<string, string> = {
   "サロン生": "salon_member",
@@ -64,6 +66,16 @@ export function ContactList() {
 
   const handleArchive = (c: ContactDTO) => {
     updateMutation.mutate({ id: c.id, data: { isArchived: !c.isArchived } })
+  }
+
+  const saveInline = (id: string, field: string, value: string | string[]) => {
+    updateMutation.mutate(
+      { id, data: { [field]: value } },
+      {
+        onSuccess: () => toast.success("保存しました"),
+        onError: () => toast.error("保存に失敗しました"),
+      },
+    )
   }
 
   if (isLoading) return <div className="p-4 text-muted-foreground">読み込み中...</div>
@@ -129,18 +141,40 @@ export function ContactList() {
                 onClick={() => router.push(`/crm/contacts/${c.id}`)}
               >
                 <TableCell className="text-sm font-medium">{c.name}</TableCell>
-                <TableCell className="text-sm">{c.realName || "-"}</TableCell>
-                <TableCell className="text-sm">{(c.nicknames ?? []).length > 0 ? (c.nicknames ?? []).join(", ") : "-"}</TableCell>
+                <TableCell>
+                  <EditableCell
+                    value={c.realName ?? ""}
+                    onSave={(v) => saveInline(c.id, "realName", v)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <EditableCell
+                    value={(c.nicknames ?? []).join(", ")}
+                    onSave={(v) => saveInline(
+                      c.id,
+                      "nicknames",
+                      v.split(/[,、,\n]/).map((s) => s.trim()).filter(Boolean),
+                    )}
+                  />
+                </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">
                     {c.type === "salon_member" ? "サロン生" : "取引先"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm">{c.occupation || "-"}</TableCell>
-                <TableCell className="text-sm">{c.email || "-"}</TableCell>
-                <TableCell className="text-sm">{c.phone || "-"}</TableCell>
-                <TableCell className="text-sm">{c.lineId || "-"}</TableCell>
-                <TableCell className="text-sm">{c.discordId || "-"}</TableCell>
+                <TableCell>
+                  <EditableCell value={c.email ?? ""} onSave={(v) => saveInline(c.id, "email", v)} />
+                </TableCell>
+                <TableCell>
+                  <EditableCell value={c.phone ?? ""} onSave={(v) => saveInline(c.id, "phone", v)} />
+                </TableCell>
+                <TableCell>
+                  <EditableCell value={c.lineId ?? ""} onSave={(v) => saveInline(c.id, "lineId", v)} />
+                </TableCell>
+                <TableCell>
+                  <EditableCell value={c.discordId ?? ""} onSave={(v) => saveInline(c.id, "discordId", v)} />
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.lastMeetingDate ? new Date(c.lastMeetingDate).toLocaleDateString("ja-JP") : "-"}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.nextMeetingDate ? new Date(c.nextMeetingDate).toLocaleDateString("ja-JP") : "-"}</TableCell>
                 <TableCell>
