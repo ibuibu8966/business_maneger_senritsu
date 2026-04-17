@@ -288,7 +288,7 @@ export function ContactDetailView({ contactId }: Props) {
           name: editName,
           realName: editRealName,
           nicknames,
-          type: (TYPE_TO_API[editType] ?? editType) === "salon_member" ? "SALON_MEMBER" : "PARTNER_CONTACT",
+          type: TYPE_TO_API[editType] ?? editType,
           occupation: editOccupation,
           age: editAge ? Number(editAge) : null,
           email: editEmail,
