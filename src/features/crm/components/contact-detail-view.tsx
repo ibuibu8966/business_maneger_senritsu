@@ -46,51 +46,8 @@ import { CardSkeleton } from "@/components/skeletons/card-skeleton"
 import { TableSkeleton } from "@/components/skeletons/table-skeleton"
 import type { ContactDTO, SubscriptionDTO } from "@/types/dto"
 
-// --- Extended type for contact detail (includes relations) ---
-
-interface PartnerAffiliation {
-  partnerId: string
-  partnerName: string
-  role: string
-}
-
-interface ContactDetailData extends ContactDTO {
-  subscriptions: SubscriptionDTO[]
-  partnerAffiliations: PartnerAffiliation[]
-}
-
-// --- Label maps ---
-
-const METHOD_LABELS: Record<string, string> = {
-  memberpay: "メンバーペイ",
-  robotpay: "ロボットペイ",
-  paypal: "PayPal",
-  univpay: "UnivaPay",
-  other: "その他",
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  active: "アクティブ",
-  cancelled: "解約済み",
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  salon_member: "サロン生",
-  partner_contact: "取引先",
-}
-
-const TYPE_TO_API: Record<string, string> = {
-  "サロン生": "salon_member",
-  "取引先": "partner_contact",
-}
-
-const METHOD_TO_API: Record<string, string> = {
-  "メンバーペイ": "memberpay",
-  "ロボットペイ": "robotpay",
-  "PayPal": "paypal",
-  "UnivaPay": "univpay",
-  "その他": "other",
-}
+import type { PartnerAffiliation, ContactDetailData } from "./contact-detail/types"
+import { METHOD_LABELS, STATUS_LABELS, TYPE_LABELS, TYPE_TO_API, METHOD_TO_API } from "./contact-detail/constants"
 
 // --- Component ---
 

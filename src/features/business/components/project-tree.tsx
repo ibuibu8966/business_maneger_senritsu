@@ -72,61 +72,7 @@ const statusDot: Record<string, string> = {
   completed: "bg-gray-400 dark:bg-gray-500",
 }
 
-function formatCompact(n: number): string {
-  if (n >= 10000) return (n / 10000).toFixed(0) + "万"
-  return n.toLocaleString()
-}
-
-// ===== DTO → Mock型 変換ヘルパー =====
-
-function toBusiness(dto: BusinessDetailDTO): Business {
-  return {
-    id: dto.id,
-    name: dto.name,
-    purpose: dto.purpose,
-    revenue: dto.revenue,
-    expense: dto.expense,
-    status: dto.status,
-    priority: dto.priority,
-    assigneeIds: dto.assigneeIds,
-    assignees: dto.assignees,
-    accountNames: dto.accountNames,
-    partnerNames: dto.partnerNames,
-    contractMemo: dto.contractMemo,
-    relatedPartners: dto.relatedPartners ?? [],
-    relatedContacts: dto.relatedContacts,
-    attachments: dto.attachments.map((a) => ({
-      ...a,
-      type: a.type as "file" | "url",
-    })),
-  }
-}
-
-function toProjectNode(dto: ProjectDTO): ProjectNode {
-  return {
-    id: dto.id,
-    businessId: dto.businessId,
-    parentId: dto.parentId,
-    name: dto.name,
-    purpose: dto.purpose,
-    deadline: dto.deadline,
-    revenue: dto.revenue,
-    expense: dto.expense,
-    status: dto.status,
-    priority: dto.priority,
-    assigneeIds: dto.assigneeIds,
-    assignees: dto.assignees,
-    accountNames: dto.accountNames,
-    partnerNames: dto.partnerNames,
-    contractMemo: dto.contractMemo,
-    relatedPartners: dto.relatedPartners ?? [],
-    relatedContacts: dto.relatedContacts,
-    attachments: dto.attachments.map((a) => ({
-      ...a,
-      type: a.type as "file" | "url",
-    })),
-  }
-}
+import { formatCompact, toBusiness, toProjectNode } from "./project-tree/utils"
 
 // ===== カスタムノード: 事業 =====
 
