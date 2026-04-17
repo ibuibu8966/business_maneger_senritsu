@@ -107,6 +107,8 @@ export function ContactList() {
           <TableHeader>
             <TableRow>
               <TableHead>名前</TableHead>
+              <TableHead>本名</TableHead>
+              <TableHead>ニックネーム</TableHead>
               <TableHead>種別</TableHead>
               <TableHead>職業</TableHead>
               <TableHead>メール</TableHead>
@@ -126,15 +128,9 @@ export function ContactList() {
                 className={cn("cursor-pointer", c.isArchived && "opacity-50")}
                 onClick={() => router.push(`/crm/contacts/${c.id}`)}
               >
-                <TableCell className="text-sm font-medium">
-                  <div>{c.name}</div>
-                  {c.realName && c.realName !== c.name && (
-                    <div className="text-xs text-muted-foreground">本名: {c.realName}</div>
-                  )}
-                  {c.nicknames && c.nicknames.length > 0 && (
-                    <div className="text-xs text-muted-foreground">別名: {c.nicknames.join(", ")}</div>
-                  )}
-                </TableCell>
+                <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                <TableCell className="text-sm">{c.realName || "-"}</TableCell>
+                <TableCell className="text-sm">{(c.nicknames ?? []).length > 0 ? (c.nicknames ?? []).join(", ") : "-"}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">
                     {c.type === "salon_member" ? "サロン生" : "取引先"}
@@ -176,7 +172,7 @@ export function ContactList() {
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                   データがありません
                 </TableCell>
               </TableRow>
