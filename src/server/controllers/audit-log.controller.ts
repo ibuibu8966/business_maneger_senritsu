@@ -1,7 +1,7 @@
-import { logger } from "@/lib/logger"
 import { NextRequest, NextResponse } from "next/server"
 import { GetAuditLogs } from "@/server/use-cases/get-audit-logs.use-case"
 import { requireRole } from "@/lib/auth-guard"
+import { handleApiError } from "@/server/lib/error-response"
 
 export class AuditLogController {
   static async list(req: NextRequest) {
@@ -17,8 +17,7 @@ export class AuditLogController {
       const data = await GetAuditLogs.execute({ entityType, userId, limit })
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("操作履歴の取得に失敗しました", e)
-      return NextResponse.json({ error: "操作履歴の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "操作履歴", action: "取得" })
     }
   }
 }

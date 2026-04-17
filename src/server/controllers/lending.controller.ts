@@ -1,4 +1,3 @@
-import { logger } from "@/lib/logger"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireRole } from "@/lib/auth-guard"
@@ -22,6 +21,7 @@ import {
   updateLendingSchema,
   createPaymentSchema,
 } from "@/server/schemas/lending.schema"
+import { handleApiError } from "@/server/lib/error-response"
 
 // ========== Controller ==========
 
@@ -44,8 +44,8 @@ export class LendingController {
       }
       const data = await GetAccountDetails.execute(params)
       return NextResponse.json(data)
-    } catch {
-      return NextResponse.json({ error: "口座の取得に失敗しました" }, { status: 500 })
+    } catch (e) {
+      return handleApiError(e, { resource: "口座", action: "取得" })
     }
   }
 
@@ -56,8 +56,8 @@ export class LendingController {
       const data = await GetAccountDetails.executeOne(id)
       if (!data) return NextResponse.json({ error: "口座が見つかりません" }, { status: 404 })
       return NextResponse.json(data)
-    } catch {
-      return NextResponse.json({ error: "口座の取得に失敗しました" }, { status: 500 })
+    } catch (e) {
+      return handleApiError(e, { resource: "口座", action: "取得" })
     }
   }
 
@@ -68,8 +68,7 @@ export class LendingController {
       const data = await GetAccountDetails.getSummary()
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("getSummary error:", e)
-      return NextResponse.json({ error: "サマリーの取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "サマリー", action: "取得" })
     }
   }
 
@@ -82,10 +81,7 @@ export class LendingController {
       const result = await CreateAccount.execute(data)
       return NextResponse.json(result, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: "口座の登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "口座", action: "登録" })
     }
   }
 
@@ -98,10 +94,7 @@ export class LendingController {
       const result = await UpdateAccount.execute(id, data)
       return NextResponse.json(result)
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: "口座の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "口座", action: "更新" })
     }
   }
 
@@ -122,8 +115,8 @@ export class LendingController {
       }
       const data = await GetAccountTransactions.execute(params)
       return NextResponse.json(data)
-    } catch {
-      return NextResponse.json({ error: "口座取引の取得に失敗しました" }, { status: 500 })
+    } catch (e) {
+      return handleApiError(e, { resource: "口座取引", action: "取得" })
     }
   }
 
@@ -150,11 +143,7 @@ export class LendingController {
       })
       return NextResponse.json(result, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      logger.error("口座取引登録エラー:", e)
-      return NextResponse.json({ error: "口座取引の登録に失敗しました", detail: String(e) }, { status: 500 })
+      return handleApiError(e, { resource: "口座取引", action: "登録" })
     }
   }
 
@@ -167,10 +156,7 @@ export class LendingController {
       const result = await UpdateAccountTransaction.execute(id, data)
       return NextResponse.json(result)
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: "口座取引の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "口座取引", action: "更新" })
     }
   }
 
@@ -190,8 +176,8 @@ export class LendingController {
       }
       const data = await GetLendings.execute(params)
       return NextResponse.json(data)
-    } catch {
-      return NextResponse.json({ error: "貸借の取得に失敗しました" }, { status: 500 })
+    } catch (e) {
+      return handleApiError(e, { resource: "貸借", action: "取得" })
     }
   }
 
@@ -204,11 +190,7 @@ export class LendingController {
       const result = await CreateLending.execute(data)
       return NextResponse.json(result, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      logger.error("貸借登録エラー:", e)
-      return NextResponse.json({ error: "貸借の登録に失敗しました", detail: String(e) }, { status: 500 })
+      return handleApiError(e, { resource: "貸借", action: "登録" })
     }
   }
 
@@ -221,10 +203,7 @@ export class LendingController {
       const result = await UpdateLending.execute(id, data)
       return NextResponse.json(result)
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: "貸借の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "貸借", action: "更新" })
     }
   }
 
@@ -238,10 +217,7 @@ export class LendingController {
       const result = await CreateLendingPayment.execute(data)
       return NextResponse.json(result, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: "返済の登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "返済", action: "登録" })
     }
   }
 
@@ -253,8 +229,8 @@ export class LendingController {
       if (error) return error
       const result = await AccountTagUseCase.list()
       return NextResponse.json(result)
-    } catch {
-      return NextResponse.json({ error: "タグの取得に失敗しました" }, { status: 500 })
+    } catch (e) {
+      return handleApiError(e, { resource: "タグ", action: "取得" })
     }
   }
 
@@ -270,10 +246,7 @@ export class LendingController {
       const result = await AccountTagUseCase.create(data)
       return NextResponse.json(result, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: "タグの作成に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "タグ", action: "作成" })
     }
   }
 
@@ -289,10 +262,7 @@ export class LendingController {
       const result = await AccountTagUseCase.update(id, data)
       return NextResponse.json(result)
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: "タグの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "タグ", action: "更新" })
     }
   }
 
@@ -302,8 +272,8 @@ export class LendingController {
       if (error) return error
       await AccountTagUseCase.delete(id)
       return NextResponse.json({ ok: true })
-    } catch {
-      return NextResponse.json({ error: "タグの削除に失敗しました" }, { status: 500 })
+    } catch (e) {
+      return handleApiError(e, { resource: "タグ", action: "削除" })
     }
   }
 }

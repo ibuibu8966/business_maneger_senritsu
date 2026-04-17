@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { requireRole } from "@/lib/auth-guard"
+import { handleApiError } from "@/server/lib/error-response"
 import { ContactRepository } from "@/server/repositories/contact.repository"
 import { SalonRepository } from "@/server/repositories/salon.repository"
 import { SubscriptionRepository } from "@/server/repositories/subscription.repository"
@@ -48,7 +49,7 @@ export class ContactController {
         isFinalMeeting: c.isFinalMeeting, tags: c.tags,
         isArchived: c.isArchived, createdAt: c.createdAt.toISOString(),
       })))
-    } catch { return NextResponse.json({ error: "連絡先の取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "連絡先", action: "取得" }) }
   }
 
   static async getById(_req: NextRequest, id: string) {
@@ -104,7 +105,7 @@ export class ContactController {
           role: pc.role ?? "",
         })),
       })
-    } catch { return NextResponse.json({ error: "連絡先の取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "連絡先", action: "取得" }) }
   }
 
   static async create(req: NextRequest) {
@@ -116,8 +117,7 @@ export class ContactController {
       const r = await ContactRepository.create({ ...data, type: data.type.toUpperCase() as "SALON_MEMBER" | "PARTNER_CONTACT", memberpayId: data.memberpayId, robotpayId: data.robotpayId, paypalId: data.paypalId, nextMeetingDate: data.nextMeetingDate ? new Date(data.nextMeetingDate) : null, isFinalMeeting: data.isFinalMeeting, tags: data.tags })
       return NextResponse.json({ ...r, type: r.type.toLowerCase(), createdAt: r.createdAt.toISOString(), memberpayId: r.memberpayId, robotpayId: r.robotpayId, paypalId: r.paypalId, nextMeetingDate: null, lastMeetingDate: null, isFinalMeeting: r.isFinalMeeting, tags: r.tags }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "連絡先の登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "連絡先", action: "登録" })
     }
   }
 
@@ -134,8 +134,7 @@ export class ContactController {
       const r = await ContactRepository.update(id, updateData as Parameters<typeof ContactRepository.update>[1])
       return NextResponse.json({ ...r, type: r.type.toLowerCase(), createdAt: r.createdAt.toISOString(), memberpayId: r.memberpayId ?? "", robotpayId: r.robotpayId ?? "", paypalId: r.paypalId ?? "", nextMeetingDate: r.nextMeetingDate?.toISOString() ?? null, lastMeetingDate: r.lastMeetingDate?.toISOString() ?? null, isFinalMeeting: r.isFinalMeeting, tags: r.tags })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "連絡先の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "連絡先", action: "更新" })
     }
   }
 }
@@ -151,7 +150,7 @@ export class SalonController {
         id: s.id, name: s.name, isActive: s.isActive,
         courses: s.courses.map(c => ({ id: c.id, salonId: s.id, salonName: s.name, name: c.name, monthlyFee: c.monthlyFee, discordRoleName: c.discordRoleName, isActive: c.isActive })),
       })))
-    } catch { return NextResponse.json({ error: "サロンの取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "サロン", action: "取得" }) }
   }
 
   static async create(req: NextRequest) {
@@ -163,8 +162,7 @@ export class SalonController {
       const r = await SalonRepository.create(data)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "サロンの登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "サロン", action: "登録" })
     }
   }
 
@@ -177,8 +175,7 @@ export class SalonController {
       const r = await SalonRepository.update(id, data)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "サロンの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "サロン", action: "更新" })
     }
   }
 
@@ -191,8 +188,7 @@ export class SalonController {
       const r = await SalonRepository.createCourse(data)
       return NextResponse.json({ id: r.id, salonId: r.salonId, salonName: r.salon.name, name: r.name, monthlyFee: r.monthlyFee, discordRoleName: r.discordRoleName, isActive: r.isActive }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "コースの登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "コース", action: "登録" })
     }
   }
 
@@ -205,8 +201,7 @@ export class SalonController {
       const r = await SalonRepository.updateCourse(id, data)
       return NextResponse.json({ id: r.id, salonId: r.salonId, salonName: r.salon.name, name: r.name, monthlyFee: r.monthlyFee, discordRoleName: r.discordRoleName, isActive: r.isActive })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "コースの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "コース", action: "更新" })
     }
   }
 }
@@ -233,7 +228,7 @@ export class SubscriptionController {
         status: s.status.toLowerCase(), startDate: s.startDate.toISOString().split("T")[0],
         endDate: s.endDate ? s.endDate.toISOString().split("T")[0] : null,
       })))
-    } catch { return NextResponse.json({ error: "サブスクリプションの取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "購読", action: "取得" }) }
   }
 
   static async create(req: NextRequest) {
@@ -255,8 +250,7 @@ export class SubscriptionController {
         status: r.status.toLowerCase(), startDate: r.startDate.toISOString().split("T")[0], endDate: null,
       }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "サブスクリプションの登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "購読", action: "登録" })
     }
   }
 
@@ -281,8 +275,7 @@ export class SubscriptionController {
         endDate: r.endDate ? r.endDate.toISOString().split("T")[0] : null,
       })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "サブスクリプションの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "購読", action: "更新" })
     }
   }
 }
@@ -317,7 +310,7 @@ export class PaymentCheckController {
         year: p.year, month: p.month, isConfirmed: p.isConfirmed,
         confirmedBy: p.confirmedBy, confirmedAt: p.confirmedAt?.toISOString() ?? null,
       })))
-    } catch { return NextResponse.json({ error: "決済確認の取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "決済確認", action: "取得" }) }
   }
 
   static async upsert(req: NextRequest) {
@@ -342,8 +335,7 @@ export class PaymentCheckController {
         confirmedBy: r.confirmedBy, confirmedAt: r.confirmedAt?.toISOString() ?? null,
       })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "決済確認の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "決済確認", action: "更新" })
     }
   }
 
@@ -356,8 +348,7 @@ export class PaymentCheckController {
       const count = await PaymentCheckRepository.generateForMonth(year, month)
       return NextResponse.json({ generated: count })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "決済確認の生成に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "決済確認", action: "実行" })
     }
   }
 }
@@ -378,7 +369,7 @@ export class PartnerController {
         contacts: p.partnerContacts.map(pc => ({ contactId: pc.contact.id, contactName: pc.contact.name, role: pc.role })),
         businesses: p.partnerBusinesses.map(pb => ({ businessId: pb.business.id, businessName: pb.business.name })),
       })))
-    } catch { return NextResponse.json({ error: "取引先の取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "取引先", action: "取得" }) }
   }
 
   static async getById(_req: NextRequest, id: string) {
@@ -394,7 +385,7 @@ export class PartnerController {
         contacts: p.partnerContacts.map(pc => ({ contactId: pc.contact.id, contactName: pc.contact.name, role: pc.role })),
         businesses: p.partnerBusinesses.map(pb => ({ businessId: pb.business.id, businessName: pb.business.name })),
       })
-    } catch { return NextResponse.json({ error: "取引先の取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "取引先", action: "取得" }) }
   }
 
   static async create(req: NextRequest) {
@@ -408,8 +399,7 @@ export class PartnerController {
         id: r.id, name: r.name, memo: r.memo, businessDescription: r.businessDescription ?? "", needs: r.needs ?? "", relationshipPlan: r.relationshipPlan ?? "", tags: r.tags, isArchived: r.isArchived, contacts: [], businesses: [],
       }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "取引先の登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "取引先", action: "登録" })
     }
   }
 
@@ -428,8 +418,7 @@ export class PartnerController {
         businesses: r.partnerBusinesses.map(pb => ({ businessId: pb.business.id, businessName: pb.business.name })),
       })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "取引先の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "取引先", action: "更新" })
     }
   }
 
@@ -442,8 +431,7 @@ export class PartnerController {
       await PartnerRepository.addContact(id, data.contactId, data.role)
       return NextResponse.json({ success: true }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "担当者の追加に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "取引先の担当者", action: "登録" })
     }
   }
 
@@ -456,8 +444,7 @@ export class PartnerController {
       await PartnerRepository.addBusiness(id, data.businessId)
       return NextResponse.json({ success: true }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "事業の追加に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "取引先の事業", action: "登録" })
     }
   }
 }
@@ -486,7 +473,7 @@ export class TicketController {
         dueDate: t.dueDate ? t.dueDate.toISOString().split("T")[0] : null,
         isArchived: t.isArchived, createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString(),
       })))
-    } catch { return NextResponse.json({ error: "チケットの取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "チケット", action: "取得" }) }
   }
 
   static async getById(_req: NextRequest, id: string) {
@@ -508,7 +495,7 @@ export class TicketController {
           authorId: c.author.id, authorName: c.author.name, createdAt: c.createdAt.toISOString(),
         })),
       })
-    } catch { return NextResponse.json({ error: "チケットの取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "チケット", action: "取得" }) }
   }
 
   static async create(req: NextRequest) {
@@ -534,8 +521,7 @@ export class TicketController {
         isArchived: r.isArchived, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
       }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "チケットの登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チケット", action: "登録" })
     }
   }
 
@@ -564,8 +550,7 @@ export class TicketController {
         isArchived: r.isArchived, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
       })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "チケットの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チケット", action: "更新" })
     }
   }
 
@@ -581,8 +566,7 @@ export class TicketController {
         authorId: r.author.id, authorName: r.author.name, createdAt: r.createdAt.toISOString(),
       }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "コメントの追加に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チケットコメント", action: "登録" })
     }
   }
 }
@@ -598,7 +582,7 @@ export class ContactMeetingController {
         id: m.id, contactId: m.contactId, date: m.date.toISOString(),
         summary: m.summary, createdAt: m.createdAt.toISOString(),
       })))
-    } catch { return NextResponse.json({ error: "面談メモの取得に失敗しました" }, { status: 500 }) }
+    } catch (e) { return handleApiError(e, { resource: "面談メモ", action: "取得" }) }
   }
 
   static async create(req: NextRequest, contactId: string) {
@@ -631,8 +615,7 @@ export class ContactMeetingController {
         summary: r.summary, createdAt: r.createdAt.toISOString(),
       }, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      return NextResponse.json({ error: "面談メモの登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "面談メモ", action: "登録" })
     }
   }
 }

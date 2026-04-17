@@ -1,10 +1,10 @@
-import { logger } from "@/lib/logger"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { GetEmployees } from "@/server/use-cases/get-employees.use-case"
 import { CreateEmployee } from "@/server/use-cases/create-employee.use-case"
 import { UpdateEmployee } from "@/server/use-cases/update-employee.use-case"
 import { DeleteEmployee } from "@/server/use-cases/delete-employee.use-case"
+import { handleApiError } from "@/server/lib/error-response"
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -36,8 +36,8 @@ export class EmployeeController {
     try {
       const data = await GetEmployees.execute()
       return NextResponse.json(data)
-    } catch {
-      return NextResponse.json({ error: "従業員の取得に失敗しました" }, { status: 500 })
+    } catch (e) {
+      return handleApiError(e, { resource: "従業員", action: "取得" })
     }
   }
 
@@ -48,10 +48,7 @@ export class EmployeeController {
       const result = await CreateEmployee.execute(data)
       return NextResponse.json(result, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: "従業員の登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "従業員", action: "登録" })
     }
   }
 
@@ -62,12 +59,7 @@ export class EmployeeController {
       const result = await UpdateEmployee.execute(id, data)
       return NextResponse.json(result)
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      logger.error("Employee update error:", e)
-      const msg = e instanceof Error ? e.message : String(e)
-      return NextResponse.json({ error: "従業員の更新に失敗しました", detail: msg }, { status: 500 })
+      return handleApiError(e, { resource: "従業員", action: "更新" })
     }
   }
 
@@ -75,8 +67,8 @@ export class EmployeeController {
     try {
       await DeleteEmployee.execute(id)
       return NextResponse.json({ ok: true })
-    } catch {
-      return NextResponse.json({ error: "従業員の削除に失敗しました" }, { status: 500 })
+    } catch (e) {
+      return handleApiError(e, { resource: "従業員", action: "削除" })
     }
   }
 }

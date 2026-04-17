@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma"
+import type { BusinessTaskStatus } from "@/generated/prisma/client"
 
 export class BusinessTaskRepository {
   static async findMany(params?: {
     projectId?: string
     assigneeId?: string
-    status?: string
+    status?: BusinessTaskStatus
     contactId?: string
     issueId?: string
   }) {
@@ -12,7 +13,7 @@ export class BusinessTaskRepository {
       where: {
         ...(params?.projectId && { projectId: params.projectId }),
         ...(params?.assigneeId && { assigneeId: params.assigneeId }),
-        ...(params?.status && { status: params.status as any }),
+        ...(params?.status && { status: params.status }),
         ...(params?.contactId && { contactId: params.contactId }),
         ...(params?.issueId && { issueId: params.issueId }),
         project: { status: "ACTIVE" },

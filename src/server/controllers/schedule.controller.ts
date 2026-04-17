@@ -1,6 +1,5 @@
 import { logger } from "@/lib/logger"
 import { NextRequest, NextResponse } from "next/server"
-import { z } from "zod"
 import { requireRole } from "@/lib/auth-guard"
 import { EmployeeRepository } from "@/server/repositories/employee.repository"
 import {
@@ -17,6 +16,7 @@ import {
   updateScheduleEventSchema,
   updateScheduleParticipantsSchema,
 } from "@/server/schemas/schedule.schema"
+import { handleApiError } from "@/server/lib/error-response"
 
 // イベントIDはフロントに「calendarId::googleEventId」の形式で渡す
 function encodeEventId(calendarId: string, googleEventId: string): string {
@@ -252,7 +252,7 @@ export class ScheduleController {
             startAt: new Date(data.startAt),
             endAt: new Date(data.endAt),
             allDay: data.allDay ?? false,
-            eventType: (data.eventType ?? "work").toUpperCase() as any,
+            eventType: (data.eventType ?? "work").toUpperCase() as import("@/generated/prisma/client").EventType,
             employeeId: data.employeeId,
             googleEventId: gcalEvent.id,
             taskId: data.taskId,
@@ -268,11 +268,7 @@ export class ScheduleController {
 
       return NextResponse.json(dto, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      logger.error("Google Calendar create error:", e)
-      return NextResponse.json({ error: "予定の登録に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "スケジュールイベント", action: "登録" })
     }
   }
 
@@ -364,11 +360,7 @@ export class ScheduleController {
 
       return NextResponse.json(dto)
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      logger.error("Google Calendar update error:", e)
-      return NextResponse.json({ error: "予定の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "スケジュールイベント", action: "更新" })
     }
   }
 
@@ -409,8 +401,7 @@ export class ScheduleController {
       await deleteEvent(calendarId, googleEventId)
       return NextResponse.json({ success: true })
     } catch (e) {
-      logger.error("Google Calendar delete error:", e)
-      return NextResponse.json({ error: "予定の削除に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "スケジュールイベント", action: "削除" })
     }
   }
 
@@ -518,11 +509,7 @@ export class ScheduleController {
 
       return NextResponse.json({ groupId, participants })
     } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ errors: e.issues }, { status: 400 })
-      }
-      logger.error("Update participants error:", e)
-      return NextResponse.json({ error: "参加者の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "参加者", action: "更新" })
     }
   }
 }

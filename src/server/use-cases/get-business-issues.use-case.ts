@@ -1,10 +1,11 @@
 import { BusinessIssueRepository } from "@/server/repositories/business-issue.repository"
+import type { BusinessIssueStatus, BusinessPriority } from "@/generated/prisma/client"
 
 const ISSUE_STATUS_MAP: Record<string, string> = { UNRESOLVED: "unresolved", IN_PROGRESS: "in-progress", RESOLVED: "resolved" }
 const PRIORITY_MAP: Record<string, string> = { HIGHEST: "highest", HIGH: "high", MEDIUM: "medium", LOW: "low" }
 
 export class GetBusinessIssues {
-  static async execute(params?: { projectId?: string; assigneeId?: string; status?: string; priority?: string }) {
+  static async execute(params?: { projectId?: string; assigneeId?: string; status?: BusinessIssueStatus; priority?: BusinessPriority }) {
     const issues = await BusinessIssueRepository.findMany(params)
     return issues.map((i) => ({
       id: i.id,

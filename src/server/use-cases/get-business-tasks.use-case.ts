@@ -1,11 +1,12 @@
 import { BusinessTaskRepository } from "@/server/repositories/business-task.repository"
+import type { BusinessTaskStatus } from "@/generated/prisma/client"
 
 const TASK_STATUS_MAP: Record<string, string> = { TODO: "todo", IN_PROGRESS: "in-progress", WAITING: "waiting", DONE: "done" }
 const STATUS_MAP: Record<string, string> = { ACTIVE: "active", ON_HOLD: "on-hold", COMPLETED: "completed" }
 const PRIORITY_MAP: Record<string, string> = { HIGHEST: "highest", HIGH: "high", MEDIUM: "medium", LOW: "low" }
 
 export class GetBusinessTasks {
-  static async execute(params?: { projectId?: string; assigneeId?: string; status?: string; contactId?: string; issueId?: string }) {
+  static async execute(params?: { projectId?: string; assigneeId?: string; status?: BusinessTaskStatus; contactId?: string; issueId?: string }) {
     const tasks = await BusinessTaskRepository.findMany(params)
     return tasks.map((t: any) => ({
       id: t.id,

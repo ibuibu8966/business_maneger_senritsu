@@ -1,6 +1,5 @@
-import { logger } from "@/lib/logger"
 import { NextRequest, NextResponse } from "next/server"
-import { z } from "zod"
+import { handleApiError } from "@/server/lib/error-response"
 import { GetBusinessDetails } from "@/server/use-cases/get-business-details.use-case"
 import { CreateBusiness } from "@/server/use-cases/create-business.use-case"
 import { UpdateBusinessDetail } from "@/server/use-cases/update-business-detail.use-case"
@@ -59,8 +58,7 @@ export class BusinessController {
       const data = await GetBusinessDetails.execute()
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("事業一覧の取得に失敗しました", e)
-      return NextResponse.json({ error: "事業一覧の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "事業", action: "取得" })
     }
   }
 
@@ -71,9 +69,7 @@ export class BusinessController {
       const r = await CreateBusiness.execute(data)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("事業の作成に失敗しました", e)
-      return NextResponse.json({ error: "事業の作成に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "事業", action: "作成" })
     }
   }
 
@@ -85,8 +81,7 @@ export class BusinessController {
       if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 })
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("事業詳細の取得に失敗しました", e)
-      return NextResponse.json({ error: "事業詳細の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "事業", action: "取得" })
     }
   }
 
@@ -97,9 +92,7 @@ export class BusinessController {
       const r = await UpdateBusinessDetail.execute(id, data)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("事業の更新に失敗しました", e)
-      return NextResponse.json({ error: "事業の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "事業", action: "更新" })
     }
   }
 
@@ -108,8 +101,7 @@ export class BusinessController {
       await DeleteBusiness.execute(id)
       return NextResponse.json({ success: true })
     } catch (e) {
-      logger.error("事業の削除に失敗しました", e)
-      return NextResponse.json({ error: "事業の削除に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "事業", action: "削除" })
     }
   }
 }
@@ -125,8 +117,7 @@ export class ProjectController {
       const data = await GetProjects.execute({ businessId })
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("プロジェクト一覧の取得に失敗しました", e)
-      return NextResponse.json({ error: "プロジェクト一覧の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "プロジェクト", action: "取得" })
     }
   }
 
@@ -138,8 +129,7 @@ export class ProjectController {
       if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 })
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("プロジェクト詳細の取得に失敗しました", e)
-      return NextResponse.json({ error: "プロジェクト詳細の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "プロジェクト", action: "取得" })
     }
   }
 
@@ -150,9 +140,7 @@ export class ProjectController {
       const r = await CreateProject.execute(data)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("プロジェクトの作成に失敗しました", e)
-      return NextResponse.json({ error: "プロジェクトの作成に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "プロジェクト", action: "作成" })
     }
   }
 
@@ -163,9 +151,7 @@ export class ProjectController {
       const r = await UpdateProject.execute(id, data)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("プロジェクトの更新に失敗しました", e)
-      return NextResponse.json({ error: "プロジェクトの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "プロジェクト", action: "更新" })
     }
   }
 
@@ -174,8 +160,7 @@ export class ProjectController {
       await DeleteProject.execute(id)
       return NextResponse.json({ success: true })
     } catch (e) {
-      logger.error("プロジェクトの削除に失敗しました", e)
-      return NextResponse.json({ error: "プロジェクトの削除に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "プロジェクト", action: "削除" })
     }
   }
 }
@@ -192,8 +177,7 @@ export class BusinessTaskController {
       const data = await GetBusinessTasks.execute({ projectId, assigneeId, contactId, issueId })
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("タスク一覧の取得に失敗しました", e)
-      return NextResponse.json({ error: "タスク一覧の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "タスク", action: "取得" })
     }
   }
 
@@ -204,9 +188,7 @@ export class BusinessTaskController {
       const r = await CreateBusinessTask.execute(data)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("タスクの作成に失敗しました", e)
-      return NextResponse.json({ error: "タスクの作成に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "タスク", action: "作成" })
     }
   }
 
@@ -217,9 +199,7 @@ export class BusinessTaskController {
       const r = await UpdateBusinessTask.execute(id, data)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("タスクの更新に失敗しました", e)
-      return NextResponse.json({ error: "タスクの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "タスク", action: "更新" })
     }
   }
 
@@ -228,8 +208,7 @@ export class BusinessTaskController {
       await DeleteBusinessTask.execute(id)
       return NextResponse.json({ success: true })
     } catch (e) {
-      logger.error("タスクの削除に失敗しました", e)
-      return NextResponse.json({ error: "タスクの削除に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "タスク", action: "削除" })
     }
   }
 
@@ -240,9 +219,7 @@ export class BusinessTaskController {
       const r = await ReorderBusinessTasks.execute(data.taskId, data.newSortOrder)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("タスクの並び替えに失敗しました", e)
-      return NextResponse.json({ error: "タスクの並び替えに失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "タスク", action: "更新" })
     }
   }
 }
@@ -253,13 +230,12 @@ export class BusinessIssueController {
     try {
       const url = new URL(req.url)
       const projectId = url.searchParams.get("projectId") ?? undefined
-      const status = url.searchParams.get("status") ?? undefined
-      const priority = url.searchParams.get("priority") ?? undefined
+      const status = (url.searchParams.get("status")?.toUpperCase() ?? undefined) as import("@/generated/prisma/client").BusinessIssueStatus | undefined
+      const priority = (url.searchParams.get("priority")?.toUpperCase() ?? undefined) as import("@/generated/prisma/client").BusinessPriority | undefined
       const data = await GetBusinessIssues.execute({ projectId, status, priority })
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("課題一覧の取得に失敗しました", e)
-      return NextResponse.json({ error: "課題一覧の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "課題", action: "取得" })
     }
   }
 
@@ -270,9 +246,7 @@ export class BusinessIssueController {
       const r = await CreateBusinessIssue.execute(data)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("課題の作成に失敗しました", e)
-      return NextResponse.json({ error: "課題の作成に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "課題", action: "作成" })
     }
   }
 
@@ -283,9 +257,7 @@ export class BusinessIssueController {
       const r = await UpdateBusinessIssue.execute(id, data)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("課題の更新に失敗しました", e)
-      return NextResponse.json({ error: "課題の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "課題", action: "更新" })
     }
   }
 
@@ -294,8 +266,7 @@ export class BusinessIssueController {
       await DeleteBusinessIssue.execute(id)
       return NextResponse.json({ success: true })
     } catch (e) {
-      logger.error("課題の削除に失敗しました", e)
-      return NextResponse.json({ error: "課題の削除に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "課題", action: "削除" })
     }
   }
 
@@ -306,9 +277,7 @@ export class BusinessIssueController {
       const r = await AddIssueNote.execute({ issueId: id, ...data })
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("メモの追加に失敗しました", e)
-      return NextResponse.json({ error: "メモの追加に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "メモ", action: "作成" })
     }
   }
 }
@@ -324,8 +293,7 @@ export class BusinessMemoController {
       const data = await GetBusinessMemos.execute({ businessId, projectId, issueId })
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("メモ一覧の取得に失敗しました", e)
-      return NextResponse.json({ error: "メモ一覧の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "メモ", action: "取得" })
     }
   }
 
@@ -336,9 +304,7 @@ export class BusinessMemoController {
       const r = await CreateBusinessMemo.execute(data)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("メモの作成に失敗しました", e)
-      return NextResponse.json({ error: "メモの作成に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "メモ", action: "作成" })
     }
   }
 
@@ -347,8 +313,7 @@ export class BusinessMemoController {
       await DeleteBusinessMemo.execute(id)
       return NextResponse.json({ success: true })
     } catch (e) {
-      logger.error("メモの削除に失敗しました", e)
-      return NextResponse.json({ error: "メモの削除に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "メモ", action: "削除" })
     }
   }
 }
@@ -362,9 +327,7 @@ export class TaskChecklistController {
       const r = await AddTaskChecklistItem.execute({ taskId, ...data })
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("チェックリスト項目の追加に失敗しました", e)
-      return NextResponse.json({ error: "チェックリスト項目の追加に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チェックリスト項目", action: "作成" })
     }
   }
 
@@ -375,9 +338,7 @@ export class TaskChecklistController {
       const r = await UpdateTaskChecklistItem.execute(itemId, data)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("チェックリスト項目の更新に失敗しました", e)
-      return NextResponse.json({ error: "チェックリスト項目の更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チェックリスト項目", action: "更新" })
     }
   }
 
@@ -386,8 +347,7 @@ export class TaskChecklistController {
       await DeleteTaskChecklistItem.execute(itemId)
       return NextResponse.json({ success: true })
     } catch (e) {
-      logger.error("チェックリスト項目の削除に失敗しました", e)
-      return NextResponse.json({ error: "チェックリスト項目の削除に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チェックリスト項目", action: "削除" })
     }
   }
 
@@ -398,9 +358,7 @@ export class TaskChecklistController {
       const r = await ApplyChecklistTemplate.execute(taskId, data.templateId)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("テンプレートの適用に失敗しました", e)
-      return NextResponse.json({ error: "テンプレートの適用に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チェックリストテンプレート", action: "実行" })
     }
   }
 }
@@ -414,8 +372,7 @@ export class ChecklistTemplateController {
       const data = await GetChecklistTemplates.execute(businessId)
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("テンプレート一覧の取得に失敗しました", e)
-      return NextResponse.json({ error: "テンプレート一覧の取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チェックリストテンプレート", action: "取得" })
     }
   }
 
@@ -426,9 +383,7 @@ export class ChecklistTemplateController {
       const r = await CreateChecklistTemplate.execute(data)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("テンプレートの作成に失敗しました", e)
-      return NextResponse.json({ error: "テンプレートの作成に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チェックリストテンプレート", action: "作成" })
     }
   }
 
@@ -439,9 +394,7 @@ export class ChecklistTemplateController {
       const r = await UpdateChecklistTemplate.execute(id, data)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("テンプレートの更新に失敗しました", e)
-      return NextResponse.json({ error: "テンプレートの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チェックリストテンプレート", action: "更新" })
     }
   }
 
@@ -450,8 +403,7 @@ export class ChecklistTemplateController {
       await DeleteChecklistTemplate.execute(id)
       return NextResponse.json({ success: true })
     } catch (e) {
-      logger.error("テンプレートの削除に失敗しました", e)
-      return NextResponse.json({ error: "テンプレートの削除に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "チェックリストテンプレート", action: "削除" })
     }
   }
 }

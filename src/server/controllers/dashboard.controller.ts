@@ -1,10 +1,10 @@
-import { logger } from "@/lib/logger"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { GetDashboardLayout } from "@/server/use-cases/get-dashboard-layout.use-case"
 import { UpdateDashboardLayout } from "@/server/use-cases/update-dashboard-layout.use-case"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { handleApiError } from "@/server/lib/error-response"
 
 const updateLayoutSchema = z.object({
   layout: z.array(
@@ -25,8 +25,7 @@ export class DashboardController {
       const data = await GetDashboardLayout.execute(userId)
       return NextResponse.json(data)
     } catch (e) {
-      logger.error("ダッシュボードレイアウトの取得に失敗しました", e)
-      return NextResponse.json({ error: "ダッシュボードレイアウトの取得に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "ダッシュボードレイアウト", action: "取得" })
     }
   }
 
@@ -39,9 +38,7 @@ export class DashboardController {
       const r = await UpdateDashboardLayout.execute(userId, data.layout)
       return NextResponse.json(r)
     } catch (e) {
-      if (e instanceof z.ZodError) return NextResponse.json({ errors: e.issues }, { status: 400 })
-      logger.error("ダッシュボードレイアウトの更新に失敗しました", e)
-      return NextResponse.json({ error: "ダッシュボードレイアウトの更新に失敗しました" }, { status: 500 })
+      return handleApiError(e, { resource: "ダッシュボードレイアウト", action: "更新" })
     }
   }
 }

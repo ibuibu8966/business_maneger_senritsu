@@ -32,7 +32,7 @@ export class UpdateProject {
       const descendantIds = await ProjectRepository.findDescendantIds(id)
       if (descendantIds.length > 0) {
         cascadeOps.push(
-          prisma.project.updateMany({ where: { id: { in: descendantIds } }, data: { status: dbStatus as any } })
+          prisma.project.updateMany({ where: { id: { in: descendantIds } }, data: { status: dbStatus as import("@/generated/prisma/client").ProjectStatus } })
         )
       }
     }

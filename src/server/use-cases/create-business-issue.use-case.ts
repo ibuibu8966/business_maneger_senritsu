@@ -1,9 +1,10 @@
 import { BusinessIssueRepository } from "@/server/repositories/business-issue.repository"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
 import { prisma } from "@/lib/prisma"
+import type { BusinessIssueStatus, BusinessPriority } from "@/generated/prisma/client"
 
-const ISSUE_STATUS_TO_DB: Record<string, string> = { unresolved: "UNRESOLVED", "in-progress": "IN_PROGRESS", resolved: "RESOLVED" }
-const PRIORITY_TO_DB: Record<string, string> = { highest: "HIGHEST", high: "HIGH", medium: "MEDIUM", low: "LOW" }
+const ISSUE_STATUS_TO_DB: Record<string, BusinessIssueStatus> = { unresolved: "UNRESOLVED", "in-progress": "IN_PROGRESS", resolved: "RESOLVED" }
+const PRIORITY_TO_DB: Record<string, BusinessPriority> = { highest: "HIGHEST", high: "HIGH", medium: "MEDIUM", low: "LOW" }
 
 export class CreateBusinessIssue {
   static async execute(data: {
