@@ -142,6 +142,8 @@ export interface ScheduleEventDTO {
 export interface ContactDTO {
   id: string
   name: string
+  realName: string
+  nicknames: string[]
   type: "salon_member" | "partner_contact"
   occupation: string
   age: number | null

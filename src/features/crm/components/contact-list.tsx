@@ -44,7 +44,15 @@ export function ContactList() {
       if (typeFilter !== "すべて" && c.type !== TYPE_TO_API[typeFilter]) return false
       if (!showArchived && c.isArchived) return false
       if (showArchived && !c.isArchived) return false
-      if (search && !c.name.includes(search) && !c.email.includes(search) && !c.phone.includes(search)) return false
+      if (search) {
+        const hit =
+          c.name.includes(search) ||
+          (c.realName ?? "").includes(search) ||
+          (c.nicknames ?? []).some((n) => n.includes(search)) ||
+          c.email.includes(search) ||
+          c.phone.includes(search)
+        if (!hit) return false
+      }
       return true
     })
   }, [contacts, typeFilter, showArchived, search])
@@ -67,10 +75,10 @@ export function ContactList() {
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="名前・メール・電話で検索"
+            placeholder="名前・本名・ニックネーム・メール・電話で検索"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-8 text-sm pl-8 w-60"
+            className="h-8 text-sm pl-8 w-72"
           />
         </div>
         <select
@@ -118,7 +126,15 @@ export function ContactList() {
                 className={cn("cursor-pointer", c.isArchived && "opacity-50")}
                 onClick={() => router.push(`/crm/contacts/${c.id}`)}
               >
-                <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                <TableCell className="text-sm font-medium">
+                  <div>{c.name}</div>
+                  {c.realName && c.realName !== c.name && (
+                    <div className="text-xs text-muted-foreground">本名: {c.realName}</div>
+                  )}
+                  {c.nicknames && c.nicknames.length > 0 && (
+                    <div className="text-xs text-muted-foreground">別名: {c.nicknames.join(", ")}</div>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">
                     {c.type === "salon_member" ? "サロン生" : "取引先"}
@@ -189,6 +205,8 @@ function ContactModal({
   onSave: (data: Record<string, unknown>) => void
 }) {
   const [name, setName] = useState("")
+  const [realName, setRealName] = useState("")
+  const [nicknamesInput, setNicknamesInput] = useState("")
   const [type, setType] = useState<string>("サロン生")
   const [occupation, setOccupation] = useState("")
   const [age, setAge] = useState("")
@@ -200,10 +218,10 @@ function ContactModal({
   const [mindset, setMindset] = useState("")
   const [memo, setMemo] = useState("")
 
-  // ダイアログが開く時に値をリセット
   const handleOpenChange = (open: boolean) => {
     if (open) {
-      setName(""); setType("サロン生"); setOccupation(""); setAge("")
+      setName(""); setRealName(""); setNicknamesInput("")
+      setType("サロン生"); setOccupation(""); setAge("")
       setEmail(""); setPhone(""); setLineId(""); setDiscordId("")
       setInterests(""); setMindset(""); setMemo("")
     }
@@ -211,8 +229,13 @@ function ContactModal({
   }
 
   const handleSubmit = () => {
+    const nicknames = nicknamesInput
+      .split(/[,、,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
     onSave({
-      name, type: TYPE_TO_API[type] ?? type, occupation,
+      name, realName, nicknames,
+      type: TYPE_TO_API[type] ?? type, occupation,
       age: age ? Number(age) : null,
       email, phone, lineId, discordId,
       interests, mindset, memo,
@@ -228,7 +251,7 @@ function ContactModal({
         <div className="grid gap-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">名前 *</Label>
+              <Label className="text-xs">名前（表示用） *</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 text-sm" />
             </div>
             <div>
@@ -241,6 +264,16 @@ function ContactModal({
                 <option value="サロン生">サロン生</option>
                 <option value="取引先連絡先">取引先連絡先</option>
               </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">本名</Label>
+              <Input value={realName} onChange={(e) => setRealName(e.target.value)} className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">ニックネーム（カンマ区切りで複数可）</Label>
+              <Input value={nicknamesInput} onChange={(e) => setNicknamesInput(e.target.value)} placeholder="例: kuma, くまさん" className="h-8 text-sm" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

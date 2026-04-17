@@ -12,6 +12,8 @@ import { ContactMeetingRepository } from "@/repositories/contact-meeting.reposit
 // Zodスキーマ
 const createContactSchema = z.object({
   name: z.string().min(1),
+  realName: z.string().optional(),
+  nicknames: z.array(z.string()).optional(),
   type: z.enum(["salon_member", "partner_contact"]),
   occupation: z.string().optional(),
   age: z.number().int().nullable().optional(),
@@ -119,7 +121,8 @@ export class ContactController {
       const isArchived = url.searchParams.has("isArchived") ? url.searchParams.get("isArchived") === "true" : undefined
       const data = await ContactRepository.findMany({ type: type || undefined, isArchived })
       return NextResponse.json(data.map(c => ({
-        id: c.id, name: c.name, type: c.type.toLowerCase(), occupation: c.occupation,
+        id: c.id, name: c.name, realName: c.realName, nicknames: c.nicknames,
+        type: c.type.toLowerCase(), occupation: c.occupation,
         age: c.age, interests: c.interests, mindset: c.mindset, lineId: c.lineId,
         discordId: c.discordId, email: c.email, phone: c.phone, memo: c.memo,
         memberpayId: c.memberpayId, robotpayId: c.robotpayId, paypalId: c.paypalId,

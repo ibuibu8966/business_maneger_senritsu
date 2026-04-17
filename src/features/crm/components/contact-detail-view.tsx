@@ -107,6 +107,8 @@ export function ContactDetailView({ contactId }: Props) {
   // Edit state
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState("")
+  const [editRealName, setEditRealName] = useState("")
+  const [editNicknamesInput, setEditNicknamesInput] = useState("")
   const [editType, setEditType] = useState("")
   const [editOccupation, setEditOccupation] = useState("")
   const [editAge, setEditAge] = useState("")
@@ -230,6 +232,8 @@ export function ContactDetailView({ contactId }: Props) {
   useEffect(() => {
     if (contact) {
       setEditName(contact.name)
+      setEditRealName(contact.realName ?? "")
+      setEditNicknamesInput((contact.nicknames ?? []).join(", "))
       setEditType(TYPE_LABELS[contact.type] ?? contact.type)
       setEditOccupation(contact.occupation ?? "")
       setEditAge(contact.age != null ? String(contact.age) : "")
@@ -252,6 +256,8 @@ export function ContactDetailView({ contactId }: Props) {
   const cancelEditing = () => {
     if (contact) {
       setEditName(contact.name)
+      setEditRealName(contact.realName ?? "")
+      setEditNicknamesInput((contact.nicknames ?? []).join(", "))
       setEditType(TYPE_LABELS[contact.type] ?? contact.type)
       setEditOccupation(contact.occupation ?? "")
       setEditAge(contact.age != null ? String(contact.age) : "")
@@ -271,11 +277,17 @@ export function ContactDetailView({ contactId }: Props) {
   }
 
   const saveEditing = () => {
+    const nicknames = editNicknamesInput
+      .split(/[,、,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
     updateContactMutation.mutate(
       {
         id: contactId,
         data: {
           name: editName,
+          realName: editRealName,
+          nicknames,
           type: (TYPE_TO_API[editType] ?? editType) === "salon_member" ? "SALON_MEMBER" : "PARTNER_CONTACT",
           occupation: editOccupation,
           age: editAge ? Number(editAge) : null,
@@ -422,9 +434,9 @@ export function ContactDetailView({ contactId }: Props) {
         </CardHeader>
         <CardContent className="p-3 pt-0">
           <div className="grid grid-cols-3 gap-3 mb-3">
-            {/* 名前 */}
+            {/* 名前（表示用） */}
             <div>
-              <p className="text-xs text-muted-foreground">名前</p>
+              <p className="text-xs text-muted-foreground">名前（表示用）</p>
               {editing ? (
                 <Input
                   value={editName}
@@ -433,6 +445,33 @@ export function ContactDetailView({ contactId }: Props) {
                 />
               ) : (
                 <p className="text-sm font-medium">{contact.name}</p>
+              )}
+            </div>
+            {/* 本名 */}
+            <div>
+              <p className="text-xs text-muted-foreground">本名</p>
+              {editing ? (
+                <Input
+                  value={editRealName}
+                  onChange={(e) => setEditRealName(e.target.value)}
+                  className="h-8 text-sm mt-1"
+                />
+              ) : (
+                <p className="text-sm font-medium">{contact.realName || "-"}</p>
+              )}
+            </div>
+            {/* ニックネーム */}
+            <div>
+              <p className="text-xs text-muted-foreground">ニックネーム（カンマ区切り）</p>
+              {editing ? (
+                <Input
+                  value={editNicknamesInput}
+                  onChange={(e) => setEditNicknamesInput(e.target.value)}
+                  placeholder="例: kuma, くまさん"
+                  className="h-8 text-sm mt-1"
+                />
+              ) : (
+                <p className="text-sm font-medium">{(contact.nicknames ?? []).length > 0 ? (contact.nicknames ?? []).join(", ") : "-"}</p>
               )}
             </div>
             {/* 種別 */}

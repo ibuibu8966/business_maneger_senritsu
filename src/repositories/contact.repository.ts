@@ -41,17 +41,19 @@ export class ContactRepository {
   }
 
   static async create(data: {
-    name: string; type: "SALON_MEMBER" | "PARTNER_CONTACT"
+    name: string; realName?: string; nicknames?: string[]
+    type: "SALON_MEMBER" | "PARTNER_CONTACT"
     occupation?: string; age?: number | null; interests?: string; mindset?: string
     lineId?: string; discordId?: string; email?: string; phone?: string; memo?: string
     memberpayId?: string; robotpayId?: string; paypalId?: string; nextMeetingDate?: Date | null
     isFinalMeeting?: boolean; tags?: string[]
   }) {
-    return prisma.contact.create({ data: { ...data, occupation: data.occupation ?? "", interests: data.interests ?? "", mindset: data.mindset ?? "", lineId: data.lineId ?? "", discordId: data.discordId ?? "", email: data.email ?? "", phone: data.phone ?? "", memo: data.memo ?? "", memberpayId: data.memberpayId ?? "", robotpayId: data.robotpayId ?? "", paypalId: data.paypalId ?? "", isFinalMeeting: data.isFinalMeeting ?? false, tags: data.tags ?? [] } })
+    return prisma.contact.create({ data: { ...data, realName: data.realName ?? "", nicknames: data.nicknames ?? [], occupation: data.occupation ?? "", interests: data.interests ?? "", mindset: data.mindset ?? "", lineId: data.lineId ?? "", discordId: data.discordId ?? "", email: data.email ?? "", phone: data.phone ?? "", memo: data.memo ?? "", memberpayId: data.memberpayId ?? "", robotpayId: data.robotpayId ?? "", paypalId: data.paypalId ?? "", isFinalMeeting: data.isFinalMeeting ?? false, tags: data.tags ?? [] } })
   }
 
   static async update(id: string, data: {
-    name?: string; type?: "SALON_MEMBER" | "PARTNER_CONTACT"
+    name?: string; realName?: string; nicknames?: string[]
+    type?: "SALON_MEMBER" | "PARTNER_CONTACT"
     occupation?: string; age?: number | null; interests?: string; mindset?: string
     lineId?: string; discordId?: string; email?: string; phone?: string; memo?: string; isArchived?: boolean
     memberpayId?: string; robotpayId?: string; paypalId?: string; nextMeetingDate?: Date | null

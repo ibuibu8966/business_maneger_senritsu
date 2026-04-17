@@ -543,7 +543,9 @@ enum ContactType {
 
 model Contact {
   id           String      @id @default(cuid())
-  name         String                             // 名前
+  name         String                             // 表示名（呼び名）
+  realName     String      @default("")           // 本名
+  nicknames    String[]    @default([])           // 別名・ニックネーム（複数）
   type         ContactType                        // サロン生 / 取引先担当者
   occupation   String      @default("")           // 職業
   age          Int?                               // 年齢
