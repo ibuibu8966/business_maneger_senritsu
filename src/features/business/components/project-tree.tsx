@@ -57,7 +57,9 @@ import {
   useUpdateProject,
   useBusinessTasks,
   useBusinessIssues,
+  useCreateBusinessTask,
 } from "@/hooks/use-business"
+import { useSession } from "next-auth/react"
 import { ProjectInfoPanel, ProjectTasksPanel, ProjectIssuesPanel } from "./project-detail-panel"
 import { MemoSection } from "./memo-section"
 import { useEmployees } from "@/hooks/use-schedule"
@@ -1343,13 +1345,54 @@ function BusinessTasksPanel({ biz, projects, tasks }: { biz: Business; projects:
     return t.businessId === biz.id
   })
 
+  const [showAdd, setShowAdd] = useState(false)
+  const [newTitle, setNewTitle] = useState("")
+  const [newAssigneeId, setNewAssigneeId] = useState("")
+  const createTaskMutation = useCreateBusinessTask()
+  const { data: employees = [] } = useEmployees()
+  const { data: session } = useSession()
+  const currentUserName = session?.user?.name ?? "野田"
+
+  const handleAdd = () => {
+    if (!newTitle.trim()) return
+    createTaskMutation.mutate({
+      businessId: biz.id,
+      projectId: null,
+      title: newTitle.trim(),
+      status: "todo",
+      priority: "medium",
+      createdBy: currentUserName,
+      assigneeId: newAssigneeId || null,
+      assigneeIds: newAssigneeId ? [newAssigneeId] : [],
+    })
+    setNewTitle("")
+    setNewAssigneeId("")
+    setShowAdd(false)
+  }
+
   return (
     <div className="w-[280px] border-l bg-card h-full flex flex-col shrink-0">
-      <div className="px-4 py-3 border-b shrink-0">
+      <div className="px-4 py-3 border-b shrink-0 flex items-center justify-between">
         <p className="text-sm font-bold">タスク ({activeTasks.length})</p>
+        <Button size="sm" className="h-7 px-3 text-xs bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer" onClick={() => setShowAdd(true)}>
+          <Plus className="w-3.5 h-3.5 mr-1" />追加
+        </Button>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
-        {activeTasks.length === 0 ? (
+        {showAdd && (
+          <div className="mb-2 p-2 rounded border bg-muted/30 space-y-1">
+            <Input placeholder="タスク名（事業直下）" className="h-7 text-xs" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleAdd() }} />
+            <select className="w-full h-7 text-xs border rounded px-2 bg-background" value={newAssigneeId} onChange={(e) => setNewAssigneeId(e.target.value)}>
+              <option value="">担当者（未設定）</option>
+              {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+            </select>
+            <div className="flex gap-1 justify-end">
+              <Button variant="ghost" size="sm" className="h-6 text-[10px] cursor-pointer" onClick={() => { setShowAdd(false); setNewTitle(""); setNewAssigneeId("") }}>キャンセル</Button>
+              <Button size="sm" className="h-6 text-[10px] cursor-pointer" onClick={handleAdd} disabled={!newTitle.trim()}>追加</Button>
+            </div>
+          </div>
+        )}
+        {activeTasks.length === 0 && !showAdd ? (
           <p className="text-xs text-muted-foreground">タスクなし</p>
         ) : (
           <div className="space-y-1.5">
