@@ -238,7 +238,7 @@ export function TicketList() {
                       { id: "completed", label: "完了" },
                     ]} />
                   ) : (
-                    <Badge variant={t.status === "completed" ? "secondary" : t.status === "in_progress" ? "default" : t.status === "waiting" ? "default" : "outline"} className={cn("text-xs", t.status === "waiting" && "bg-yellow-500 hover:bg-yellow-600")}>
+                    <Badge variant={t.status === "completed" ? "secondary" : t.status === "in_progress" ? "default" : t.status === "waiting" ? "default" : "outline"} className={cn("text-xs", t.status === "waiting" && "bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700")}>
                       {STATUS_LABELS[t.status]}
                     </Badge>
                   )}

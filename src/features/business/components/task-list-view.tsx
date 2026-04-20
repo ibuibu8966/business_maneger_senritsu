@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -256,6 +257,7 @@ function TaskDetailPanel({
   updateTaskMutation,
   deleteTaskMutation,
   memoRef,
+  detailRef,
   contacts,
   partners,
   issues,
@@ -265,6 +267,7 @@ function TaskDetailPanel({
   updateTaskMutation: ReturnType<typeof useUpdateBusinessTask>
   deleteTaskMutation: ReturnType<typeof useDeleteBusinessTask>
   memoRef: React.RefObject<HTMLTextAreaElement | null>
+  detailRef: React.RefObject<HTMLTextAreaElement | null>
   contacts: { id: string; name: string }[]
   partners: { id: string; name: string }[]
   issues: { id: string; title: string; projectId: string }[]
@@ -309,7 +312,7 @@ function TaskDetailPanel({
         {task.recurring ? (
           <Badge
             variant="outline"
-            className="text-xs text-blue-600 border-blue-300 cursor-pointer hover:bg-blue-50"
+            className="text-xs text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/40"
             onClick={() => setShowRecurring(!showRecurring)}
           >
             <Repeat className="w-3 h-3 mr-1" />{recurringLabel}
@@ -350,7 +353,7 @@ function TaskDetailPanel({
             <CalendarDays className="w-3 h-3" />スケジュール
           </div>
           <button
-            className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
+            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 cursor-pointer"
             onClick={() => setShowScheduleForm(!showScheduleForm)}
           >
             {showScheduleForm ? "閉じる" : "+ 登録"}
@@ -436,9 +439,9 @@ function TaskDetailPanel({
 
       {/* 繰り返し設定セクション */}
       {showRecurring && (
-        <div className="space-y-2 border rounded-md p-3 bg-blue-50/50">
+        <div className="space-y-2 border rounded-md p-3 bg-blue-50/50 dark:bg-blue-950/20">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-blue-700">繰り返し設定</p>
+            <p className="text-xs font-medium text-blue-700 dark:text-blue-300">繰り返し設定</p>
             {task.recurring && (
               <button
                 className="text-xs text-red-500 hover:text-red-700 cursor-pointer"
@@ -568,12 +571,35 @@ function TaskDetailPanel({
         </div>
       )}
 
-      {task.detail && (
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">詳細</p>
-          <p className="text-sm bg-muted/50 rounded p-3">{task.detail}</p>
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-1">詳細</p>
+        <Textarea
+          ref={detailRef}
+          className="text-sm min-h-[80px]"
+          placeholder="詳細を入力..."
+          defaultValue={task.detail ?? ""}
+          key={`detail-${task.id}`}
+        />
+        <div className="flex gap-2 mt-2">
+          <Button
+            size="sm"
+            className="text-xs cursor-pointer"
+            disabled={updateTaskMutation.isPending}
+            onClick={() => {
+              const val = detailRef.current?.value ?? ""
+              updateTaskMutation.mutate(
+                { id: task.id, data: { detail: val } },
+                {
+                  onSuccess: () => toast.success("詳細を保存しました"),
+                  onError: () => toast.error("詳細の保存に失敗しました"),
+                }
+              )
+            }}
+          >
+            {updateTaskMutation.isPending ? "保存中..." : "詳細保存"}
+          </Button>
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -587,7 +613,7 @@ function TaskDetailPanel({
               return (
                 <label
                   key={emp.id}
-                  className={`flex items-center gap-1 text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 border-blue-400" : "bg-background"}`}
+                  className={`flex items-center gap-1 text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
                 >
                   <input
                     type="checkbox"
@@ -759,7 +785,7 @@ function TaskDetailPanel({
                 key={t}
                 size="sm"
                 variant="outline"
-                className={`text-xs cursor-pointer ${task.tool === t ? "font-bold border-2 bg-blue-50" : ""}`}
+                className={`text-xs cursor-pointer ${task.tool === t ? "font-bold border-2 bg-blue-50 dark:bg-blue-950/40" : ""}`}
                 onClick={() => {
                   updateTaskMutation.mutate({ id: task.id, data: { tool: t } })
                 }}
@@ -792,12 +818,19 @@ function TaskDetailPanel({
           <Button
             size="sm"
             className="text-xs cursor-pointer"
+            disabled={updateTaskMutation.isPending}
             onClick={() => {
               const val = memoRef.current?.value ?? ""
-              updateTaskMutation.mutate({ id: task.id, data: { memo: val } })
+              updateTaskMutation.mutate(
+                { id: task.id, data: { memo: val } },
+                {
+                  onSuccess: () => toast.success("メモを保存しました"),
+                  onError: () => toast.error("メモの保存に失敗しました"),
+                }
+              )
             }}
           >
-            メモ保存
+            {updateTaskMutation.isPending ? "保存中..." : "メモ保存"}
           </Button>
           <Button
             size="sm"
@@ -844,6 +877,7 @@ export function TaskListView() {
   const deleteTaskMutation = useDeleteBusinessTask()
   const reorderMutation = useReorderBusinessTasks()
   const memoRef = useRef<HTMLTextAreaElement>(null)
+  const detailRef = useRef<HTMLTextAreaElement>(null)
 
   const isLoading = bizLoading || projLoading || taskLoading || empLoading
 
@@ -998,6 +1032,7 @@ export function TaskListView() {
           updateTaskMutation={updateTaskMutation}
           deleteTaskMutation={deleteTaskMutation}
           memoRef={memoRef}
+          detailRef={detailRef}
           contacts={contactsList as unknown as { id: string; name: string }[]}
           partners={partnersList as unknown as { id: string; name: string }[]}
           issues={(issues as unknown as { id: string; title: string; projectId: string }[])}

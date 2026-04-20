@@ -306,7 +306,7 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
                 return (
                   <label
                     key={emp.id}
-                    className={`flex items-center gap-1 text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 border-blue-400" : "bg-background"}`}
+                    className={`flex items-center gap-1 text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
                   >
                     <input
                       type="checkbox"
@@ -659,7 +659,7 @@ function IssueCreateDialog({
                 return (
                   <label
                     key={s.id}
-                    className={`flex items-center gap-1 text-xs px-2 py-1 border rounded cursor-pointer ${checked ? "bg-blue-100 border-blue-400" : "bg-background"}`}
+                    className={`flex items-center gap-1 text-xs px-2 py-1 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
                   >
                     <input
                       type="checkbox"

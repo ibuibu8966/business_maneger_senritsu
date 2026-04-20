@@ -336,7 +336,7 @@ function TreeViewItem({
           {PRIORITY_CONFIG[node.priority].label}
         </span>
         {(node.revenue > 0 || node.expense > 0) && (
-          <span className={`text-[10px] font-medium ${profit >= 0 ? "text-green-700" : "text-red-600"}`}>
+          <span className={`text-[10px] font-medium ${profit >= 0 ? "text-green-700 dark:text-green-300" : "text-red-600 dark:text-red-400"}`}>
             {formatCompact(profit)}
           </span>
         )}
@@ -412,7 +412,7 @@ function TreeView({
                 {PRIORITY_CONFIG[biz.priority].label}
               </Badge>
               {(biz.revenue > 0 || biz.expense > 0) && (
-                <span className={`text-xs font-medium ${profit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                <span className={`text-xs font-medium ${profit >= 0 ? "text-green-700 dark:text-green-300" : "text-red-600 dark:text-red-400"}`}>
                   {formatCompact(profit)}
                 </span>
               )}

@@ -669,7 +669,7 @@ export function BalanceDashboard() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("text-xs border", l.type === "lend" ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200")}>
+                            <Badge variant="outline" className={cn("text-xs border", l.type === "lend" ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800" : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800")}>
                               {l.type === "lend" ? "貸出" : "借入"}
                             </Badge>
                           </TableCell>
@@ -697,9 +697,9 @@ export function BalanceDashboard() {
                               </select>
                             ) : (
                               <Badge variant="outline" className={cn("text-xs cursor-text",
-                                l.status === "active" && "border-blue-300 text-blue-700",
-                                l.status === "completed" && "border-emerald-300 text-emerald-700",
-                                l.status === "overdue" && "border-red-300 text-red-700",
+                                l.status === "active" && "border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300",
+                                l.status === "completed" && "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300",
+                                l.status === "overdue" && "border-red-300 dark:border-red-700 text-red-700 dark:text-red-300",
                               )}>
                                 {LENDING_STATUS_LABELS[l.status]}
                               </Badge>
@@ -786,7 +786,7 @@ export function BalanceDashboard() {
                           <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
                           <TableCell className="text-sm">{t.fromAccountName ?? "-"} → {t.toAccountName ?? "-"}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200")}>
+                            <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" : "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800")}>
                               {isIncoming ? "入金" : "出金"}
                             </Badge>
                           </TableCell>
@@ -1019,7 +1019,7 @@ export function BalanceDashboard() {
                           <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
                           <TableCell className="text-sm">{t.fromAccountName ?? "-"} → {t.toAccountName ?? "-"}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200")}>
+                            <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" : "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800")}>
                               {isIncoming ? "入金" : "出金"}
                             </Badge>
                           </TableCell>
@@ -1232,7 +1232,7 @@ export function BalanceDashboard() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("text-xs border", l.type === "lend" ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200")}>
+                            <Badge variant="outline" className={cn("text-xs border", l.type === "lend" ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800" : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800")}>
                               {l.type === "lend" ? "貸出" : "借入"}
                             </Badge>
                           </TableCell>
@@ -1260,9 +1260,9 @@ export function BalanceDashboard() {
                               </select>
                             ) : (
                               <Badge variant="outline" className={cn("text-xs cursor-text",
-                                l.status === "active" && "border-blue-300 text-blue-700",
-                                l.status === "completed" && "border-emerald-300 text-emerald-700",
-                                l.status === "overdue" && "border-red-300 text-red-700",
+                                l.status === "active" && "border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300",
+                                l.status === "completed" && "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300",
+                                l.status === "overdue" && "border-red-300 dark:border-red-700 text-red-700 dark:text-red-300",
                               )}>
                                 {LENDING_STATUS_LABELS[l.status]}
                               </Badge>

@@ -185,7 +185,7 @@ export function SubscriptionList() {
                       { id: "cancelled", label: "解約" },
                     ]} />
                   ) : (
-                    <Badge variant="outline" className={cn("text-xs", s.status === "active" ? "border-emerald-300 text-emerald-700" : "border-red-300 text-red-700")}>
+                    <Badge variant="outline" className={cn("text-xs", s.status === "active" ? "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300" : "border-red-300 dark:border-red-700 text-red-700 dark:text-red-300")}>
                       {STATUS_LABELS[s.status]}
                     </Badge>
                   )}

@@ -65,7 +65,7 @@ export function BusinessNodeComponent({ data }: { data: BusinessNodeData }) {
       </div>
       <div className="flex items-center gap-2 text-[11px]">
         <span className={`px-1 py-0.5 rounded ${PRIORITY_CONFIG[biz.priority].bgClassName}`}>{PRIORITY_CONFIG[biz.priority].label}</span>
-        <span className={profit >= 0 ? "text-green-700 font-medium" : "text-red-600 font-medium"}>
+        <span className={profit >= 0 ? "text-green-700 dark:text-green-300 font-medium" : "text-red-600 dark:text-red-400 font-medium"}>
           {formatCompact(profit)}
         </span>
         {taskCount > 0 && (
@@ -112,7 +112,7 @@ export function ProjectNodeComponent({ data }: { data: ProjectNodeData }) {
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className={`text-[10px] px-1 py-0.5 rounded ${PRIORITY_CONFIG[project.priority].bgClassName}`}>{PRIORITY_CONFIG[project.priority].label}</span>
         {(project.revenue > 0 || project.expense > 0) && (
-          <span className={`text-[10px] font-medium ${profit >= 0 ? "text-green-700" : "text-red-600"}`}>
+          <span className={`text-[10px] font-medium ${profit >= 0 ? "text-green-700 dark:text-green-300" : "text-red-600 dark:text-red-400"}`}>
             {profit >= 0 ? "+" : ""}{formatCompact(profit)}
           </span>
         )}

@@ -46,7 +46,7 @@ export function SortableTaskRow({
       onClick={() => onClickTask(task)}
       className={`flex items-center gap-2 p-2.5 rounded-md border text-xs bg-background hover:bg-muted/50 cursor-grab active:cursor-grabbing touch-none ${
         task.status === "done" ? "opacity-50" : ""
-      } ${task.todayFlag ? "ring-1 ring-yellow-400/60 bg-yellow-50/40" : ""}`}
+      } ${task.todayFlag ? "ring-1 ring-yellow-400/60 dark:ring-yellow-500/60 bg-yellow-50/40 dark:bg-yellow-900/20" : ""}`}
     >
       <button
         type="button"

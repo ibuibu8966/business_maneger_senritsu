@@ -669,7 +669,7 @@ export function ContactDetailView({ contactId }: Props) {
                         { id: "cancelled", label: "解約" },
                       ]} />
                     ) : (
-                      <Badge variant="outline" className={cn("text-xs", s.status === "active" && "border-emerald-300 text-emerald-700", s.status === "cancelled" && "border-red-300 text-red-700")}>
+                      <Badge variant="outline" className={cn("text-xs", s.status === "active" && "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300", s.status === "cancelled" && "border-red-300 dark:border-red-700 text-red-700 dark:text-red-300")}>
                         {STATUS_LABELS[s.status] ?? s.status}
                       </Badge>
                     )}
@@ -681,14 +681,14 @@ export function ContactDetailView({ contactId }: Props) {
                         { id: "not_exempt", label: "-" },
                       ]} />
                     ) : (
-                      s.isExempt ? <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">免除</Badge> : <span className="text-muted-foreground">-</span>
+                      s.isExempt ? <Badge variant="outline" className="text-xs text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700">免除</Badge> : <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
                     {s.discordRoleAssigned ? (
                       <Badge
                         variant="outline"
-                        className="text-xs border-blue-300 text-blue-700"
+                        className="text-xs border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300"
                       >
                         {s.discordRoleName || "付与済み"}
                       </Badge>

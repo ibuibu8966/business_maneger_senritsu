@@ -499,8 +499,8 @@ export function PartnerDetailView({ partnerId }: Props) {
                   <TableCell className="text-sm">{t.assigneeName}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn("text-xs",
-                      t.priority === "high" && "border-red-300 text-red-700",
-                      t.priority === "medium" && "border-yellow-300 text-yellow-700",
+                      t.priority === "high" && "border-red-300 dark:border-red-700 text-red-700 dark:text-red-300",
+                      t.priority === "medium" && "border-yellow-300 dark:border-yellow-700 text-yellow-700 dark:text-yellow-300",
                     )}>
                       {t.priority === "high" ? "高" : t.priority === "medium" ? "中" : "低"}
                     </Badge>
