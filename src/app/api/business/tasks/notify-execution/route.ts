@@ -53,7 +53,7 @@ async function run(req: NextRequest) {
       where: {
         status: { not: "DONE" },
         executionTime: { in: candidateHHMMs },
-        assigneeId: { not: null },
+        assignees: { some: {} },
         project: { status: "ACTIVE" },
       },
       select: {
@@ -64,7 +64,11 @@ async function run(req: NextRequest) {
         notifyEnabled: true,
         notifyMinutesBefore: true,
         project: { select: { name: true } },
-        assignee: { select: { id: true, name: true, lineUserId: true, isActive: true } },
+        assignees: {
+          include: {
+            employee: { select: { id: true, name: true, lineUserId: true, isActive: true } },
+          },
+        },
       },
     })
 
@@ -93,7 +97,11 @@ async function run(req: NextRequest) {
     const details: Array<{ task: string; kind: string; ok?: boolean; reason?: string }> = []
 
     for (const t of tasks) {
-      if (!t.assignee || !t.assignee.lineUserId || !t.assignee.isActive) {
+      const validAssignees = (t.assignees ?? [])
+        .map((a) => a.employee)
+        .filter((e): e is NonNullable<typeof e> => !!e && !!e.lineUserId && e.isActive)
+
+      if (validAssignees.length === 0) {
         skipped++
         details.push({ task: t.title, kind: "-", reason: "no_line_user" })
         continue
@@ -102,7 +110,7 @@ async function run(req: NextRequest) {
       const kind = t.kind
       const tag = `${dateStr} ${t.executionTime} ${kind}`
 
-      // 重複チェック
+      // 重複チェック（タスク単位）
       if (t.notifiedExecAt === tag) {
         skipped++
         details.push({ task: t.title, kind, reason: "already_notified" })
@@ -115,18 +123,26 @@ async function run(req: NextRequest) {
           ? `🚨 実行時刻になりました\n${proj}${t.title}\n今、やってください`
           : `⏰ あと${t.minutesBefore}分で実行時刻です\n${proj}${t.title}\n実行時刻: ${t.executionTime}`
 
-      const r = await pushLineMessage(t.assignee.lineUserId, message)
-      if (r.ok) {
-        sent++
-        details.push({ task: t.title, kind, ok: true })
-        // 通知済み記録
+      // 担当者全員に送信
+      let anySent = false
+      for (const assignee of validAssignees) {
+        const r = await pushLineMessage(assignee.lineUserId!, message)
+        if (r.ok) {
+          sent++
+          anySent = true
+          details.push({ task: `${t.title}→${assignee.name}`, kind, ok: true })
+        } else {
+          failed++
+          details.push({ task: `${t.title}→${assignee.name}`, kind, ok: false, reason: r.error })
+        }
+      }
+
+      // 誰か1人でも送信成功したら通知済み記録
+      if (anySent) {
         await prisma.businessTask.update({
           where: { id: t.id },
           data: { notifiedExecAt: tag },
         })
-      } else {
-        failed++
-        details.push({ task: t.title, kind, ok: false, reason: r.error })
       }
     }
 

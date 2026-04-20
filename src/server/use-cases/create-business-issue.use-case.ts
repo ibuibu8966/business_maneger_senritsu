@@ -12,6 +12,7 @@ export class CreateBusinessIssue {
     title: string
     detail?: string
     assigneeId?: string | null
+    assigneeIds?: string[]
     createdBy?: string
     deadline?: string | null
     priority?: string
@@ -21,17 +22,31 @@ export class CreateBusinessIssue {
     const seqResult = await prisma.$queryRaw<[{ nextval: bigint }]>`SELECT nextval('task_issue_seq')`
     const seqNumber = Number(seqResult[0].nextval)
 
+    const assigneeIds =
+      data.assigneeIds && data.assigneeIds.length > 0
+        ? data.assigneeIds
+        : data.assigneeId
+        ? [data.assigneeId]
+        : []
+
     const result = await BusinessIssueRepository.create({
       projectId: data.projectId,
       seqNumber,
       title: data.title,
       detail: data.detail ?? "",
-      assigneeId: data.assigneeId ?? null,
+      assigneeId: assigneeIds[0] ?? null,
       createdBy: data.createdBy ?? "",
       deadline: data.deadline ? new Date(data.deadline) : null,
       priority: data.priority ? PRIORITY_TO_DB[data.priority] ?? "MEDIUM" : "MEDIUM",
       status: data.status ? ISSUE_STATUS_TO_DB[data.status] ?? "UNRESOLVED" : "UNRESOLVED",
     })
+
+    if (assigneeIds.length > 0) {
+      await prisma.issueAssignee.createMany({
+        data: assigneeIds.map((employeeId) => ({ issueId: result.id, employeeId })),
+        skipDuplicates: true,
+      })
+    }
 
     try {
       await AuditLogRepository.create({

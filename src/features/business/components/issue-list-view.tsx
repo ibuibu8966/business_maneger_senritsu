@@ -181,7 +181,7 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
   const [title, setTitle] = useState(issue.title)
   const [detail, setDetail] = useState(issue.detail)
   const [deadline, setDeadline] = useState(issue.deadline ?? "")
-  const [assigneeId, setAssigneeId] = useState(issue.assigneeId ?? "")
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(issue.assigneeIds ?? [])
   const [newTaskTitle, setNewTaskTitle] = useState("")
   const [newTaskAssigneeId, setNewTaskAssigneeId] = useState(issue.assigneeId ?? "")
   const [showTaskForm, setShowTaskForm] = useState(false)
@@ -200,7 +200,7 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
     setTitle(issue.title)
     setDetail(issue.detail)
     setDeadline(issue.deadline ?? "")
-    setAssigneeId(issue.assigneeId ?? "")
+    setAssigneeIds(issue.assigneeIds ?? [])
   }
 
   const inlineInput = "bg-transparent border-0 border-b border-transparent hover:border-border focus:border-primary focus:ring-0 rounded-none px-0 transition-colors"
@@ -299,27 +299,43 @@ function IssueDetailPanel({ issue, onClose }: { issue: IssueItem; onClose: () =>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">旗振り役</p>
-            <select
-              className={cn("text-sm w-full cursor-pointer", inlineInput, "py-0.5")}
-              value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-            >
-              <option value="">未割当</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>{emp.name}</option>
-              ))}
-            </select>
-            {assigneeId !== (issue.assigneeId ?? "") && (
+            <p className="text-xs font-medium text-muted-foreground mb-1">旗振り役（複数選択可）</p>
+            <div className="flex flex-wrap gap-1">
+              {employees.map((emp) => {
+                const checked = assigneeIds.includes(emp.id)
+                return (
+                  <label
+                    key={emp.id}
+                    className={`flex items-center gap-1 text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 border-blue-400" : "bg-background"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) setAssigneeIds([...assigneeIds, emp.id])
+                        else setAssigneeIds(assigneeIds.filter((id) => id !== emp.id))
+                      }}
+                    />
+                    {emp.name}
+                  </label>
+                )
+              })}
+            </div>
+            {JSON.stringify([...assigneeIds].sort()) !== JSON.stringify([...(issue.assigneeIds ?? [])].sort()) && (
               <div className="flex gap-1 justify-end mt-1">
-                <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setAssigneeId(issue.assigneeId ?? "")}>
+                <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setAssigneeIds(issue.assigneeIds ?? [])}>
                   キャンセル
                 </Button>
                 <Button size="sm" className="h-6 text-[10px]" disabled={updateIssueMutation.isPending} onClick={() => {
-                  const emp = employees.find((em) => em.id === assigneeId)
+                  const selectedNames = employees.filter((em) => assigneeIds.includes(em.id)).map((em) => em.name)
                   updateIssueMutation.mutate({
                     id: issue.id,
-                    data: { assigneeId: assigneeId || null, assigneeName: emp?.name ?? null },
+                    data: {
+                      assigneeIds,
+                      assigneeId: assigneeIds[0] ?? null,
+                      assigneeName: selectedNames[0] ?? null,
+                      assigneeNames: selectedNames,
+                    },
                   })
                 }}>
                   保存
@@ -552,7 +568,7 @@ function IssueCreateDialog({
   const [title, setTitle] = useState("")
   const [detail, setDetail] = useState("")
   const [priority, setPriority] = useState<Priority | "">("")
-  const [assigneeId, setAssigneeId] = useState("")
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [deadline, setDeadline] = useState("")
   const [projectId, setProjectId] = useState(defaultProjectId ?? "")
   const createIssueMutation = useCreateBusinessIssue()
@@ -560,14 +576,16 @@ function IssueCreateDialog({
   const handleCreate = () => {
     if (!title.trim()) return
     const proj = projects.find((p) => p.id === projectId)
-    const staff = employees.find((s) => s.id === assigneeId)
+    const selectedStaff = employees.filter((s) => assigneeIds.includes(s.id))
     createIssueMutation.mutate({
       projectId: projectId || undefined,
       projectName: proj?.name ?? "不明",
       title: title.trim(),
       detail: detail.trim(),
-      assigneeId: assigneeId || null,
-      assigneeName: staff?.name ?? null,
+      assigneeId: assigneeIds[0] ?? null,
+      assigneeName: selectedStaff[0]?.name ?? null,
+      assigneeIds,
+      assigneeNames: selectedStaff.map((s) => s.name),
       createdBy: "野田",
       deadline: deadline || null,
       priority: (priority as Priority) || "medium",
@@ -578,7 +596,7 @@ function IssueCreateDialog({
     setTitle("")
     setDetail("")
     setPriority("")
-    setAssigneeId("")
+    setAssigneeIds([])
     setDeadline("")
   }
 
@@ -629,17 +647,32 @@ function IssueCreateDialog({
               </select>
             </div>
             <div>
-              <Label className="text-xs">旗振り役</Label>
-              <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-                <option value="">任意</option>
-                {employees.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
               <Label className="text-xs">期限</Label>
               <Input type="date" className="mt-1 h-8 text-sm" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">旗振り役（複数選択可）</Label>
+            <div className="mt-1 flex flex-wrap gap-2 p-2 border rounded-md bg-background">
+              {employees.map((s) => {
+                const checked = assigneeIds.includes(s.id)
+                return (
+                  <label
+                    key={s.id}
+                    className={`flex items-center gap-1 text-xs px-2 py-1 border rounded cursor-pointer ${checked ? "bg-blue-100 border-blue-400" : "bg-background"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) setAssigneeIds([...assigneeIds, s.id])
+                        else setAssigneeIds(assigneeIds.filter((id) => id !== s.id))
+                      }}
+                    />
+                    {s.name}
+                  </label>
+                )
+              })}
             </div>
           </div>
         </div>

@@ -570,21 +570,42 @@ function TaskDetailPanel({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">担当者</p>
-          <select
-            className="text-sm w-full border rounded-md px-2 py-1 bg-background cursor-pointer"
-            value={task.assigneeId ?? ""}
-            onChange={(e) => {
-              const emp = employees.find((em) => em.id === e.target.value)
-              updateTaskMutation.mutate({
-                id: task.id,
-                data: { assigneeId: e.target.value || null, assigneeName: emp?.name ?? null },
-              })
-            }}
-          >
-            <option value="">未割当</option>
-            {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-          </select>
+          <p className="text-xs font-medium text-muted-foreground mb-1">担当者（複数選択可）</p>
+          <div className="flex flex-wrap gap-1">
+            {employees.map((emp) => {
+              const currentIds: string[] = (task.assigneeIds && task.assigneeIds.length > 0)
+                ? task.assigneeIds
+                : (task.assigneeId ? [task.assigneeId] : [])
+              const checked = currentIds.includes(emp.id)
+              return (
+                <label
+                  key={emp.id}
+                  className={`flex items-center gap-1 text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 border-blue-400" : "bg-background"}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                        ? [...currentIds, emp.id]
+                        : currentIds.filter((id) => id !== emp.id)
+                      const names = employees.filter((em) => next.includes(em.id)).map((em) => em.name)
+                      updateTaskMutation.mutate({
+                        id: task.id,
+                        data: {
+                          assigneeIds: next,
+                          assigneeId: next[0] ?? null,
+                          assigneeName: names[0] ?? null,
+                          assigneeNames: names,
+                        },
+                      })
+                    }}
+                  />
+                  {emp.name}
+                </label>
+              )
+            })}
+          </div>
         </div>
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">作成者</p>

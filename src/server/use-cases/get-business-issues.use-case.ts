@@ -7,7 +7,7 @@ const PRIORITY_MAP: Record<string, string> = { HIGHEST: "highest", HIGH: "high",
 export class GetBusinessIssues {
   static async execute(params?: { projectId?: string; assigneeId?: string; status?: BusinessIssueStatus; priority?: BusinessPriority }) {
     const issues = await BusinessIssueRepository.findMany(params)
-    return issues.map((i) => ({
+    return issues.map((i: any) => ({
       id: i.id,
       seqNumber: i.seqNumber ?? null,
       projectId: i.projectId,
@@ -16,11 +16,13 @@ export class GetBusinessIssues {
       detail: i.detail,
       assigneeId: i.assigneeId,
       assigneeName: i.assignee?.name ?? null,
+      assigneeIds: (i.assignees ?? []).map((a: any) => a.employeeId),
+      assigneeNames: (i.assignees ?? []).map((a: any) => a.employee?.name).filter(Boolean),
       createdBy: i.createdBy,
       deadline: i.deadline ? i.deadline.toISOString().split("T")[0] : null,
       priority: PRIORITY_MAP[i.priority] ?? "medium",
       status: ISSUE_STATUS_MAP[i.status] ?? "unresolved",
-      progressNotes: i.progressNotes.map((n) => ({
+      progressNotes: i.progressNotes.map((n: any) => ({
         id: n.id,
         issueId: n.issueId,
         date: n.date.toISOString().split("T")[0],

@@ -345,6 +345,8 @@ export interface BusinessTaskDTO {
   detail: string
   assigneeId: string | null
   assigneeName: string | null
+  assigneeIds: string[]
+  assigneeNames: string[]
   deadline: string | null
   status: "todo" | "in-progress" | "waiting" | "done"
   memo: string
@@ -433,6 +435,8 @@ export interface BusinessIssueDTO {
   detail: string
   assigneeId: string | null
   assigneeName: string | null
+  assigneeIds: string[]
+  assigneeNames: string[]
   createdBy: string
   deadline: string | null
   priority: "highest" | "high" | "medium" | "low"

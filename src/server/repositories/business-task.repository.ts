@@ -35,6 +35,7 @@ export class BusinessTaskRepository {
           },
         },
         assignee: { select: { id: true, name: true } },
+        assignees: { include: { employee: { select: { id: true, name: true } } } },
         contact: { select: { id: true, name: true } },
         partner: { select: { id: true, name: true } },
         issue: { select: { id: true, title: true, status: true, priority: true } },
@@ -70,6 +71,7 @@ export class BusinessTaskRepository {
           },
         },
         assignee: { select: { id: true, name: true } },
+        assignees: { include: { employee: { select: { id: true, name: true } } } },
       },
     })
   }

@@ -101,8 +101,10 @@ export function SortableTaskRow({
         <Badge variant="outline" className={`text-[10px] h-4 px-1 font-semibold ${st.className}`}>
           {st.label}
         </Badge>
-        {task.assigneeName && (
-          <span className="text-muted-foreground text-[10px]">{task.assigneeName}</span>
+        {((task.assigneeNames && task.assigneeNames.length > 0) || task.assigneeName) && (
+          <span className="text-muted-foreground text-[10px]">
+            {(task.assigneeNames && task.assigneeNames.length > 0) ? task.assigneeNames.join("、") : task.assigneeName}
+          </span>
         )}
         {task.executionTime && (
           <span className="text-[10px] text-purple-600 font-medium">

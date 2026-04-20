@@ -11,6 +11,7 @@ export class CreateBusinessTask {
     title: string
     detail?: string
     assigneeId?: string | null
+    assigneeIds?: string[]
     deadline?: string | null
     status?: string
     memo?: string
@@ -33,12 +34,20 @@ export class CreateBusinessTask {
     const seqResult = await prisma.$queryRaw<[{ nextval: bigint }]>`SELECT nextval('task_issue_seq')`
     const seqNumber = Number(seqResult[0].nextval)
 
+    // assigneeIds 優先。未指定なら assigneeId から1件だけ補填
+    const assigneeIds =
+      data.assigneeIds && data.assigneeIds.length > 0
+        ? data.assigneeIds
+        : data.assigneeId
+        ? [data.assigneeId]
+        : []
+
     const result = await BusinessTaskRepository.create({
       projectId: data.projectId,
       seqNumber,
       title: data.title,
       detail: data.detail ?? "",
-      assigneeId: data.assigneeId ?? null,
+      assigneeId: assigneeIds[0] ?? null,
       deadline: data.deadline ? new Date(data.deadline) : null,
       status: data.status ? TASK_STATUS_TO_DB[data.status] ?? "TODO" : "TODO",
       memo: data.memo ?? "",
@@ -57,6 +66,13 @@ export class CreateBusinessTask {
       notifyMinutesBefore: data.notifyMinutesBefore ?? 10,
       issueId: data.issueId ?? null,
     })
+
+    if (assigneeIds.length > 0) {
+      await prisma.taskAssignee.createMany({
+        data: assigneeIds.map((employeeId) => ({ taskId: result.id, employeeId })),
+        skipDuplicates: true,
+      })
+    }
 
     try {
       await AuditLogRepository.create({

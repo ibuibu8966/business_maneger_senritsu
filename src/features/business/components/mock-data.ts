@@ -112,6 +112,8 @@ export interface TaskItem {
   detail: string
   assigneeId: string | null
   assigneeName: string | null
+  assigneeIds: string[]
+  assigneeNames: string[]
   deadline: string | null
   status: TaskStatus
   memo: string
@@ -180,6 +182,8 @@ export interface IssueItem {
   detail: string
   assigneeId: string | null
   assigneeName: string | null
+  assigneeIds: string[]
+  assigneeNames: string[]
   createdBy: string
   deadline: string | null
   priority: Priority

@@ -37,7 +37,7 @@ async function run(req: NextRequest) {
     for (const emp of employees) {
       const tasks = await prisma.businessTask.findMany({
         where: {
-          assigneeId: emp.id,
+          assignees: { some: { employeeId: emp.id } },
           status: { not: "DONE" },
           project: { status: "ACTIVE" },
         },

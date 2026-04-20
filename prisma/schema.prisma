@@ -143,6 +143,7 @@ model BusinessTask {
   checklistItems TaskChecklistItem[]
   missedLogs     TaskMissedLog[]
   scheduleEvents ScheduleEvent[]
+  assignees      TaskAssignee[]                           // 担当者（複数）
 
   @@index([projectId])
   @@index([assigneeId])
@@ -153,6 +154,21 @@ model BusinessTask {
   @@index([todayFlag])
   @@index([issueId])
   @@map("business_tasks")
+}
+
+// ========== タスク担当者（中間テーブル） ==========
+model TaskAssignee {
+  id         String       @id @default(cuid())
+  taskId     String
+  task       BusinessTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee     @relation("TaskAssignees", fields: [employeeId], references: [id])
+  createdAt  DateTime     @default(now())
+
+  @@unique([taskId, employeeId])
+  @@index([taskId])
+  @@index([employeeId])
+  @@map("task_assignees")
 }
 
 // ========== 未達成ログ（深夜2時Cronで記録） ==========
@@ -195,12 +211,28 @@ model BusinessIssue {
   progressNotes BusinessIssueNote[]
   tasks         BusinessTask[]
   memos         BusinessMemo[]
+  assignees     IssueAssignee[]                            // 旗振り役（複数）
 
   @@index([projectId])
   @@index([assigneeId])
   @@index([status])
   @@index([priority])
   @@map("business_issues")
+}
+
+// ========== 課題担当者（中間テーブル） ==========
+model IssueAssignee {
+  id         String        @id @default(cuid())
+  issueId    String
+  issue      BusinessIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee      @relation("IssueAssignees", fields: [employeeId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@unique([issueId, employeeId])
+  @@index([issueId])
+  @@index([employeeId])
+  @@map("issue_assignees")
 }
 
 // ========== 課題経過記録 ==========
@@ -448,6 +480,8 @@ model Employee {
   projectAssignees   ProjectAssignee[]  @relation("ProjectAssignees")
   assignedTasks      BusinessTask[]     @relation("TaskAssignee")
   assignedIssues     BusinessIssue[]    @relation("IssueAssignee")
+  taskAssignees      TaskAssignee[]     @relation("TaskAssignees")
+  issueAssignees     IssueAssignee[]    @relation("IssueAssignees")
 
   @@map("employees")
 }

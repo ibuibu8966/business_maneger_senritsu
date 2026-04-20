@@ -43,7 +43,9 @@ export function TaskCard({
         </Badge>
       </div>
       <div className={`flex items-center gap-3 ${compact ? "mt-1" : "mt-2"} text-xs text-muted-foreground`}>
-        {task.assigneeName && <span>{task.assigneeName}</span>}
+        {((task.assigneeNames && task.assigneeNames.length > 0) || task.assigneeName) && (
+          <span>{(task.assigneeNames && task.assigneeNames.length > 0) ? task.assigneeNames.join("、") : task.assigneeName}</span>
+        )}
         {task.deadline && (
           <span className={new Date(task.deadline) < new Date() && task.status !== "done" ? "text-red-600 font-medium" : ""}>
             〆 {task.deadline}

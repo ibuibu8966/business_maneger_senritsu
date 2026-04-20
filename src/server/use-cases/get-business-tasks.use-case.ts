@@ -17,6 +17,8 @@ export class GetBusinessTasks {
       detail: t.detail,
       assigneeId: t.assigneeId,
       assigneeName: t.assignee?.name ?? null,
+      assigneeIds: (t.assignees ?? []).map((a: any) => a.employeeId),
+      assigneeNames: (t.assignees ?? []).map((a: any) => a.employee?.name).filter(Boolean),
       deadline: t.deadline ? t.deadline.toISOString().split("T")[0] : null,
       status: TASK_STATUS_MAP[t.status] ?? "todo",
       memo: t.memo,

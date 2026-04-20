@@ -44,7 +44,7 @@ export function TaskCreateDialog({
   const [title, setTitle] = useState("")
   const [detail, setDetail] = useState("")
   const [projectId, setProjectId] = useState("")
-  const [assigneeId, setAssigneeId] = useState("s1")
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [deadline, setDeadline] = useState("")
   const [executionTime, setExecutionTime] = useState("09:00")
   const [notifyMinutesBefore, setNotifyMinutesBefore] = useState(10)
@@ -63,14 +63,16 @@ export function TaskCreateDialog({
   const handleCreate = () => {
     if (!title.trim() || !projectId) return
     const proj = projects.find((p) => p.id === projectId)
-    const staff = employees.find((s) => s.id === assigneeId)
+    const selectedStaff = employees.filter((s) => assigneeIds.includes(s.id))
     createTaskMutation.mutate({
       projectId,
       projectName: proj?.name ?? "不明",
       title: title.trim(),
       detail: detail.trim(),
-      assigneeId: assigneeId || null,
-      assigneeName: staff?.name ?? null,
+      assigneeId: assigneeIds[0] || null,
+      assigneeName: selectedStaff[0]?.name ?? null,
+      assigneeIds,
+      assigneeNames: selectedStaff.map((s) => s.name),
       deadline: deadline || null,
       status: "todo",
       memo: "",
@@ -94,6 +96,7 @@ export function TaskCreateDialog({
     setTitle("")
     setDetail("")
     setProjectId("")
+    setAssigneeIds([])
     setDeadline("")
     setExecutionTime("09:00")
     setNotifyMinutesBefore(10)
@@ -145,19 +148,33 @@ export function TaskCreateDialog({
             <Label className="text-xs">詳細</Label>
             <Textarea className="mt-1 text-sm min-h-[50px]" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="タスクの詳細（任意）" />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">担当者</Label>
-              <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-                {employees.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+          <div>
+            <Label className="text-xs">担当者（複数選択可）</Label>
+            <div className="mt-1 flex flex-wrap gap-2 p-2 border rounded-md bg-background">
+              {employees.map((s) => {
+                const checked = assigneeIds.includes(s.id)
+                return (
+                  <label
+                    key={s.id}
+                    className={`flex items-center gap-1 text-xs px-2 py-1 border rounded cursor-pointer ${checked ? "bg-blue-100 border-blue-400" : "bg-background"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) setAssigneeIds([...assigneeIds, s.id])
+                        else setAssigneeIds(assigneeIds.filter((id) => id !== s.id))
+                      }}
+                    />
+                    {s.name}
+                  </label>
+                )
+              })}
             </div>
-            <div>
-              <Label className="text-xs">期限</Label>
-              <Input type="date" className="mt-1 h-8 text-sm" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
-            </div>
+          </div>
+          <div>
+            <Label className="text-xs">期限</Label>
+            <Input type="date" className="mt-1 h-8 text-sm" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>

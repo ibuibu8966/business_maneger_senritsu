@@ -4,6 +4,7 @@ import type { BusinessIssueStatus, BusinessPriority, Prisma } from "@/generated/
 const issueInclude = {
   project: { select: { id: true, name: true } },
   assignee: { select: { id: true, name: true } },
+  assignees: { include: { employee: { select: { id: true, name: true } } } },
   progressNotes: { orderBy: { date: "desc" as const } },
 }
 

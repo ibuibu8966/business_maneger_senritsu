@@ -1,5 +1,6 @@
 import { BusinessTaskRepository } from "@/server/repositories/business-task.repository"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
+import { prisma } from "@/lib/prisma"
 
 const TASK_STATUS_TO_DB: Record<string, string> = { todo: "TODO", "in-progress": "IN_PROGRESS", waiting: "WAITING", done: "DONE" }
 const PRIORITY_TO_DB: Record<string, string> = { highest: "HIGHEST", high: "HIGH", medium: "MEDIUM", low: "LOW" }
@@ -41,6 +42,21 @@ export class UpdateBusinessTask {
       dbData.notifiedExecAt = null
     }
     if (data.issueId !== undefined) dbData.issueId = data.issueId || null
+
+    // 担当者複数対応：assigneeIds が明示されたら中間テーブルを差し替え
+    if (data.assigneeIds !== undefined) {
+      const newIds = (data.assigneeIds as string[]) ?? []
+      await prisma.taskAssignee.deleteMany({ where: { taskId: id } })
+      if (newIds.length > 0) {
+        await prisma.taskAssignee.createMany({
+          data: newIds.map((employeeId) => ({ taskId: id, employeeId })),
+          skipDuplicates: true,
+        })
+      }
+      // 旧 assigneeId も互換のため先頭 or null で同期
+      dbData.assigneeId = newIds[0] ?? null
+    }
+
     const result = await BusinessTaskRepository.update(id, dbData)
 
     try {
