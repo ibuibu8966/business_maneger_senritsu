@@ -1,9 +1,10 @@
 "use client"
 
-import { useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, Trash2 } from "lucide-react"
+import { ArrowLeft, Trash2, Pencil, Paperclip, FileText, Link2, X, Upload, Link as LinkIcon } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +17,7 @@ import {
   type TaskStatus,
   type Priority,
   type TicketTool,
+  type TaskItem,
 } from "./mock-data"
 import {
   useBusinessTasks,
@@ -26,6 +28,50 @@ import {
 import { useEmployees } from "@/hooks/use-schedule"
 import { useContacts, usePartners } from "@/hooks/use-crm"
 import { TaskChecklistSection } from "./task-list/task-checklist-section"
+import { useFileUpload } from "@/features/business/hooks/use-file-upload"
+
+type Attachment = { id: string; name: string; url: string; type: string }
+
+type EditForm = {
+  title: string
+  detail: string
+  memo: string
+  status: TaskStatus
+  priority: Priority
+  assigneeIds: string[]
+  deadline: string
+  executionTime: string
+  notifyEnabled: boolean
+  notifyMinutesBefore: number
+  contactId: string
+  partnerId: string
+  tool: TicketTool | ""
+  issueId: string
+}
+
+function buildForm(task: TaskItem): EditForm {
+  return {
+    title: task.title,
+    detail: task.detail ?? "",
+    memo: task.memo ?? "",
+    status: task.status,
+    priority: task.priority,
+    assigneeIds:
+      task.assigneeIds && task.assigneeIds.length > 0
+        ? task.assigneeIds
+        : task.assigneeId
+        ? [task.assigneeId]
+        : [],
+    deadline: task.deadline ?? "",
+    executionTime: task.executionTime ?? "",
+    notifyEnabled: task.notifyEnabled,
+    notifyMinutesBefore: task.notifyMinutesBefore ?? 10,
+    contactId: task.contactId ?? "",
+    partnerId: task.partnerId ?? "",
+    tool: task.tool ?? "",
+    issueId: task.issueId ?? "",
+  }
+}
 
 export function TaskDetailPage({ taskId }: { taskId: string }) {
   const router = useRouter()
@@ -38,9 +84,28 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
   const { data: partnersList = [] } = usePartners()
   const { data: issues = [] } = useBusinessIssues()
 
-  const titleRef = useRef<HTMLInputElement>(null)
-  const detailRef = useRef<HTMLTextAreaElement>(null)
-  const memoRef = useRef<HTMLTextAreaElement>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [form, setForm] = useState<EditForm | null>(null)
+  const [urlName, setUrlName] = useState("")
+  const [urlValue, setUrlValue] = useState("")
+  const [showUrlInput, setShowUrlInput] = useState(false)
+
+  const attachments: Attachment[] = (task?.attachments ?? []) as Attachment[]
+
+  const { openFilePicker } = useFileUpload((result) => {
+    if (!task) return
+    const next: Attachment[] = [
+      ...attachments,
+      { id: `att-${Date.now()}`, name: result.name, url: result.url, type: "file" },
+    ]
+    updateTaskMutation.mutate(
+      { id: task.id, data: { attachments: next } },
+      {
+        onSuccess: () => toast.success("添付を追加しました"),
+        onError: () => toast.error("添付の保存に失敗しました"),
+      }
+    )
+  })
 
   if (isLoading) {
     return <div className="p-8 text-sm text-muted-foreground">読み込み中...</div>
@@ -60,7 +125,123 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
 
   const contacts = contactsList as unknown as { id: string; name: string }[]
   const partners = partnersList as unknown as { id: string; name: string }[]
-  const typedIssues = issues as unknown as { id: string; title: string; projectId: string }[]
+  const typedIssues = issues as unknown as {
+    id: string
+    title: string
+    projectId: string
+  }[]
+
+  const startEditing = () => {
+    setForm(buildForm(task))
+    setIsEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setForm(null)
+    setIsEditing(false)
+  }
+
+  const save = () => {
+    if (!form) return
+    const data: Record<string, unknown> = {}
+    if (form.title.trim() !== task.title) {
+      if (!form.title.trim()) {
+        toast.error("タイトルは必須です")
+        return
+      }
+      data.title = form.title.trim()
+    }
+    if (form.detail !== (task.detail ?? "")) data.detail = form.detail
+    if (form.memo !== (task.memo ?? "")) data.memo = form.memo
+    if (form.status !== task.status) data.status = form.status
+    if (form.priority !== task.priority) data.priority = form.priority
+    if (form.deadline !== (task.deadline ?? "")) data.deadline = form.deadline || null
+    if (form.executionTime !== (task.executionTime ?? "")) data.executionTime = form.executionTime || null
+    if (form.notifyEnabled !== task.notifyEnabled) data.notifyEnabled = form.notifyEnabled
+    if (form.notifyMinutesBefore !== (task.notifyMinutesBefore ?? 10)) data.notifyMinutesBefore = form.notifyMinutesBefore
+    if (form.contactId !== (task.contactId ?? "")) data.contactId = form.contactId || null
+    if (form.partnerId !== (task.partnerId ?? "")) data.partnerId = form.partnerId || null
+    if (form.tool !== (task.tool ?? "")) data.tool = form.tool || null
+    if (form.issueId !== (task.issueId ?? "")) data.issueId = form.issueId || null
+
+    const currentAssigneeIds =
+      task.assigneeIds && task.assigneeIds.length > 0
+        ? task.assigneeIds
+        : task.assigneeId
+        ? [task.assigneeId]
+        : []
+    const sameAssignees =
+      currentAssigneeIds.length === form.assigneeIds.length &&
+      currentAssigneeIds.every((id) => form.assigneeIds.includes(id))
+    if (!sameAssignees) {
+      const names = employees
+        .filter((em) => form.assigneeIds.includes(em.id))
+        .map((em) => em.name)
+      data.assigneeIds = form.assigneeIds
+      data.assigneeId = form.assigneeIds[0] ?? null
+      data.assigneeName = names[0] ?? null
+      data.assigneeNames = names
+    }
+
+    if (Object.keys(data).length === 0) {
+      toast.info("変更がありません")
+      setIsEditing(false)
+      setForm(null)
+      return
+    }
+
+    updateTaskMutation.mutate(
+      { id: task.id, data },
+      {
+        onSuccess: () => {
+          toast.success("保存しました")
+          setIsEditing(false)
+          setForm(null)
+        },
+        onError: () => toast.error("保存に失敗しました"),
+      }
+    )
+  }
+
+  const addUrlAttachment = () => {
+    if (!urlName.trim() || !urlValue.trim()) return
+    const next: Attachment[] = [
+      ...attachments,
+      { id: `att-${Date.now()}`, name: urlName.trim(), url: urlValue.trim(), type: "url" },
+    ]
+    updateTaskMutation.mutate(
+      { id: task.id, data: { attachments: next } },
+      {
+        onSuccess: () => {
+          toast.success("URLを追加しました")
+          setUrlName("")
+          setUrlValue("")
+          setShowUrlInput(false)
+        },
+        onError: () => toast.error("URLの保存に失敗しました"),
+      }
+    )
+  }
+
+  const removeAttachment = (id: string) => {
+    const next = attachments.filter((a) => a.id !== id)
+    updateTaskMutation.mutate(
+      { id: task.id, data: { attachments: next } },
+      {
+        onSuccess: () => toast.success("添付を削除しました"),
+        onError: () => toast.error("添付の削除に失敗しました"),
+      }
+    )
+  }
+
+  const assigneeDisplay = (() => {
+    if (task.assigneeNames && task.assigneeNames.length > 0) return task.assigneeNames.join("、")
+    if (task.assigneeName) return task.assigneeName
+    return "未割当"
+  })()
+
+  const st = TASK_STATUS_CONFIG[task.status]
+  const pr = PRIORITY_CONFIG[task.priority]
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-5">
@@ -77,69 +258,76 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
             <span className="ml-2 font-mono text-xs">#{task.seqNumber}</span>
           )}
         </div>
+        {isEditing ? (
+          <>
+            <Button size="sm" variant="outline" onClick={cancelEditing} disabled={updateTaskMutation.isPending}>
+              キャンセル
+            </Button>
+            <Button size="sm" onClick={save} disabled={updateTaskMutation.isPending}>
+              {updateTaskMutation.isPending ? "保存中..." : "保存"}
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" onClick={startEditing}>
+            <Pencil className="w-3 h-3 mr-1" />
+            編集
+          </Button>
+        )}
       </div>
 
       {/* タイトル */}
-      <div>
-        <Label className="text-xs text-muted-foreground">タイトル</Label>
-        <Input
-          ref={titleRef}
-          defaultValue={task.title}
-          className="text-lg font-semibold mt-1"
-          key={`title-${task.id}`}
-        />
-        <div className="flex gap-2 mt-2">
-          <Button
-            size="sm"
-            disabled={updateTaskMutation.isPending}
-            onClick={() => {
-              const val = titleRef.current?.value?.trim() ?? ""
-              if (!val) {
-                toast.error("タイトルは必須です")
-                return
-              }
-              updateTaskMutation.mutate(
-                { id: task.id, data: { title: val } },
-                {
-                  onSuccess: () => toast.success("タイトルを保存しました"),
-                  onError: () => toast.error("タイトルの保存に失敗しました"),
-                }
-              )
-            }}
-          >
-            {updateTaskMutation.isPending ? "保存中..." : "タイトル保存"}
-          </Button>
+      {isEditing && form ? (
+        <div>
+          <Label className="text-xs text-muted-foreground">タイトル</Label>
+          <Input
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            className="text-lg font-semibold mt-1"
+          />
         </div>
-      </div>
+      ) : (
+        <h1 className="text-2xl font-bold">{task.title}</h1>
+      )}
+
+      {/* ステータスバッジ行（表示モードのみ） */}
+      {!isEditing && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="outline" className={`font-semibold ${st.className}`}>
+            {st.label}
+          </Badge>
+          <Badge variant="outline" className={`${pr.className}`}>
+            {pr.label}
+          </Badge>
+          {task.recurring && (
+            <Badge variant="outline" className="text-xs text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700">
+              繰り返し
+            </Badge>
+          )}
+          {task.todayFlag && (
+            <Badge variant="outline" className="text-xs text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700">
+              今日やる
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* 詳細 */}
       <div>
         <Label className="text-xs text-muted-foreground">詳細</Label>
-        <Textarea
-          ref={detailRef}
-          defaultValue={task.detail ?? ""}
-          className="min-h-[200px] mt-1 text-sm"
-          placeholder="詳細を入力..."
-          key={`detail-${task.id}`}
-        />
-        <div className="flex gap-2 mt-2">
-          <Button
-            size="sm"
-            disabled={updateTaskMutation.isPending}
-            onClick={() => {
-              const val = detailRef.current?.value ?? ""
-              updateTaskMutation.mutate(
-                { id: task.id, data: { detail: val } },
-                {
-                  onSuccess: () => toast.success("詳細を保存しました"),
-                  onError: () => toast.error("詳細の保存に失敗しました"),
-                }
-              )
-            }}
-          >
-            {updateTaskMutation.isPending ? "保存中..." : "詳細保存"}
-          </Button>
-        </div>
+        {isEditing && form ? (
+          <Textarea
+            value={form.detail}
+            onChange={(e) => setForm({ ...form, detail: e.target.value })}
+            className="min-h-[200px] mt-1 text-sm"
+            placeholder="詳細を入力..."
+          />
+        ) : task.detail ? (
+          <div className="mt-1 p-3 bg-muted/30 rounded text-sm whitespace-pre-wrap">
+            {task.detail}
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground italic">未設定</p>
+        )}
       </div>
 
       <Separator />
@@ -150,40 +338,44 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
         <div className="space-y-4">
           <div>
             <Label className="text-xs text-muted-foreground">状態</Label>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {(Object.keys(TASK_STATUS_CONFIG) as TaskStatus[]).map((s) => (
-                <Button
-                  key={s}
-                  size="sm"
-                  variant={task.status === s ? "default" : "outline"}
-                  className="text-xs"
-                  onClick={() =>
-                    updateTaskMutation.mutate({ id: task.id, data: { status: s } })
-                  }
-                >
-                  {TASK_STATUS_CONFIG[s].label}
-                </Button>
-              ))}
-            </div>
+            {isEditing && form ? (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {(Object.keys(TASK_STATUS_CONFIG) as TaskStatus[]).map((s) => (
+                  <Button
+                    key={s}
+                    size="sm"
+                    variant={form.status === s ? "default" : "outline"}
+                    className="text-xs"
+                    onClick={() => setForm({ ...form, status: s })}
+                  >
+                    {TASK_STATUS_CONFIG[s].label}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm mt-1">{st.label}</p>
+            )}
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">優先度</Label>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
-                <Button
-                  key={p}
-                  size="sm"
-                  variant={task.priority === p ? "default" : "outline"}
-                  className="text-xs"
-                  onClick={() =>
-                    updateTaskMutation.mutate({ id: task.id, data: { priority: p } })
-                  }
-                >
-                  {PRIORITY_CONFIG[p].label}
-                </Button>
-              ))}
-            </div>
+            {isEditing && form ? (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
+                  <Button
+                    key={p}
+                    size="sm"
+                    variant={form.priority === p ? "default" : "outline"}
+                    className="text-xs"
+                    onClick={() => setForm({ ...form, priority: p })}
+                  >
+                    {PRIORITY_CONFIG[p].label}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm mt-1">{pr.label}</p>
+            )}
           </div>
 
           <div>
@@ -196,25 +388,26 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
 
           <div>
             <Label className="text-xs text-muted-foreground">紐づく課題</Label>
-            <select
-              className="w-full mt-1 text-sm border rounded-md p-2 bg-background cursor-pointer"
-              value={task.issueId ?? ""}
-              onChange={(e) =>
-                updateTaskMutation.mutate({
-                  id: task.id,
-                  data: { issueId: e.target.value || null },
-                })
-              }
-            >
-              <option value="">課題なし</option>
-              {typedIssues
-                .filter((i) => i.projectId === task.projectId)
-                .map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.title}
-                  </option>
-                ))}
-            </select>
+            {isEditing && form ? (
+              <select
+                className="w-full mt-1 text-sm border rounded-md p-2 bg-background cursor-pointer"
+                value={form.issueId}
+                onChange={(e) => setForm({ ...form, issueId: e.target.value })}
+              >
+                <option value="">課題なし</option>
+                {typedIssues
+                  .filter((i) => i.projectId === task.projectId)
+                  .map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.title}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <p className="text-sm mt-1">
+                {task.issueTitle ?? <span className="text-muted-foreground italic">なし</span>}
+              </p>
+            )}
           </div>
 
           <div>
@@ -226,7 +419,9 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
                   {task.recurringDay != null ? ` / ${task.recurringDay}` : ""}
                 </span>
               ) : (
-                <span className="text-muted-foreground">なし（設定は右サイドパネルから）</span>
+                <span className="text-muted-foreground italic">
+                  なし{isEditing ? "（設定は右サイドパネルから）" : ""}
+                </span>
               )}
             </p>
           </div>
@@ -235,191 +430,262 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
         {/* 右カラム */}
         <div className="space-y-4">
           <div>
-            <Label className="text-xs text-muted-foreground">担当者（複数選択可）</Label>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {employees.map((emp) => {
-                const currentIds: string[] =
-                  task.assigneeIds && task.assigneeIds.length > 0
-                    ? task.assigneeIds
-                    : task.assigneeId
-                    ? [task.assigneeId]
-                    : []
-                const checked = currentIds.includes(emp.id)
-                return (
-                  <label
-                    key={emp.id}
-                    className={`flex items-center gap-1 text-xs px-2 py-1 border rounded cursor-pointer ${
-                      checked
-                        ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100"
-                        : "bg-background"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => {
-                        const next = e.target.checked
-                          ? [...currentIds, emp.id]
-                          : currentIds.filter((id) => id !== emp.id)
-                        const names = employees
-                          .filter((em) => next.includes(em.id))
-                          .map((em) => em.name)
-                        updateTaskMutation.mutate({
-                          id: task.id,
-                          data: {
-                            assigneeIds: next,
-                            assigneeId: next[0] ?? null,
-                            assigneeName: names[0] ?? null,
-                            assigneeNames: names,
-                          },
-                        })
-                      }}
-                    />
-                    {emp.name}
-                  </label>
-                )
-              })}
-            </div>
+            <Label className="text-xs text-muted-foreground">担当者</Label>
+            {isEditing && form ? (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {employees.map((emp) => {
+                  const checked = form.assigneeIds.includes(emp.id)
+                  return (
+                    <label
+                      key={emp.id}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 border rounded cursor-pointer ${
+                        checked
+                          ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100"
+                          : "bg-background"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...form.assigneeIds, emp.id]
+                            : form.assigneeIds.filter((id) => id !== emp.id)
+                          setForm({ ...form, assigneeIds: next })
+                        }}
+                      />
+                      {emp.name}
+                    </label>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-sm mt-1">{assigneeDisplay}</p>
+            )}
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">期限</Label>
-            <Input
-              type="date"
-              className="mt-1"
-              value={task.deadline ?? ""}
-              onChange={(e) =>
-                updateTaskMutation.mutate({
-                  id: task.id,
-                  data: { deadline: e.target.value || null },
-                })
-              }
-            />
+            {isEditing && form ? (
+              <Input
+                type="date"
+                className="mt-1"
+                value={form.deadline}
+                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+              />
+            ) : (
+              <p className="text-sm mt-1">
+                {task.deadline ?? <span className="text-muted-foreground italic">未設定</span>}
+              </p>
+            )}
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">実行時刻</Label>
-            <Input
-              type="time"
-              className="mt-1"
-              value={task.executionTime ?? ""}
-              onChange={(e) =>
-                updateTaskMutation.mutate({
-                  id: task.id,
-                  data: { executionTime: e.target.value || null },
-                })
-              }
-            />
+            {isEditing && form ? (
+              <Input
+                type="time"
+                className="mt-1"
+                value={form.executionTime}
+                onChange={(e) => setForm({ ...form, executionTime: e.target.value })}
+              />
+            ) : (
+              <p className="text-sm mt-1">
+                {task.executionTime ?? <span className="text-muted-foreground italic">未設定</span>}
+              </p>
+            )}
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">通知</Label>
-            <div className="flex items-center gap-2 mt-1">
-              <label className="text-sm flex items-center gap-1 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={task.notifyEnabled}
-                  onChange={(e) =>
-                    updateTaskMutation.mutate({
-                      id: task.id,
-                      data: { notifyEnabled: e.target.checked },
-                    })
-                  }
-                />
-                有効
-              </label>
-              <select
-                className="text-sm border rounded p-1 bg-background cursor-pointer disabled:opacity-50"
-                value={String(task.notifyMinutesBefore ?? 10)}
-                onChange={(e) =>
-                  updateTaskMutation.mutate({
-                    id: task.id,
-                    data: { notifyMinutesBefore: Number(e.target.value) },
-                  })
-                }
-                disabled={!task.notifyEnabled}
-              >
-                <option value="0">なし</option>
-                <option value="5">5分前</option>
-                <option value="10">10分前</option>
-                <option value="15">15分前</option>
-                <option value="30">30分前</option>
-                <option value="60">60分前</option>
-              </select>
-            </div>
+            {isEditing && form ? (
+              <div className="flex items-center gap-2 mt-1">
+                <label className="text-sm flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.notifyEnabled}
+                    onChange={(e) => setForm({ ...form, notifyEnabled: e.target.checked })}
+                  />
+                  有効
+                </label>
+                <select
+                  className="text-sm border rounded p-1 bg-background cursor-pointer disabled:opacity-50"
+                  value={String(form.notifyMinutesBefore)}
+                  onChange={(e) => setForm({ ...form, notifyMinutesBefore: Number(e.target.value) })}
+                  disabled={!form.notifyEnabled}
+                >
+                  <option value="0">なし</option>
+                  <option value="5">5分前</option>
+                  <option value="10">10分前</option>
+                  <option value="15">15分前</option>
+                  <option value="30">30分前</option>
+                  <option value="60">60分前</option>
+                </select>
+              </div>
+            ) : (
+              <p className="text-sm mt-1">
+                {task.notifyEnabled
+                  ? `有効 / ${task.notifyMinutesBefore}分前`
+                  : <span className="text-muted-foreground italic">無効</span>}
+              </p>
+            )}
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">連絡先</Label>
-            <select
-              className="w-full mt-1 text-sm border rounded-md p-2 bg-background cursor-pointer"
-              value={task.contactId ?? ""}
-              onChange={(e) =>
-                updateTaskMutation.mutate({
-                  id: task.id,
-                  data: { contactId: e.target.value || null },
-                })
-              }
-            >
-              <option value="">なし</option>
-              {contacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            {isEditing && form ? (
+              <select
+                className="w-full mt-1 text-sm border rounded-md p-2 bg-background cursor-pointer"
+                value={form.contactId}
+                onChange={(e) => setForm({ ...form, contactId: e.target.value })}
+              >
+                <option value="">なし</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-sm mt-1">
+                {task.contactName ?? <span className="text-muted-foreground italic">なし</span>}
+              </p>
+            )}
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">取引先</Label>
-            <select
-              className="w-full mt-1 text-sm border rounded-md p-2 bg-background cursor-pointer"
-              value={task.partnerId ?? ""}
-              onChange={(e) =>
-                updateTaskMutation.mutate({
-                  id: task.id,
-                  data: { partnerId: e.target.value || null },
-                })
-              }
-            >
-              <option value="">なし</option>
-              {partners.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            {isEditing && form ? (
+              <select
+                className="w-full mt-1 text-sm border rounded-md p-2 bg-background cursor-pointer"
+                value={form.partnerId}
+                onChange={(e) => setForm({ ...form, partnerId: e.target.value })}
+              >
+                <option value="">なし</option>
+                {partners.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-sm mt-1">
+                {task.partnerName ?? <span className="text-muted-foreground italic">なし</span>}
+              </p>
+            )}
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">連絡ツール</Label>
-            <div className="flex flex-wrap gap-1 mt-1">
-              <Button
-                size="sm"
-                variant={task.tool == null ? "default" : "outline"}
-                className="text-xs"
-                onClick={() =>
-                  updateTaskMutation.mutate({ id: task.id, data: { tool: null } })
-                }
-              >
-                なし
-              </Button>
-              {(Object.keys(TOOL_CONFIG) as TicketTool[]).map((t) => (
+            {isEditing && form ? (
+              <div className="flex flex-wrap gap-1 mt-1">
                 <Button
-                  key={t}
                   size="sm"
-                  variant={task.tool === t ? "default" : "outline"}
+                  variant={form.tool === "" ? "default" : "outline"}
                   className="text-xs"
-                  onClick={() =>
-                    updateTaskMutation.mutate({ id: task.id, data: { tool: t } })
-                  }
+                  onClick={() => setForm({ ...form, tool: "" })}
                 >
-                  {TOOL_CONFIG[t].emoji} {TOOL_CONFIG[t].label}
+                  なし
                 </Button>
-              ))}
-            </div>
+                {(Object.keys(TOOL_CONFIG) as TicketTool[]).map((t) => (
+                  <Button
+                    key={t}
+                    size="sm"
+                    variant={form.tool === t ? "default" : "outline"}
+                    className="text-xs"
+                    onClick={() => setForm({ ...form, tool: t })}
+                  >
+                    {TOOL_CONFIG[t].emoji} {TOOL_CONFIG[t].label}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm mt-1">
+                {task.tool && TOOL_CONFIG[task.tool] ? (
+                  `${TOOL_CONFIG[task.tool].emoji} ${TOOL_CONFIG[task.tool].label}`
+                ) : (
+                  <span className="text-muted-foreground italic">なし</span>
+                )}
+              </p>
+            )}
           </div>
         </div>
+      </div>
+
+      <Separator />
+
+      {/* 添付 */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-sm font-medium">
+            <Paperclip className="w-3.5 h-3.5 inline mr-1" />
+            添付 ({attachments.length})
+          </Label>
+          <div className="flex gap-1">
+            <Button size="sm" variant="outline" onClick={openFilePicker}>
+              <Upload className="w-3 h-3 mr-1" />
+              ファイル
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowUrlInput((v) => !v)}>
+              <LinkIcon className="w-3 h-3 mr-1" />
+              URL
+            </Button>
+          </div>
+        </div>
+
+        {showUrlInput && (
+          <div className="flex gap-2 mb-2">
+            <Input
+              placeholder="表示名"
+              value={urlName}
+              onChange={(e) => setUrlName(e.target.value)}
+              className="flex-1"
+            />
+            <Input
+              placeholder="https://..."
+              value={urlValue}
+              onChange={(e) => setUrlValue(e.target.value)}
+              className="flex-1"
+            />
+            <Button size="sm" onClick={addUrlAttachment} disabled={!urlName.trim() || !urlValue.trim()}>
+              追加
+            </Button>
+          </div>
+        )}
+
+        {attachments.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">添付はありません</p>
+        ) : (
+          <div className="space-y-1">
+            {attachments.map((att) => (
+              <div
+                key={att.id}
+                className="flex items-center gap-2 text-sm p-2 rounded bg-muted/30 group"
+              >
+                {att.type === "file" ? (
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                ) : (
+                  <Link2 className="w-4 h-4 text-blue-500 shrink-0" />
+                )}
+                <a
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate flex-1 hover:text-blue-600 hover:underline cursor-pointer"
+                >
+                  {att.name}
+                </a>
+                <button
+                  onClick={() => removeAttachment(att.id)}
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive cursor-pointer"
+                  title="削除"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <Separator />
@@ -432,30 +698,25 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
       {/* メモ */}
       <div>
         <Label className="text-xs text-muted-foreground">メモ</Label>
-        <Textarea
-          ref={memoRef}
-          defaultValue={task.memo}
-          className="min-h-[100px] mt-1 text-sm"
-          placeholder="作業メモを入力..."
-          key={`memo-${task.id}`}
-        />
-        <div className="flex gap-2 mt-2 justify-between">
-          <Button
-            size="sm"
-            disabled={updateTaskMutation.isPending}
-            onClick={() => {
-              const val = memoRef.current?.value ?? ""
-              updateTaskMutation.mutate(
-                { id: task.id, data: { memo: val } },
-                {
-                  onSuccess: () => toast.success("メモを保存しました"),
-                  onError: () => toast.error("メモの保存に失敗しました"),
-                }
-              )
-            }}
-          >
-            {updateTaskMutation.isPending ? "保存中..." : "メモ保存"}
-          </Button>
+        {isEditing && form ? (
+          <Textarea
+            value={form.memo}
+            onChange={(e) => setForm({ ...form, memo: e.target.value })}
+            className="min-h-[100px] mt-1 text-sm"
+            placeholder="作業メモを入力..."
+          />
+        ) : task.memo ? (
+          <div className="mt-1 p-3 bg-muted/30 rounded text-sm whitespace-pre-wrap">
+            {task.memo}
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground italic">未設定</p>
+        )}
+      </div>
+
+      {/* 削除ボタン（編集モード時のみ） */}
+      {isEditing && (
+        <div className="flex justify-end pt-4">
           <Button
             size="sm"
             variant="destructive"
@@ -474,7 +735,7 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
             タスクを削除
           </Button>
         </div>
-      </div>
+      )}
 
       {/* フッター */}
       <div className="pt-3 border-t text-xs text-muted-foreground">

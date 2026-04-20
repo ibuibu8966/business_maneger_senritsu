@@ -117,6 +117,7 @@ export interface TaskItem {
   deadline: string | null
   status: TaskStatus
   memo: string
+  attachments: { id: string; name: string; url: string; type: string }[]
   contactId: string | null
   contactName: string | null
   partnerId: string | null

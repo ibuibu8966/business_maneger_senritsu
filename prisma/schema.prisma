@@ -118,6 +118,7 @@ model BusinessTask {
   deadline    DateTime?          @db.Date             // 期限
   status      BusinessTaskStatus @default(TODO)       // ステータス
   memo        String             @default("")         // メモ
+  attachments Json               @default("[]")       // 添付 [{id,name,url,type}]
   recurring         Boolean            @default(false)      // 繰り返し
   recurringPattern  String?                                  // "daily"|"weekly"|"monthly_date"|"monthly_weekday"
   recurringDay      Int?                                     // 曜日(0-6) or 日(1-31)

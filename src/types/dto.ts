@@ -350,6 +350,7 @@ export interface BusinessTaskDTO {
   deadline: string | null
   status: "todo" | "in-progress" | "waiting" | "done"
   memo: string
+  attachments: { id: string; name: string; url: string; type: string }[]
   contactId: string | null
   contactName: string | null
   partnerId: string | null

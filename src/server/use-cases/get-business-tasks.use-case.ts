@@ -22,6 +22,7 @@ export class GetBusinessTasks {
       deadline: t.deadline ? t.deadline.toISOString().split("T")[0] : null,
       status: TASK_STATUS_MAP[t.status] ?? "todo",
       memo: t.memo,
+      attachments: Array.isArray(t.attachments) ? t.attachments : [],
       contactId: t.contactId ?? null,
       contactName: t.contact?.name ?? null,
       partnerId: t.partnerId ?? null,

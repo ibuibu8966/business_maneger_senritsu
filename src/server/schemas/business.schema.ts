@@ -59,6 +59,7 @@ export const createTaskSchema = z.object({
   deadline: z.string().nullable().optional(),
   status: z.enum(["todo", "in-progress", "waiting", "done"]).optional(),
   memo: z.string().optional(),
+  attachments: z.array(z.object({ id: z.string(), name: z.string(), url: z.string(), type: z.string() })).optional(),
   recurring: z.boolean().optional(),
   recurringPattern: z.enum(["daily", "weekly", "monthly_date", "monthly_weekday"]).nullable().optional(),
   recurringDay: z.number().int().nullable().optional(),
@@ -71,6 +72,10 @@ export const createTaskSchema = z.object({
   notifyEnabled: z.boolean().optional(),
   notifyMinutesBefore: z.number().int().optional(), // 0/5/10/15/30/60
   issueId: z.string().nullable().optional(),
+  contactId: z.string().nullable().optional(),
+  partnerId: z.string().nullable().optional(),
+  tool: z.enum(["LINE", "TELEGRAM", "DISCORD", "PHONE", "ZOOM", "IN_PERSON"]).nullable().optional(),
+  priority: z.enum(["highest", "high", "medium", "low"]).optional(),
 })
 
 export const createIssueSchema = z.object({

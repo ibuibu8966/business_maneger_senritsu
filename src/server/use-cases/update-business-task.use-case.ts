@@ -16,6 +16,7 @@ export class UpdateBusinessTask {
     if (data.deadline !== undefined) dbData.deadline = data.deadline ? new Date(data.deadline as string) : null
     if (data.status !== undefined) dbData.status = TASK_STATUS_TO_DB[data.status as string]
     if (data.memo !== undefined) dbData.memo = data.memo
+    if (data.attachments !== undefined) dbData.attachments = data.attachments
     if (data.recurring !== undefined) dbData.recurring = data.recurring
     if (data.recurringPattern !== undefined) dbData.recurringPattern = data.recurringPattern || null
     if (data.recurringDay !== undefined) dbData.recurringDay = data.recurringDay ?? null
