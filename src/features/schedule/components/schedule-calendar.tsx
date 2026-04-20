@@ -49,15 +49,21 @@ function getWeekDates(date: Date): Date[] {
   })
 }
 
-// 画面高さに応じてカレンダーに表示するイベント数を可変にする
+// 画面高さに応じてカレンダーに表示するイベント数を可変にする（上限なし・連続的に増減）
 function useResponsiveEventLimits() {
-  const [limits, setLimits] = useState({ span: 2, timed: 2 })
+  const [limits, setLimits] = useState({ span: 2, timed: 3 })
   useEffect(() => {
     const compute = () => {
       const h = window.innerHeight
-      if (h >= 1000) setLimits({ span: 3, timed: 5 })
-      else if (h >= 800) setLimits({ span: 3, timed: 3 })
-      else setLimits({ span: 2, timed: 2 })
+      // ヘッダー・操作バー・曜日行分を除いた、カレンダー本体の利用可能高さ
+      const available = Math.max(0, h - 220)
+      // 月ビューは6週行
+      const perWeekHeight = available / 6
+      // 各週行から日付行(約28px)とスパン(約20px/行)を差し引いた残りを1イベント20pxで割る
+      const timed = Math.max(2, Math.floor((perWeekHeight - 30) / 20))
+      // スパン行はタイムドと連動させつつ、画面が大きい時は多めに
+      const span = Math.max(2, Math.min(timed, Math.floor(perWeekHeight / 40)))
+      setLimits({ span, timed })
     }
     compute()
     window.addEventListener("resize", compute)
