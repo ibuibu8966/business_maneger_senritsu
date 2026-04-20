@@ -73,6 +73,7 @@ import { TaskCreateDialog } from "./task-list/task-create-dialog"
 import { SortableTaskRow } from "./task-list/sortable-task-row"
 import { TaskChecklistSection } from "./task-list/task-checklist-section"
 import { ProjectTreeNode } from "./task-list/project-tree-node"
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 
 
 
@@ -136,7 +137,7 @@ function ProjectSidePanel({
   )
 
   return (
-    <div className="w-[360px] border-l bg-card h-full flex flex-col shrink-0">
+    <div className="border-l bg-card h-full flex flex-col">
       <div className="px-3 py-2.5 border-b shrink-0">
         <h3 className="text-sm font-bold">事業・プロジェクト</h3>
       </div>
@@ -299,7 +300,7 @@ function TaskDetailPanel({
     : "繰り返し"
 
   return (
-    <div className="w-[380px] border-l overflow-y-auto p-4 space-y-4">
+    <div className="border-l overflow-y-auto p-4 space-y-4 h-full">
       <div className="flex items-center justify-between">
         <h3 className="text-base font-bold truncate">{task.title}</h3>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg cursor-pointer">&times;</button>
@@ -938,10 +939,8 @@ export function TaskListView() {
     )
   }
 
-  return (
-    <div className="h-full flex">
-      {/* 左カラム: タスク一覧 */}
-      <div className="flex-1 overflow-y-auto">
+  const leftColumn = (
+    <div className="h-full overflow-y-auto">
         {/* ヘッダー: フィルタ + 登録ボタン */}
         <div className="p-3 border-b flex items-center gap-2 flex-wrap">
           {isAdmin && (
@@ -988,7 +987,7 @@ export function TaskListView() {
             title="今日やるフラグのついたタスクのみ表示"
           >
             <Star className={`w-3 h-3 mr-1 ${showTodayOnly ? "fill-yellow-400 text-yellow-500" : ""}`} />
-            今日やる（{allTasks.filter((t) => t.todayFlag).length}）
+            今日やる
           </Button>
 
           <div className="flex-1" />
@@ -1022,34 +1021,58 @@ export function TaskListView() {
             </DndContext>
           )}
         </div>
-      </div>
+    </div>
+  )
 
-      {/* 中央カラム: タスク詳細 (選択時) */}
-      {selectedTask && (
-        <TaskDetailPanel
-          task={selectedTask}
-          onClose={() => setSelectedTaskId(null)}
-          updateTaskMutation={updateTaskMutation}
-          deleteTaskMutation={deleteTaskMutation}
-          memoRef={memoRef}
-          detailRef={detailRef}
-          contacts={contactsList as unknown as { id: string; name: string }[]}
-          partners={partnersList as unknown as { id: string; name: string }[]}
-          issues={(issues as unknown as { id: string; title: string; projectId: string }[])}
-        />
+  const rightColumn = (
+    <ProjectSidePanel
+      selectedTask={selectedTask}
+      allTasks={allTasks}
+      allProjects={allProjects}
+      allBusinesses={allBusinesses}
+      allIssues={issues as unknown as IssueInfo[]}
+      onSelectTask={setSelectedTaskId}
+    />
+  )
+
+  return (
+    <div className="h-full">
+      {selectedTask ? (
+        <ResizablePanelGroup direction="horizontal" autoSaveId="task-list-with-detail" className="h-full">
+          <ResizablePanel id="tasks-list" order={1} defaultSize={40} minSize={25}>
+            {leftColumn}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel id="task-detail" order={2} defaultSize={30} minSize={20}>
+            <TaskDetailPanel
+              task={selectedTask}
+              onClose={() => setSelectedTaskId(null)}
+              updateTaskMutation={updateTaskMutation}
+              deleteTaskMutation={deleteTaskMutation}
+              memoRef={memoRef}
+              detailRef={detailRef}
+              contacts={contactsList as unknown as { id: string; name: string }[]}
+              partners={partnersList as unknown as { id: string; name: string }[]}
+              issues={(issues as unknown as { id: string; title: string; projectId: string }[])}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel id="project-side" order={3} defaultSize={30} minSize={15}>
+            {rightColumn}
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        <ResizablePanelGroup direction="horizontal" autoSaveId="task-list-no-detail" className="h-full">
+          <ResizablePanel id="tasks-list" order={1} defaultSize={70} minSize={30}>
+            {leftColumn}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel id="project-side" order={3} defaultSize={30} minSize={15}>
+            {rightColumn}
+          </ResizablePanel>
+        </ResizablePanelGroup>
       )}
 
-      {/* 右カラム: プロジェクトサイドパネル（参考情報） */}
-      <ProjectSidePanel
-        selectedTask={selectedTask}
-        allTasks={allTasks}
-        allProjects={allProjects}
-        allBusinesses={allBusinesses}
-        allIssues={issues as unknown as IssueInfo[]}
-        onSelectTask={setSelectedTaskId}
-      />
-
-      {/* タスク登録ダイアログ */}
       <TaskCreateDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
