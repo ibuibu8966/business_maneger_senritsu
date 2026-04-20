@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Check, Star, Repeat } from "lucide-react"
@@ -69,7 +70,15 @@ export function SortableTaskRow({
         <div className="flex items-center gap-1.5">
           {task.recurring && <Repeat className="w-3 h-3 text-blue-500 shrink-0" />}
           {task.seqNumber && <span className="text-[10px] text-muted-foreground font-mono shrink-0">#{task.seqNumber}</span>}
-          <span className="font-medium truncate">{task.title}</span>
+          <Link
+            href={`/business/tasks/${task.id}`}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="font-medium truncate hover:underline hover:text-primary cursor-pointer"
+            title="詳細ページを開く"
+          >
+            {task.title}
+          </Link>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground mt-0.5">
           {task.projectName && <span className="text-[10px]">{task.businessName} / {task.projectName}</span>}
