@@ -50,13 +50,14 @@ export const createProjectSchema = z.object({
 })
 
 export const createTaskSchema = z.object({
-  projectId: z.string(),
+  projectId: z.string().nullable().optional(),
+  businessId: z.string().nullable().optional(),
   title: z.string().min(1),
   detail: z.string().optional(),
   assigneeId: z.string().nullable().optional(),
   assigneeIds: z.array(z.string()).optional(),
   deadline: z.string().nullable().optional(),
-  status: z.enum(["todo", "in-progress", "done"]).optional(),
+  status: z.enum(["todo", "in-progress", "waiting", "done"]).optional(),
   memo: z.string().optional(),
   recurring: z.boolean().optional(),
   recurringPattern: z.enum(["daily", "weekly", "monthly_date", "monthly_weekday"]).nullable().optional(),

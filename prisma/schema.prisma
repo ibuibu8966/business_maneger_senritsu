@@ -63,6 +63,7 @@ model Business {
   contactBusinesses  ContactBusiness[]                // CRM: 直接紐づく顧客
   checklistTemplates ChecklistTemplate[]              // チェックリストテンプレート
   memos              BusinessMemo[]                   // メモ（複数）
+  directTasks        BusinessTask[]    @relation("BusinessDirectTasks") // 事業直下タスク（プロジェクト経由しない）
 
   @@map("businesses")
 }
@@ -106,8 +107,10 @@ model Project {
 model BusinessTask {
   id          String             @id @default(cuid())
   seqNumber   Int?               @unique              // 通し番号（タスク・課題共通シーケンス）
-  projectId   String                                  // 所属プロジェクト
-  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String?                                 // 所属プロジェクト（事業直下タスクの場合はnull）
+  project     Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  businessId  String?                                 // 所属事業（プロジェクト経由しない直下タスクの場合に使用）
+  business    Business?          @relation("BusinessDirectTasks", fields: [businessId], references: [id], onDelete: Cascade)
   title       String                                  // タスク名
   detail      String             @default("")         // 詳細
   assigneeId  String?                                 // 担当者

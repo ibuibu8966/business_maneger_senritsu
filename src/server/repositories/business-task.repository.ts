@@ -4,6 +4,7 @@ import type { BusinessTaskStatus } from "@/generated/prisma/client"
 export class BusinessTaskRepository {
   static async findMany(params?: {
     projectId?: string
+    businessId?: string
     assigneeId?: string
     status?: BusinessTaskStatus
     contactId?: string
@@ -12,11 +13,16 @@ export class BusinessTaskRepository {
     return prisma.businessTask.findMany({
       where: {
         ...(params?.projectId && { projectId: params.projectId }),
+        ...(params?.businessId && { businessId: params.businessId }),
         ...(params?.assigneeId && { assigneeId: params.assigneeId }),
         ...(params?.status && { status: params.status }),
         ...(params?.contactId && { contactId: params.contactId }),
         ...(params?.issueId && { issueId: params.issueId }),
-        project: { status: "ACTIVE" },
+        // プロジェクト配下タスクはプロジェクトがACTIVE、事業直下タスクは事業がACTIVEであること
+        OR: [
+          { project: { status: "ACTIVE" } },
+          { business: { status: "ACTIVE" } },
+        ],
       },
       include: {
         project: {
@@ -32,6 +38,12 @@ export class BusinessTaskRepository {
                 priority: true, revenue: true, expense: true,
               },
             },
+          },
+        },
+        business: {
+          select: {
+            id: true, name: true, purpose: true, status: true,
+            priority: true, revenue: true, expense: true,
           },
         },
         assignee: { select: { id: true, name: true } },

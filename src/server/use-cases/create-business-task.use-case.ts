@@ -7,7 +7,8 @@ const PRIORITY_TO_DB: Record<string, string> = { highest: "HIGHEST", high: "HIGH
 
 export class CreateBusinessTask {
   static async execute(data: {
-    projectId: string
+    projectId?: string | null
+    businessId?: string | null
     title: string
     detail?: string
     assigneeId?: string | null
@@ -30,6 +31,10 @@ export class CreateBusinessTask {
     notifyMinutesBefore?: number
     issueId?: string | null
   }) {
+    // projectId と businessId のどちらか1つは必須
+    if (!data.projectId && !data.businessId) {
+      throw new Error("projectId または businessId のいずれかが必要です")
+    }
     // 通し番号を採番
     const seqResult = await prisma.$queryRaw<[{ nextval: bigint }]>`SELECT nextval('task_issue_seq')`
     const seqNumber = Number(seqResult[0].nextval)
@@ -43,7 +48,8 @@ export class CreateBusinessTask {
         : []
 
     const result = await BusinessTaskRepository.create({
-      projectId: data.projectId,
+      projectId: data.projectId ?? null,
+      businessId: data.businessId ?? null,
       seqNumber,
       title: data.title,
       detail: data.detail ?? "",

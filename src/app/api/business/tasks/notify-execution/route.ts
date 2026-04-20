@@ -54,7 +54,10 @@ async function run(req: NextRequest) {
         status: { not: "DONE" },
         executionTime: { in: candidateHHMMs },
         assignees: { some: {} },
-        project: { status: "ACTIVE" },
+        OR: [
+          { project: { status: "ACTIVE" } },
+          { business: { status: "ACTIVE" } },
+        ],
       },
       select: {
         id: true,
@@ -64,6 +67,7 @@ async function run(req: NextRequest) {
         notifyEnabled: true,
         notifyMinutesBefore: true,
         project: { select: { name: true } },
+        business: { select: { name: true } },
         assignees: {
           include: {
             employee: { select: { id: true, name: true, lineUserId: true, isActive: true } },
@@ -117,7 +121,8 @@ async function run(req: NextRequest) {
         continue
       }
 
-      const proj = t.project?.name ? `[${t.project.name}] ` : ""
+      const projLabel = t.project?.name ?? t.business?.name
+      const proj = projLabel ? `[${projLabel}] ` : ""
       const message =
         kind === "now"
           ? `🚨 実行時刻になりました\n${proj}${t.title}\n今、やってください`

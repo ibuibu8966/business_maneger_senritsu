@@ -6,12 +6,12 @@ const STATUS_MAP: Record<string, string> = { ACTIVE: "active", ON_HOLD: "on-hold
 const PRIORITY_MAP: Record<string, string> = { HIGHEST: "highest", HIGH: "high", MEDIUM: "medium", LOW: "low" }
 
 export class GetBusinessTasks {
-  static async execute(params?: { projectId?: string; assigneeId?: string; status?: BusinessTaskStatus; contactId?: string; issueId?: string }) {
+  static async execute(params?: { projectId?: string; businessId?: string; assigneeId?: string; status?: BusinessTaskStatus; contactId?: string; issueId?: string }) {
     const tasks = await BusinessTaskRepository.findMany(params)
     return tasks.map((t: any) => ({
       id: t.id,
       seqNumber: t.seqNumber ?? null,
-      projectId: t.projectId,
+      projectId: t.projectId ?? null,
       projectName: t.project?.name ?? "",
       title: t.title,
       detail: t.detail,
@@ -56,12 +56,12 @@ export class GetBusinessTasks {
       projectContractMemo: t.project?.contractMemo ?? "",
       projectAccountNames: t.project?.accountNames ?? [],
       projectPartnerNames: t.project?.partnerNames ?? [],
-      // 事業情報
-      businessId: t.project?.business?.id ?? "",
-      businessName: t.project?.business?.name ?? "",
-      businessPurpose: t.project?.business?.purpose ?? "",
-      businessStatus: STATUS_MAP[t.project?.business?.status] ?? "active",
-      businessPriority: PRIORITY_MAP[t.project?.business?.priority] ?? "medium",
+      // 事業情報（事業直下タスクは t.business 優先、プロジェクト経由は t.project.business）
+      businessId: t.business?.id ?? t.project?.business?.id ?? "",
+      businessName: t.business?.name ?? t.project?.business?.name ?? "",
+      businessPurpose: t.business?.purpose ?? t.project?.business?.purpose ?? "",
+      businessStatus: STATUS_MAP[t.business?.status ?? t.project?.business?.status] ?? "active",
+      businessPriority: PRIORITY_MAP[t.business?.priority ?? t.project?.business?.priority] ?? "medium",
       // スケジュール紐づけ
       scheduleEvents: (t.scheduleEvents ?? []).map((se: any) => ({
         id: se.id,

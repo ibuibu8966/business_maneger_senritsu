@@ -39,7 +39,10 @@ async function run(req: NextRequest) {
         where: {
           assignees: { some: { employeeId: emp.id } },
           status: { not: "DONE" },
-          project: { status: "ACTIVE" },
+          OR: [
+            { project: { status: "ACTIVE" } },
+            { business: { status: "ACTIVE" } },
+          ],
         },
         select: {
           title: true,
@@ -48,6 +51,7 @@ async function run(req: NextRequest) {
           status: true,
           priority: true,
           project: { select: { name: true } },
+          business: { select: { name: true } },
         },
       })
 
@@ -69,7 +73,8 @@ async function run(req: NextRequest) {
       } else {
         const lines = tasks.map((t) => {
           const time = t.executionTime ? `🕐${t.executionTime} ` : ""
-          const proj = t.project?.name ? `[${t.project.name}] ` : ""
+          const label = t.project?.name ?? t.business?.name
+          const proj = label ? `[${label}] ` : ""
           return `・${time}${proj}${t.title}`
         })
         body =

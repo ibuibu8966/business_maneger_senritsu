@@ -52,10 +52,12 @@ async function runReset(req: NextRequest) {
       },
     })
 
+    // 事業直下タスク（projectIdなし）は TaskMissedLog に projectId NOT NULL 制約があるため記録スキップ
+    const loggable = targets.filter((t): t is typeof t & { projectId: string } => t.projectId !== null)
     let missedCount = 0
-    if (targets.length > 0) {
+    if (loggable.length > 0) {
       await prisma.taskMissedLog.createMany({
-        data: targets.map((t) => ({
+        data: loggable.map((t) => ({
           taskId: t.id,
           taskTitle: t.title,
           projectId: t.projectId,
@@ -66,7 +68,7 @@ async function runReset(req: NextRequest) {
           statusAtMissed: t.status,
         })),
       })
-      missedCount = targets.length
+      missedCount = loggable.length
     }
 
     // すべての todayFlag をリセット

@@ -43,7 +43,8 @@ export function TaskCreateDialog({
 }) {
   const [title, setTitle] = useState("")
   const [detail, setDetail] = useState("")
-  const [projectId, setProjectId] = useState("")
+  // 紐づけ先: "biz:xxx"（事業直下）or "proj:xxx"（プロジェクト配下）
+  const [targetValue, setTargetValue] = useState("")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [deadline, setDeadline] = useState("")
   const [executionTime, setExecutionTime] = useState("09:00")
@@ -61,12 +62,15 @@ export function TaskCreateDialog({
   const createTaskMutation = useCreateBusinessTask()
 
   const handleCreate = () => {
-    if (!title.trim() || !projectId) return
-    const proj = projects.find((p) => p.id === projectId)
+    if (!title.trim() || !targetValue) return
+    const [kind, id] = targetValue.split(":")
+    const proj = kind === "proj" ? projects.find((p) => p.id === id) : undefined
+    const biz = kind === "biz" ? businesses.find((b) => b.id === id) : undefined
     const selectedStaff = employees.filter((s) => assigneeIds.includes(s.id))
     createTaskMutation.mutate({
-      projectId,
-      projectName: proj?.name ?? "不明",
+      projectId: kind === "proj" ? id : null,
+      businessId: kind === "biz" ? id : null,
+      projectName: proj?.name ?? biz?.name ?? "不明",
       title: title.trim(),
       detail: detail.trim(),
       assigneeId: assigneeIds[0] || null,
@@ -95,7 +99,7 @@ export function TaskCreateDialog({
     onClose()
     setTitle("")
     setDetail("")
-    setProjectId("")
+    setTargetValue("")
     setAssigneeIds([])
     setDeadline("")
     setExecutionTime("09:00")
@@ -124,20 +128,20 @@ export function TaskCreateDialog({
             <Input className="mt-1" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="タスク名を入力" autoFocus />
           </div>
           <div>
-            <Label className="text-xs">プロジェクト *</Label>
+            <Label className="text-xs">紐づけ先 *</Label>
             <select
               className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
+              value={targetValue}
+              onChange={(e) => setTargetValue(e.target.value)}
             >
               <option value="">選択してください</option>
               {businesses.map((biz) => {
                 const projs = projects.filter((p) => p.businessId === biz.id)
-                if (projs.length === 0) return null
                 return (
                   <optgroup key={biz.id} label={biz.name}>
+                    <option value={`biz:${biz.id}`}>（事業直下）{biz.name}</option>
                     {projs.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                      <option key={p.id} value={`proj:${p.id}`}>{p.name}</option>
                     ))}
                   </optgroup>
                 )
@@ -247,7 +251,11 @@ export function TaskCreateDialog({
             <Label className="text-xs">紐づく課題</Label>
             <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={issueId} onChange={(e) => setIssueId(e.target.value)}>
               <option value="">なし</option>
-              {issues.filter((i) => !projectId || i.projectId === projectId).map((i) => (
+              {issues.filter((i) => {
+                const [kind, id] = targetValue.split(":")
+                if (!targetValue || kind !== "proj") return true
+                return i.projectId === id
+              }).map((i) => (
                 <option key={i.id} value={i.id}>{i.title}</option>
               ))}
             </select>
@@ -355,7 +363,7 @@ export function TaskCreateDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>キャンセル</Button>
-          <Button size="sm" onClick={handleCreate} disabled={!title.trim() || !projectId || createTaskMutation.isPending}>登録</Button>
+          <Button size="sm" onClick={handleCreate} disabled={!title.trim() || !targetValue || createTaskMutation.isPending}>登録</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

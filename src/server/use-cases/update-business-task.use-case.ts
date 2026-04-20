@@ -10,6 +10,8 @@ export class UpdateBusinessTask {
     const dbData: Record<string, unknown> = {}
     if (data.title !== undefined) dbData.title = data.title
     if (data.detail !== undefined) dbData.detail = data.detail
+    if (data.projectId !== undefined) dbData.projectId = data.projectId || null
+    if (data.businessId !== undefined) dbData.businessId = data.businessId || null
     if (data.assigneeId !== undefined) dbData.assigneeId = data.assigneeId || null
     if (data.deadline !== undefined) dbData.deadline = data.deadline ? new Date(data.deadline as string) : null
     if (data.status !== undefined) dbData.status = TASK_STATUS_TO_DB[data.status as string]

@@ -1336,7 +1336,12 @@ function BusinessInfoPanel({ biz, projects, onClose }: { biz: Business; projects
 
 function BusinessTasksPanel({ biz, projects, tasks }: { biz: Business; projects: ProjectDTO[]; tasks: BusinessTaskDTO[] }) {
   const bizProjectIds = projects.filter((p) => p.businessId === biz.id).map((p) => p.id)
-  const activeTasks = tasks.filter((t) => bizProjectIds.includes(t.projectId) && t.status !== "done")
+  const activeTasks = tasks.filter((t) => {
+    if (t.status === "done") return false
+    // 事業直下タスク（projectIdなし）は businessId で判定、プロジェクト配下は projectId で判定
+    if (t.projectId) return bizProjectIds.includes(t.projectId)
+    return t.businessId === biz.id
+  })
 
   return (
     <div className="w-[280px] border-l bg-card h-full flex flex-col shrink-0">
