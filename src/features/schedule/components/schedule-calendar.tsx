@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -47,6 +47,23 @@ function getWeekDates(date: Date): Date[] {
     d.setDate(d.getDate() + i)
     return d
   })
+}
+
+// 画面高さに応じてカレンダーに表示するイベント数を可変にする
+function useResponsiveEventLimits() {
+  const [limits, setLimits] = useState({ span: 2, timed: 2 })
+  useEffect(() => {
+    const compute = () => {
+      const h = window.innerHeight
+      if (h >= 1000) setLimits({ span: 3, timed: 5 })
+      else if (h >= 800) setLimits({ span: 3, timed: 3 })
+      else setLimits({ span: 2, timed: 2 })
+    }
+    compute()
+    window.addEventListener("resize", compute)
+    return () => window.removeEventListener("resize", compute)
+  }, [])
+  return limits
 }
 
 function isSameDay(a: Date, b: Date) {
@@ -442,7 +459,7 @@ function MonthView({
     return { weekCells, weekDates, spanRows, timedByDay }
   })
 
-  const MAX_SPAN_ROWS = 2 // 表示するスパン行の最大数
+  const { span: MAX_SPAN_ROWS, timed: MAX_TIMED_EVENTS } = useResponsiveEventLimits()
 
   return (
     <div className="h-full flex flex-col">
@@ -525,13 +542,35 @@ function MonthView({
             {spanRows.length > MAX_SPAN_ROWS && (
               <div className="grid grid-cols-7" style={{ height: 16 }}>
                 {weekCells.map((_, col) => {
-                  const extraCount = spanRows.slice(MAX_SPAN_ROWS).filter((row) =>
-                    row.some((se) => col >= se.startCol && col < se.startCol + se.span)
-                  ).length
+                  const extraEvents = spanRows.slice(MAX_SPAN_ROWS).flatMap((row) =>
+                    row.filter((se) => col >= se.startCol && col < se.startCol + se.span).map((se) => se.event)
+                  )
                   return (
-                    <div key={col} className="border-r text-center">
-                      {extraCount > 0 && (
-                        <span className="text-[9px] text-muted-foreground">+{extraCount}件</span>
+                    <div key={col} className="border-r text-center relative group">
+                      {extraEvents.length > 0 && (
+                        <>
+                          <span className="text-[9px] text-muted-foreground cursor-pointer hover:text-foreground hover:underline">
+                            +{extraEvents.length}件
+                          </span>
+                          <div className="hidden group-hover:block absolute top-full left-0 z-50 bg-popover text-popover-foreground border rounded-md shadow-lg p-2 min-w-[200px] text-left">
+                            <p className="text-[10px] font-bold mb-1 text-muted-foreground">その他のイベント</p>
+                            <div className="space-y-1">
+                              {extraEvents.map((ev) => (
+                                <div
+                                  key={ev.id}
+                                  className={cn(
+                                    "text-[10px] px-1.5 py-0.5 rounded border truncate cursor-pointer",
+                                    EVENT_TYPE_STYLES[ev.eventType]
+                                  )}
+                                  style={{ borderLeftColor: ev.employeeColor, borderLeftWidth: 3 }}
+                                  onClick={(e) => { e.stopPropagation(); onClickEvent(ev) }}
+                                >
+                                  {ev.title}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
                       )}
                     </div>
                   )
@@ -552,7 +591,7 @@ function MonthView({
                     )}
                     onClick={() => onClickDate(dateStr)}
                   >
-                    {dayTimedEvents.slice(0, 2).map((ev) => (
+                    {dayTimedEvents.slice(0, MAX_TIMED_EVENTS).map((ev) => (
                       <div
                         key={ev.id}
                         onClick={(e) => { e.stopPropagation(); onClickEvent(ev) }}
@@ -565,8 +604,30 @@ function MonthView({
                         {`${new Date(ev.startAt).getHours()}:${String(new Date(ev.startAt).getMinutes()).padStart(2, "0")} ${ev.title}`}
                       </div>
                     ))}
-                    {dayTimedEvents.length > 2 && (
-                      <span className="text-[9px] text-muted-foreground">+{dayTimedEvents.length - 2}件</span>
+                    {dayTimedEvents.length > MAX_TIMED_EVENTS && (
+                      <div className="relative group">
+                        <span className="text-[9px] text-muted-foreground cursor-pointer hover:text-foreground hover:underline">
+                          +{dayTimedEvents.length - MAX_TIMED_EVENTS}件
+                        </span>
+                        <div className="hidden group-hover:block absolute top-full left-0 z-50 bg-popover text-popover-foreground border rounded-md shadow-lg p-2 min-w-[200px] text-left">
+                          <p className="text-[10px] font-bold mb-1 text-muted-foreground">その他のイベント</p>
+                          <div className="space-y-1">
+                            {dayTimedEvents.slice(MAX_TIMED_EVENTS).map((ev) => (
+                              <div
+                                key={ev.id}
+                                onClick={(e) => { e.stopPropagation(); onClickEvent(ev) }}
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded border truncate cursor-pointer",
+                                  EVENT_TYPE_STYLES[ev.eventType]
+                                )}
+                                style={{ borderLeftColor: ev.employeeColor, borderLeftWidth: 3 }}
+                              >
+                                {`${new Date(ev.startAt).getHours()}:${String(new Date(ev.startAt).getMinutes()).padStart(2, "0")} ${ev.title}`}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )

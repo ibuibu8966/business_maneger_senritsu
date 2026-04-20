@@ -406,11 +406,18 @@ function TaskDetailPanel({
                 onClick={() => {
                   const startAt = `${schedDate}T${schedStartTime}:00`
                   const endAt = `${schedDate}T${schedEndTime}:00`
+                  // 複数担当者対応: 先頭をメイン、残りをparticipantIdsに
+                  const allAssigneeIds: string[] = (task.assigneeIds && task.assigneeIds.length > 0)
+                    ? task.assigneeIds
+                    : (task.assigneeId ? [task.assigneeId] : [])
+                  const mainEmployeeId = allAssigneeIds[0] ?? employees[0]?.id ?? ""
+                  const participantIds = allAssigneeIds.slice(1)
                   createScheduleMutation.mutate({
                     title: schedTitle.trim(),
                     startAt: new Date(startAt).toISOString(),
                     endAt: new Date(endAt).toISOString(),
-                    employeeId: task.assigneeId ?? employees[0]?.id ?? "",
+                    employeeId: mainEmployeeId,
+                    participantIds,
                     eventType: "work",
                     taskId: task.id,
                   }, {
