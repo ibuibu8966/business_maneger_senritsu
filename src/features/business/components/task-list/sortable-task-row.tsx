@@ -95,7 +95,7 @@ export function SortableTaskRow({
       {...attributes}
       {...listeners}
       onClick={() => onClickTask(task)}
-      className={`flex items-center gap-2 p-2.5 rounded-md border text-[clamp(12px,0.95vw,16px)] bg-background hover:bg-muted/50 cursor-grab active:cursor-grabbing touch-none ${
+      className={`flex items-center gap-2 p-2.5 rounded-md border text-[clamp(12px,0.85vw,14px)] bg-background hover:bg-muted/50 cursor-grab active:cursor-grabbing touch-none ${
         task.status === "done" ? "opacity-50" : ""
       } ${task.todayFlag ? "ring-1 ring-yellow-400/60 dark:ring-yellow-500/60 bg-yellow-50/40 dark:bg-yellow-900/20" : ""}`}
     >
@@ -119,7 +119,7 @@ export function SortableTaskRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           {task.recurring && <Repeat className="w-3 h-3 text-blue-500 shrink-0" />}
-          {task.seqNumber && <span className="text-[clamp(10px,0.8vw,14px)] text-muted-foreground font-mono shrink-0">#{task.seqNumber}</span>}
+          {task.seqNumber && <span className="text-[clamp(10px,0.75vw,12px)] text-muted-foreground font-mono shrink-0">#{task.seqNumber}</span>}
           {isEditingTitle ? (
             <input
               ref={inputRef}
@@ -165,14 +165,14 @@ export function SortableTaskRow({
           )}
         </div>
         <div className="flex items-center gap-2 text-muted-foreground mt-0.5">
-          {task.projectName && <span className="text-[clamp(10px,0.8vw,14px)]">{task.businessName} / {task.projectName}</span>}
+          {task.projectName && <span className="text-[clamp(10px,0.75vw,12px)]">{task.businessName} / {task.projectName}</span>}
           {task.issueTitle && (
-            <span className="text-[clamp(10px,0.8vw,14px)] text-orange-600 dark:text-orange-400 font-medium">
+            <span className="text-[clamp(10px,0.75vw,12px)] text-orange-600 dark:text-orange-400 font-medium">
               課題: {task.issueTitle}
             </span>
           )}
           {task.contactName && (
-            <span className="text-[clamp(10px,0.8vw,14px)]">
+            <span className="text-[clamp(10px,0.75vw,12px)]">
               {task.tool && TOOL_CONFIG[task.tool] ? TOOL_CONFIG[task.tool].emoji + " " : ""}
               {task.contactName}
             </span>
@@ -182,30 +182,30 @@ export function SortableTaskRow({
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         {task.checklistItems && task.checklistItems.length > 0 && (
-          <span className="text-[clamp(10px,0.8vw,14px)] text-muted-foreground">
+          <span className="text-[clamp(10px,0.75vw,12px)] text-muted-foreground">
             <Check className="w-3 h-3 inline" />{task.checklistItems.filter((c) => c.checked).length}/{task.checklistItems.length}
           </span>
         )}
         {task.priority && task.priority !== "medium" && (
-          <span className={`text-[clamp(10px,0.8vw,14px)] font-medium ${PRIORITY_CONFIG[task.priority].className}`}>
+          <span className={`text-[clamp(10px,0.75vw,12px)] font-medium ${PRIORITY_CONFIG[task.priority].className}`}>
             {PRIORITY_CONFIG[task.priority].label}
           </span>
         )}
-        <Badge variant="outline" className={`text-[clamp(10px,0.8vw,14px)] h-4 px-1 font-semibold ${st.className}`}>
+        <Badge variant="outline" className={`text-[clamp(10px,0.75vw,12px)] h-4 px-1 font-semibold ${st.className}`}>
           {st.label}
         </Badge>
         {((task.assigneeNames && task.assigneeNames.length > 0) || task.assigneeName) && (
-          <span className="text-muted-foreground text-[clamp(10px,0.8vw,14px)]">
+          <span className="text-muted-foreground text-[clamp(10px,0.75vw,12px)]">
             {(task.assigneeNames && task.assigneeNames.length > 0) ? task.assigneeNames.join("、") : task.assigneeName}
           </span>
         )}
         {task.executionTime && (
-          <span className="text-[clamp(10px,0.8vw,14px)] text-purple-600 font-medium">
+          <span className="text-[clamp(10px,0.75vw,12px)] text-purple-600 font-medium">
             🕐{task.executionTime}
           </span>
         )}
         {task.deadline && (
-          <span className={`text-[clamp(10px,0.8vw,14px)] ${
+          <span className={`text-[clamp(10px,0.75vw,12px)] ${
             new Date(task.deadline) < new Date() && task.status !== "done" ? "text-red-600 font-medium" : "text-muted-foreground"
           }`}>
             〆{task.deadline}
