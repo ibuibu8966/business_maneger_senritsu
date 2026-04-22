@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog"
 import { PRIORITY_CONFIG, type ProjectNode } from "../mock-data"
 import { useCreateBusinessTask } from "@/hooks/use-business"
+import { useCreateScheduleEvent } from "@/hooks/use-schedule"
+import { toast } from "sonner"
 
 /**
  * タスク登録ダイアログ
@@ -59,44 +61,15 @@ export function TaskCreateDialog({
   const [priority, setPriority] = useState("medium")
   const [tool, setTool] = useState("")
   const [issueId, setIssueId] = useState("")
+  const [addToCalendar, setAddToCalendar] = useState(false)
+  const [calendarDate, setCalendarDate] = useState("")
+  const [calendarStartTime, setCalendarStartTime] = useState("09:00")
+  const [calendarEndTime, setCalendarEndTime] = useState("10:00")
+  const [calendarEventType, setCalendarEventType] = useState<"meeting" | "holiday" | "outing" | "work" | "other">("work")
   const createTaskMutation = useCreateBusinessTask()
+  const createScheduleEventMutation = useCreateScheduleEvent()
 
-  const handleCreate = () => {
-    if (!title.trim() || !targetValue) return
-    const [kind, id] = targetValue.split(":")
-    const proj = kind === "proj" ? projects.find((p) => p.id === id) : undefined
-    const biz = kind === "biz" ? businesses.find((b) => b.id === id) : undefined
-    const selectedStaff = employees.filter((s) => assigneeIds.includes(s.id))
-    createTaskMutation.mutate({
-      projectId: kind === "proj" ? id : null,
-      businessId: kind === "biz" ? id : null,
-      projectName: proj?.name ?? biz?.name ?? "不明",
-      title: title.trim(),
-      detail: detail.trim(),
-      assigneeId: assigneeIds[0] || null,
-      assigneeName: selectedStaff[0]?.name ?? null,
-      assigneeIds,
-      assigneeNames: selectedStaff.map((s) => s.name),
-      deadline: deadline || null,
-      status: "todo",
-      memo: "",
-      recurring,
-      recurringPattern: recurring && recurringPattern ? recurringPattern : null,
-      recurringDay: recurring && recurringDay !== "" ? Number(recurringDay) : null,
-      recurringWeek: recurring && recurringWeek !== "" ? Number(recurringWeek) : null,
-      recurringEndDate: recurring && recurringEndDate ? recurringEndDate : null,
-      createdBy: currentUserName,
-      sortOrder: taskCount + 1,
-      contactId: contactId || null,
-      partnerId: partnerId || null,
-      priority: priority || "medium",
-      tool: tool || null,
-      executionTime: executionTime || null,
-      notifyEnabled: notifyMinutesBefore !== 0,
-      notifyMinutesBefore: notifyMinutesBefore === 0 ? 0 : notifyMinutesBefore,
-      issueId: issueId || null,
-    })
-    onClose()
+  const resetForm = () => {
     setTitle("")
     setDetail("")
     setTargetValue("")
@@ -114,6 +87,79 @@ export function TaskCreateDialog({
     setPriority("medium")
     setTool("")
     setIssueId("")
+    setAddToCalendar(false)
+    setCalendarDate("")
+    setCalendarStartTime("09:00")
+    setCalendarEndTime("10:00")
+    setCalendarEventType("work")
+  }
+
+  const handleCreate = async () => {
+    if (!title.trim() || !targetValue) return
+    const [kind, id] = targetValue.split(":")
+    const proj = kind === "proj" ? projects.find((p) => p.id === id) : undefined
+    const biz = kind === "biz" ? businesses.find((b) => b.id === id) : undefined
+    const selectedStaff = employees.filter((s) => assigneeIds.includes(s.id))
+    try {
+      const newTask = await createTaskMutation.mutateAsync({
+        projectId: kind === "proj" ? id : null,
+        businessId: kind === "biz" ? id : null,
+        projectName: proj?.name ?? biz?.name ?? "不明",
+        title: title.trim(),
+        detail: detail.trim(),
+        assigneeId: assigneeIds[0] || null,
+        assigneeName: selectedStaff[0]?.name ?? null,
+        assigneeIds,
+        assigneeNames: selectedStaff.map((s) => s.name),
+        deadline: deadline || null,
+        status: "todo",
+        memo: "",
+        recurring,
+        recurringPattern: recurring && recurringPattern ? recurringPattern : null,
+        recurringDay: recurring && recurringDay !== "" ? Number(recurringDay) : null,
+        recurringWeek: recurring && recurringWeek !== "" ? Number(recurringWeek) : null,
+        recurringEndDate: recurring && recurringEndDate ? recurringEndDate : null,
+        createdBy: currentUserName,
+        sortOrder: taskCount + 1,
+        contactId: contactId || null,
+        partnerId: partnerId || null,
+        priority: priority || "medium",
+        tool: tool || null,
+        executionTime: executionTime || null,
+        notifyEnabled: notifyMinutesBefore !== 0,
+        notifyMinutesBefore: notifyMinutesBefore === 0 ? 0 : notifyMinutesBefore,
+        issueId: issueId || null,
+      })
+
+      if (addToCalendar && calendarDate) {
+        const newTaskId = (newTask as { id?: string } | undefined)?.id
+        const mainEmployeeId = assigneeIds[0] ?? employees[0]?.id ?? ""
+        const participantIds = assigneeIds.slice(1)
+        if (!mainEmployeeId) {
+          toast.error("カレンダー登録には担当者または従業員の設定が必要です")
+        } else {
+          try {
+            await createScheduleEventMutation.mutateAsync({
+              title: title.trim(),
+              description: detail.trim(),
+              startAt: new Date(`${calendarDate}T${calendarStartTime}:00`).toISOString(),
+              endAt: new Date(`${calendarDate}T${calendarEndTime}:00`).toISOString(),
+              employeeId: mainEmployeeId,
+              participantIds,
+              eventType: calendarEventType,
+              taskId: newTaskId ?? null,
+            })
+          } catch {
+            toast.error("カレンダー登録に失敗しました")
+          }
+        }
+      }
+
+      onClose()
+      resetForm()
+    } catch {
+      toast.error("タスク作成に失敗しました")
+    }
   }
 
   return (
@@ -261,6 +307,57 @@ export function TaskCreateDialog({
             </select>
           </div>
           <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <input type="checkbox" checked={addToCalendar} onChange={(e) => setAddToCalendar(e.target.checked)} className="rounded" />
+            カレンダーにも登録
+          </label>
+          {addToCalendar && (
+            <div className="space-y-2 pl-4 border-l-2 border-green-200">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs">日付</Label>
+                  <Input
+                    type="date"
+                    className="mt-1 h-8 text-sm"
+                    value={calendarDate}
+                    onChange={(e) => setCalendarDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">開始</Label>
+                  <Input
+                    type="time"
+                    className="mt-1 h-8 text-sm"
+                    value={calendarStartTime}
+                    onChange={(e) => setCalendarStartTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">終了</Label>
+                  <Input
+                    type="time"
+                    className="mt-1 h-8 text-sm"
+                    value={calendarEndTime}
+                    onChange={(e) => setCalendarEndTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">予定種別</Label>
+                <select
+                  className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background"
+                  value={calendarEventType}
+                  onChange={(e) => setCalendarEventType(e.target.value as typeof calendarEventType)}
+                >
+                  <option value="work">作業</option>
+                  <option value="meeting">打ち合わせ</option>
+                  <option value="outing">外出</option>
+                  <option value="holiday">休み</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+            </div>
+          )}
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
             <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="rounded" />
             繰り返しタスク
           </label>
@@ -363,7 +460,7 @@ export function TaskCreateDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>キャンセル</Button>
-          <Button size="sm" onClick={handleCreate} disabled={!title.trim() || !targetValue || createTaskMutation.isPending}>登録</Button>
+          <Button size="sm" onClick={handleCreate} disabled={!title.trim() || !targetValue || createTaskMutation.isPending || createScheduleEventMutation.isPending}>登録</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

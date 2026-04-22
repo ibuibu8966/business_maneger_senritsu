@@ -17,6 +17,7 @@ import {
   updateScheduleParticipantsSchema,
 } from "@/server/schemas/schedule.schema"
 import { handleApiError } from "@/server/lib/error-response"
+import { syncGoogleEventUpdateToTask } from "@/server/services/task-calendar-sync.service"
 
 // イベントIDはフロントに「calendarId::googleEventId」の形式で渡す
 function encodeEventId(calendarId: string, googleEventId: string): string {
@@ -324,6 +325,18 @@ export class ScheduleController {
         allDay: data.allDay,
         eventType: data.eventType,
       })
+
+      // DB ScheduleEvent と紐づくタスクに同期
+      try {
+        await syncGoogleEventUpdateToTask(googleEventId, {
+          title: data.title,
+          description: data.description,
+          startAt: data.startAt,
+          endAt: data.endAt,
+        })
+      } catch (syncErr) {
+        logger.error("[task-calendar-sync] failed:", syncErr)
+      }
 
       // グループに属するイベントも同時更新
       const participantRecord = await prisma.eventParticipant.findFirst({

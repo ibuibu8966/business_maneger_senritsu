@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import type { BusinessTaskStatus } from "@/generated/prisma/client"
+import { syncTaskToLatestEvent, taskUpdateNeedsSync } from "@/server/services/task-calendar-sync.service"
 
 export class BusinessTaskRepository {
   static async findMany(params?: {
@@ -63,7 +64,15 @@ export class BusinessTaskRepository {
   }
 
   static async update(id: string, data: any) {
-    return prisma.businessTask.update({ where: { id }, data })
+    const updated = await prisma.businessTask.update({ where: { id }, data })
+    if (taskUpdateNeedsSync(data)) {
+      try {
+        await syncTaskToLatestEvent(id)
+      } catch (e) {
+        console.error("[task-calendar-sync] task->event sync failed:", e)
+      }
+    }
+    return updated
   }
 
   static async delete(id: string) {

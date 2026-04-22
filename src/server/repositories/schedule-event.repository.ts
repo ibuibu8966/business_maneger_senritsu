@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { syncEventToTask, eventUpdateNeedsSync } from "@/server/services/task-calendar-sync.service"
 
 export class ScheduleEventRepository {
   static async findMany(params: {
@@ -66,13 +67,21 @@ export class ScheduleEventRepository {
       googleEventId?: string | null
     }
   ) {
-    return prisma.scheduleEvent.update({
+    const updated = await prisma.scheduleEvent.update({
       where: { id },
       data,
       include: {
         employee: { select: { id: true, name: true, color: true } },
       },
     })
+    if (eventUpdateNeedsSync(data as Record<string, unknown>)) {
+      try {
+        await syncEventToTask(id)
+      } catch (e) {
+        console.error("[task-calendar-sync] event->task sync failed:", e)
+      }
+    }
+    return updated
   }
 
   static async delete(id: string) {
