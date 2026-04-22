@@ -721,16 +721,16 @@ function TaskDetailPanel({
         </div>
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">実行時刻（LINE通知）</p>
-          <div className="flex items-center gap-1">
-            <Input
-              type="time"
-              className="h-7 text-xs w-[120px]"
-              value={task.executionTime ?? ""}
-              onChange={(e) => {
-                updateTaskMutation.mutate({ id: task.id, data: { executionTime: e.target.value || null } })
-              }}
-            />
-            {task.executionTime && (
+          {task.executionTime ? (
+            <div className="flex items-center gap-1">
+              <Input
+                type="time"
+                className="h-7 text-xs w-[120px]"
+                value={task.executionTime}
+                onChange={(e) => {
+                  updateTaskMutation.mutate({ id: task.id, data: { executionTime: e.target.value || null } })
+                }}
+              />
               <button
                 type="button"
                 onClick={() => {
@@ -741,8 +741,18 @@ function TaskDetailPanel({
               >
                 <X className="w-3.5 h-3.5" />
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                updateTaskMutation.mutate({ id: task.id, data: { executionTime: "09:00" } })
+              }}
+              className="h-7 px-3 text-xs border border-dashed border-primary/50 text-primary rounded-md hover:bg-primary/5 flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" />実行時刻を設定
+            </button>
+          )}
         </div>
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">事前通知</p>
