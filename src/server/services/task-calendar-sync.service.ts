@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma"
 import { updateEvent } from "@/lib/google-calendar"
-import { EmployeeRepository } from "@/server/repositories/employee.repository"
 import { logger } from "@/lib/logger"
 
 const TASK_SYNC_FIELDS = ["title", "detail", "deadline", "executionTime"] as const
@@ -27,19 +26,24 @@ function formatLocalTime(d: Date): string {
 }
 
 /**
- * タスク更新時に、紐づく最新 ScheduleEvent（DB＋Googleカレンダー）を同期する
+ * タスク更新後、事前取得した scheduleEvents を使って紐づくイベントを同期する。
+ * 呼び出し側は update 時に include 済みの task データを渡す（DBクエリ削減）。
  */
-export async function syncTaskToLatestEvent(taskId: string): Promise<void> {
-  const task = await prisma.businessTask.findUnique({
-    where: { id: taskId },
-    include: {
-      scheduleEvents: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-    },
-  })
-  if (!task || task.scheduleEvents.length === 0) return
+export async function syncTaskToLatestEventFromTask(task: {
+  id: string
+  title: string
+  detail: string
+  deadline: Date | null
+  executionTime: string | null
+  scheduleEvents: Array<{
+    id: string
+    startAt: Date
+    endAt: Date
+    googleEventId: string | null
+    employee: { googleCalId: string | null } | null
+  }>
+}): Promise<void> {
+  if (task.scheduleEvents.length === 0) return
 
   const event = task.scheduleEvents[0]
 
@@ -66,18 +70,15 @@ export async function syncTaskToLatestEvent(taskId: string): Promise<void> {
     },
   })
 
-  // Googleカレンダー側も更新
-  if (event.googleEventId) {
+  // Googleカレンダー側も更新（googleCalIdは事前取得済み）
+  if (event.googleEventId && event.employee?.googleCalId) {
     try {
-      const employee = await EmployeeRepository.findById(event.employeeId)
-      if (employee?.googleCalId) {
-        await updateEvent(employee.googleCalId, event.googleEventId, {
-          title: task.title,
-          description: task.detail,
-          startAt: newStartAt.toISOString(),
-          endAt: newEndAt.toISOString(),
-        })
-      }
+      await updateEvent(event.employee.googleCalId, event.googleEventId, {
+        title: task.title,
+        description: task.detail,
+        startAt: newStartAt.toISOString(),
+        endAt: newEndAt.toISOString(),
+      })
     } catch (e) {
       logger.error("[task-calendar-sync] gcal update failed (task->event):", e)
     }

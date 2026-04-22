@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star, AlertCircle, CalendarDays } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star, AlertCircle, CalendarDays, Pencil } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -286,6 +286,37 @@ function TaskDetailPanel({
   const createScheduleMutation = useCreateScheduleEvent()
   const { data: employees = [] } = useEmployees()
 
+  // タイトル編集用 state
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(task.title)
+  useEffect(() => {
+    setDraftTitle(task.title)
+    setIsEditingTitle(false)
+  }, [task.id, task.title])
+  const commitTitleEdit = () => {
+    const trimmed = draftTitle.trim()
+    if (!trimmed || trimmed === task.title) {
+      setDraftTitle(task.title)
+      setIsEditingTitle(false)
+      return
+    }
+    updateTaskMutation.mutate(
+      { id: task.id, data: { title: trimmed } },
+      {
+        onSuccess: () => toast.success("タスク名を更新しました"),
+        onError: () => {
+          toast.error("更新に失敗しました")
+          setDraftTitle(task.title)
+        },
+      }
+    )
+    setIsEditingTitle(false)
+  }
+  const cancelTitleEdit = () => {
+    setDraftTitle(task.title)
+    setIsEditingTitle(false)
+  }
+
   const WEEKDAY_LABELS: Record<number, string> = { 0: "日曜日", 1: "月曜日", 2: "火曜日", 3: "水曜日", 4: "木曜日", 5: "金曜日", 6: "土曜日" }
   const PATTERN_LABELS: Record<string, string> = { daily: "毎日", weekly: "毎週", monthly_date: "毎月（日付）", monthly_weekday: "毎月（曜日）" }
 
@@ -301,9 +332,42 @@ function TaskDetailPanel({
 
   return (
     <div className="border-l overflow-y-auto p-4 space-y-4 h-full">
-      <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold truncate">{task.title}</h3>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg cursor-pointer">&times;</button>
+      <div className="flex items-center justify-between gap-2">
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={draftTitle}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            onBlur={commitTitleEdit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                commitTitleEdit()
+              } else if (e.key === "Escape") {
+                e.preventDefault()
+                cancelTitleEdit()
+              }
+            }}
+            className="text-base font-bold flex-1 min-w-0 bg-background border border-primary/50 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
+            autoFocus
+            disabled={updateTaskMutation.isPending}
+          />
+        ) : (
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <h3 className="text-base font-bold truncate">{task.title}</h3>
+            <button
+              onClick={() => {
+                setDraftTitle(task.title)
+                setIsEditingTitle(true)
+              }}
+              className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+              title="タスク名を編集"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg cursor-pointer shrink-0">&times;</button>
       </div>
 
       <div className="flex items-center gap-2">

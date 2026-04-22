@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import type { BusinessTaskStatus } from "@/generated/prisma/client"
-import { syncTaskToLatestEvent, taskUpdateNeedsSync } from "@/server/services/task-calendar-sync.service"
+import { syncTaskToLatestEventFromTask, taskUpdateNeedsSync } from "@/server/services/task-calendar-sync.service"
 
 export class BusinessTaskRepository {
   static async findMany(params?: {
@@ -64,15 +64,30 @@ export class BusinessTaskRepository {
   }
 
   static async update(id: string, data: any) {
-    const updated = await prisma.businessTask.update({ where: { id }, data })
-    if (taskUpdateNeedsSync(data)) {
+    const needsSync = taskUpdateNeedsSync(data)
+    if (needsSync) {
+      // 同期に必要な scheduleEvents + employee.googleCalId を update と同時に取得（N+1回避）
+      const updated = await prisma.businessTask.update({
+        where: { id },
+        data,
+        include: {
+          scheduleEvents: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            include: {
+              employee: { select: { googleCalId: true } },
+            },
+          },
+        },
+      })
       try {
-        await syncTaskToLatestEvent(id)
+        await syncTaskToLatestEventFromTask(updated)
       } catch (e) {
         console.error("[task-calendar-sync] task->event sync failed:", e)
       }
+      return updated
     }
-    return updated
+    return prisma.businessTask.update({ where: { id }, data })
   }
 
   static async delete(id: string) {
