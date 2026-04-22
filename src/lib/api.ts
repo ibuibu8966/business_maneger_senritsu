@@ -678,7 +678,7 @@ export async function deleteBusinessTask(id: string): Promise<void> {
   if (!res.ok) throw new Error("タスクの削除に失敗")
 }
 
-export async function reorderBusinessTasks(data: { taskId: string; newSortOrder: number }): Promise<void> {
+export async function reorderBusinessTasks(data: { taskIds: string[] }): Promise<void> {
   const res = await fetch(`${BUSINESS_BASE}/tasks/reorder`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

@@ -1011,8 +1011,16 @@ export function TaskListView() {
     if (oldIndex === -1 || newIndex === -1) return
     const newOrder = arrayMove(orderedTasks.map((t) => t.id), oldIndex, newIndex)
     setTaskOrder(newOrder)
-    // Persist the new sort order for the moved task
-    reorderMutation.mutate({ taskId: String(active.id), newSortOrder: newIndex })
+
+    // 全タスクの順序を再構築して送信（リロード後も並びが維持されるように）
+    // 表示中タスクの新順序 + 非表示タスクは元の sortOrder を維持
+    const visibleIdSet = new Set(newOrder)
+    const hiddenTasksInOrder = allTasks
+      .filter((t) => !visibleIdSet.has(t.id))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((t) => t.id)
+    const fullOrder = [...newOrder, ...hiddenTasksInOrder]
+    reorderMutation.mutate({ taskIds: fullOrder })
   }
 
   // 選択中タスクの詳細
