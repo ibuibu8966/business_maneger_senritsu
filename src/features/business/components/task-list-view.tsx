@@ -950,6 +950,7 @@ export function TaskListView() {
   const [filterStaffId, setFilterStaffId] = useState<string>(userId ?? "all")
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all")
   const [showTodayOnly, setShowTodayOnly] = useState<boolean>(false)
+  const [showRecurringOnly, setShowRecurringOnly] = useState<boolean>(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [taskOrder, setTaskOrder] = useState<string[]>([])
 
@@ -991,6 +992,7 @@ export function TaskListView() {
       if (t.status === "done") return false // 「すべて」でも完了は除外
     } else if (t.status !== filterStatus) return false
     if (showTodayOnly && !t.todayFlag) return false
+    if (showRecurringOnly && !t.recurring) return false
     return true
   }).sort((a, b) => a.sortOrder - b.sortOrder)
 
@@ -1090,6 +1092,17 @@ export function TaskListView() {
           >
             <Star className={`w-3 h-3 mr-1 ${showTodayOnly ? "fill-yellow-400 text-yellow-500" : ""}`} />
             今日やる
+          </Button>
+
+          <Button
+            variant={showRecurringOnly ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 text-xs cursor-pointer"
+            onClick={() => setShowRecurringOnly((v) => !v)}
+            title="繰り返し設定がONの親タスクのみ表示"
+          >
+            <Repeat className={`w-3 h-3 mr-1 ${showRecurringOnly ? "text-blue-600 dark:text-blue-400" : ""}`} />
+            繰り返しのみ
           </Button>
 
           <div className="flex-1" />
