@@ -837,6 +837,7 @@ export function BalanceDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-14">No.</TableHead>
                       <TableHead className="w-24">日付</TableHead>
                       <TableHead>口座</TableHead>
                       <TableHead>カテゴリ</TableHead>
@@ -848,9 +849,10 @@ export function BalanceDashboard() {
                   </TableHeader>
                   <TableBody>
                     {transactions.filter((t) => !t.isArchived && t.type !== "transfer").slice(0, 10).map((t) => {
-                      const isPositive = ["deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
+                      const isPositive = ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
                       return (
                         <TableRow key={t.id} className="">
+                          <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
                           <TableCell className="text-sm" onDoubleClick={() => startTxEdit(t, "date")}>
                             {isTxEditing(t.id, "date") ? (
                               <Input type="date" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm w-32" />
@@ -892,7 +894,7 @@ export function BalanceDashboard() {
                     })}
                     {transactions.filter((t) => !t.isArchived && t.type !== "transfer").length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">取引データなし</TableCell>
+                        <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">取引データなし</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -1092,6 +1094,7 @@ export function BalanceDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-14">No.</TableHead>
                       <TableHead className="w-24">日付</TableHead>
                       <TableHead>口座</TableHead>
                       <TableHead>カテゴリ</TableHead>
@@ -1103,9 +1106,10 @@ export function BalanceDashboard() {
                   </TableHeader>
                   <TableBody>
                     {filteredTransactions.slice(0, 50).map((t) => {
-                      const isPositive = ["deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
+                      const isPositive = ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
                       return (
                         <TableRow key={t.id} className="">
+                          <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
                           <TableCell className="text-sm" onDoubleClick={() => startTxEdit(t, "date")}>
                             {isTxEditing(t.id, "date") ? (
                               <Input type="date" autoFocus value={txEditValue} onChange={(e) => setTxEditValue(e.target.value)} onKeyDown={handleTxKeyDown} onBlur={saveTxEdit} className="h-7 text-sm w-32" />
@@ -1147,7 +1151,7 @@ export function BalanceDashboard() {
                     })}
                     {filteredTransactions.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                        <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
                           取引データなし
                         </TableCell>
                       </TableRow>
