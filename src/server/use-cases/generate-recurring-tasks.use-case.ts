@@ -22,6 +22,9 @@ export class GenerateRecurringTasks {
     const generated: string[] = []
 
     for (const task of recurringTasks) {
+      // 親タスクが完了状態（DONE）なら繰り返し停止扱いとして生成しない
+      if (task.status === "DONE") continue
+
       // recurringEndDate が設定されていて過ぎていたらスキップ
       if (task.recurringEndDate) {
         const endDate = new Date(task.recurringEndDate)
