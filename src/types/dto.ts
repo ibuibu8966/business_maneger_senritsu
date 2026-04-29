@@ -29,6 +29,7 @@ export interface EmployeeDTO {
 // ========== 貸借・口座管理 ==========
 
 export type AccountTransactionTypeDTO =
+  | "initial"
   | "deposit"
   | "withdrawal"
   | "investment"

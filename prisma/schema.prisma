@@ -338,8 +338,9 @@ model Category {
 // 口座の全お金の動きを一元管理する台帳
 // 貸借系6種（LEND〜INTEREST_PAY）はLending/LendingPayment作成時にuse-caseが自動計上。手動登録不可。
 
-// 口座取引の種別（15種類）
+// 口座取引の種別（16種類）
 enum AccountTransactionType {
+  INITIAL           // 初期残高（口座作成時の元金。手動登録 or CreateAccount自動計上）
   DEPOSIT           // 純入金
   WITHDRAWAL        // 純出金
   INVESTMENT        // 出資

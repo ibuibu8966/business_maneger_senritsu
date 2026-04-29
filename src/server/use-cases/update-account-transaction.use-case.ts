@@ -12,6 +12,7 @@ const includeRelations = {
 }
 
 const TYPE_LABELS: Record<string, string> = {
+  INITIAL: "初期残高",
   DEPOSIT: "純入金", WITHDRAWAL: "純出金", INVESTMENT: "出資", TRANSFER: "振替",
   LEND: "貸出", BORROW: "借入", REPAYMENT_RECEIVE: "返済受取", REPAYMENT_PAY: "返済支払",
   INTEREST_RECEIVE: "利息受取", INTEREST_PAY: "利息支払", GAIN: "運用益", LOSS: "運用損",

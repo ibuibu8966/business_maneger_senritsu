@@ -2,6 +2,7 @@ import type { AccountTransactionType } from "@/generated/prisma/client"
 
 /** 各取引種別の残高への影響（正=入金, 負=出金） */
 export const BALANCE_DELTA: Record<AccountTransactionType, number> = {
+  INITIAL: 1,            // 初期残高（口座開設時の元金）
   DEPOSIT: 1,
   WITHDRAWAL: -1,
   INVESTMENT: 1,

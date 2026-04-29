@@ -3,6 +3,7 @@ import type { AccountTransactionDTO, AccountTransactionTypeDTO } from "@/types/d
 import type { AccountTransactionType } from "@/generated/prisma/client"
 
 const TYPE_LABELS: Record<string, string> = {
+  INITIAL: "初期残高",
   DEPOSIT: "純入金",
   WITHDRAWAL: "純出金",
   INVESTMENT: "出資",
