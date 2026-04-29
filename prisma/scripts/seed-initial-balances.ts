@@ -70,6 +70,7 @@ async function main() {
     }
 
     // INITIALレコード作成（accounts.balanceは触らない）
+    // createdAtを1900-01-01に固定し、同じ日付の他取引より必ず先頭に来るようにする
     await prisma.accountTransaction.create({
       data: {
         accountId: acct.id,
@@ -79,6 +80,7 @@ async function main() {
         counterparty: "",
         memo: "口座開設時の初期残高（自動計算）",
         editedBy: "system",
+        createdAt: new Date("1900-01-01T00:00:00Z"),
       },
     })
 

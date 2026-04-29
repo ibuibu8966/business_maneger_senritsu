@@ -124,6 +124,7 @@ export class UpsertInitialBalance {
         resultId = existing.id
       } else {
         // 新規作成 → accounts.balanceに加算
+        // createdAt を1900-01-01に固定し、同じ日付の他取引より必ず先頭に来るようにする
         const created = await tx.accountTransaction.create({
           data: {
             accountId: data.accountId,
@@ -133,6 +134,7 @@ export class UpsertInitialBalance {
             counterparty: "",
             memo: data.memo ?? "口座開設時の初期残高",
             editedBy: data.editedBy ?? "",
+            createdAt: new Date("1900-01-01T00:00:00Z"),
           },
         })
         await tx.account.update({

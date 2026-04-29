@@ -105,7 +105,14 @@ export function AccountDetailView({ accountId }: Props) {
       if (!t.linkedTransferId) return true
       return t.id < t.linkedTransferId
     })
-  const nonTransferTxs = transactions.filter((t: { type: string }) => t.type !== "transfer")
+  // 取引履歴は振替も含めて全表示（時点残高が連続して読めるように）
+  // Initial（初期残高）は同日の振替より前に来るようにソート
+  const nonTransferTxs = [...transactions].sort((a: { date: string; type: string; createdAt: string }, b: { date: string; type: string; createdAt: string }) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date)
+    if (a.type === "initial" && b.type !== "initial") return 1
+    if (a.type !== "initial" && b.type === "initial") return -1
+    return b.createdAt.localeCompare(a.createdAt)
+  })
   const { data: lendings = [], isLoading: lendLoading } = useLendings({ accountId, isArchived: showArchivedLending ? true : false })
 
   const createTxMutation = useCreateAccountTransaction()
@@ -813,9 +820,12 @@ export function AccountDetailView({ accountId }: Props) {
             </TableHeader>
             <TableBody>
               {nonTransferTxs.map((t) => {
-                const isPositive = ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain", "revenue", "misc_income"].includes(t.type)
+                const isPositive = t.type === "transfer"
+                  ? t.direction === "in"
+                  : ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain", "revenue", "misc_income"].includes(t.type)
                 const isEditing = editingTxId === t.id
-                const isAutoType = ["initial", "lend", "borrow", "repayment_receive", "repayment_pay", "interest_receive", "interest_pay"].includes(t.type)
+                // 振替は編集を「振替」セクションで行うため、ここではインライン編集を無効化
+                const isAutoType = ["initial", "transfer", "lend", "borrow", "repayment_receive", "repayment_pay", "interest_receive", "interest_pay"].includes(t.type)
                 const isInitial = t.type === "initial"
 
                 if (isEditing) {
