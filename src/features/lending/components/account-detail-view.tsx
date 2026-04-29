@@ -679,6 +679,7 @@ export function AccountDetailView({ accountId }: Props) {
           <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
             <TableHeader>
               <TableRow>
+                <TableHead className="w-14">No.</TableHead>
                 <TableHead className="w-24">日付</TableHead>
                 <TableHead>やりとり</TableHead>
                 <TableHead>入/出</TableHead>
@@ -704,6 +705,7 @@ export function AccountDetailView({ accountId }: Props) {
                 if (isEditing) {
                   return (
                     <TableRow key={t.id} className="bg-muted/30">
+                      <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
                       <TableCell>
                         <Input type="date" value={editTxDate} onChange={(e) => setEditTxDate(e.target.value)} className="h-7 text-xs w-28" />
                       </TableCell>
@@ -738,6 +740,7 @@ export function AccountDetailView({ accountId }: Props) {
 
                 return (
                   <TableRow key={t.id} onDoubleClick={() => startEditingTx(t)} className={cn("cursor-pointer", t.isArchived && "opacity-50")}>
+                    <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
                     <TableCell className="text-sm font-medium">
                       {fromName} <span className="text-muted-foreground">→</span> {toName}
@@ -786,7 +789,7 @@ export function AccountDetailView({ accountId }: Props) {
               })}
               {transferTxs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">
+                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">
                     振替データなし
                   </TableCell>
                 </TableRow>
@@ -814,6 +817,7 @@ export function AccountDetailView({ accountId }: Props) {
           <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
             <TableHeader>
               <TableRow>
+                <TableHead className="w-14">No.</TableHead>
                 <TableHead className="w-24">日付</TableHead>
                 <TableHead>カテゴリ</TableHead>
                 <TableHead className="text-right">金額</TableHead>
@@ -835,6 +839,7 @@ export function AccountDetailView({ accountId }: Props) {
                 if (isEditing) {
                   return (
                     <TableRow key={t.id} className="bg-muted/30">
+                      <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
                       <TableCell>
                         <Input type="date" value={editTxDate} onChange={(e) => setEditTxDate(e.target.value)} className="h-7 text-xs w-28" />
                       </TableCell>
@@ -864,6 +869,7 @@ export function AccountDetailView({ accountId }: Props) {
 
                 return (
                   <TableRow key={t.id} onDoubleClick={() => !isAutoType && startEditingTx(t)} className={cn(!isAutoType && "cursor-pointer", t.isArchived && "opacity-50")}>
+                    <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
                     <TableCell className="text-sm">{formatDate(t.date)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("text-xs border", getTxTypeColor(t.type))}>{t.categoryName}</Badge>
@@ -916,7 +922,7 @@ export function AccountDetailView({ accountId }: Props) {
               })}
               {nonTransferTxs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">
+                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">
                     取引データなし
                   </TableCell>
                 </TableRow>

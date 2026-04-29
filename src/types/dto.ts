@@ -64,6 +64,7 @@ export interface AccountDetailDTO {
 
 export interface AccountTransactionDTO {
   id: string
+  serialNumber: number              // 全口座共通の通し番号（人間が指す用）
   accountId: string
   accountName: string
   type: AccountTransactionTypeDTO

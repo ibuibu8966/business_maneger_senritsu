@@ -33,6 +33,7 @@ export class GetAccountTransactions {
 
     return rows.map((r) => ({
       id: r.id,
+      serialNumber: r.serialNumber,
       accountId: r.account.id,
       accountName: r.account.name,
       type: r.type.toLowerCase() as AccountTransactionTypeDTO,

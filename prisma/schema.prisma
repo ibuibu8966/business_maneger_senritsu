@@ -360,6 +360,7 @@ enum AccountTransactionType {
 
 model AccountTransaction {
   id              String                   @id @default(cuid())
+  serialNumber    Int                      @unique @default(autoincrement()) // 全口座共通の通し番号（人間が指す用）
   accountId       String                                        // 対象口座
   account         Account                  @relation("AccountTransactions", fields: [accountId], references: [id])
   type            AccountTransactionType                        // 取引種別

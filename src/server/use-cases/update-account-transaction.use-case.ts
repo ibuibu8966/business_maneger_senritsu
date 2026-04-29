@@ -21,6 +21,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 function toDTO(r: {
   id: string
+  serialNumber: number
   account: { id: string; name: string }
   type: AccountTransactionType
   amount: number
@@ -42,6 +43,7 @@ function toDTO(r: {
 }): AccountTransactionDTO {
   return {
     id: r.id,
+    serialNumber: r.serialNumber,
     accountId: r.account.id,
     accountName: r.account.name,
     type: r.type.toLowerCase() as AccountTransactionTypeDTO,
