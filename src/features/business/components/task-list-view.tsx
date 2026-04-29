@@ -108,6 +108,9 @@ function ProjectSidePanel({
       autoExpandedBizIds.add(proj.businessId)
       autoExpandedProjIds.add(proj.id)
       getAncestorIds(proj.id, allProjects).forEach((id) => autoExpandedProjIds.add(id))
+    } else if (selectedTask.businessId) {
+      // 事業直下タスクの場合：その事業を自動展開
+      autoExpandedBizIds.add(selectedTask.businessId)
     }
   }
 
@@ -432,7 +435,7 @@ function TaskDetailPanel({
         )}
         <span className="text-[10px] text-muted-foreground ml-auto">
           {task.seqNumber && <span className="font-mono font-bold mr-1">#{task.seqNumber}</span>}
-          {task.businessName} &gt; {task.projectName}
+          {task.projectName ? `${task.businessName} > ${task.projectName}` : `${task.businessName}（事業直下）`}
         </span>
       </div>
 
