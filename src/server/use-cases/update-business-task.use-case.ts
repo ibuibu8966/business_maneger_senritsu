@@ -1,12 +1,25 @@
 import { BusinessTaskRepository } from "@/server/repositories/business-task.repository"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
 import { prisma } from "@/lib/prisma"
+import { pushLineMessage } from "@/lib/line-notify"
+import { logger } from "@/lib/logger"
 
 const TASK_STATUS_TO_DB: Record<string, string> = { todo: "TODO", "in-progress": "IN_PROGRESS", waiting: "WAITING", done: "DONE" }
 const PRIORITY_TO_DB: Record<string, string> = { highest: "HIGHEST", high: "HIGH", medium: "MEDIUM", low: "LOW" }
 
 export class UpdateBusinessTask {
-  static async execute(id: string, data: Record<string, unknown>) {
+  static async execute(id: string, data: Record<string, unknown>, completedBy?: string) {
+    // ステータス変更検知のため、更新前のタスクを取得
+    const beforeTask = await prisma.businessTask.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        title: true,
+        project: { select: { name: true } },
+        business: { select: { name: true } },
+        assignees: { include: { employee: { select: { name: true } } } },
+      },
+    })
     const dbData: Record<string, unknown> = {}
     if (data.title !== undefined) dbData.title = data.title
     if (data.detail !== undefined) dbData.detail = data.detail
@@ -74,6 +87,32 @@ export class UpdateBusinessTask {
         userName: "system",
       })
     } catch { /* audit log failure should not break main operation */ }
+
+    // ステータスが TODO等→DONE に変わった時、麥田さんに LINE 通知
+    if (data.status === "done" && beforeTask?.status !== "DONE") {
+      try {
+        const mugita = await prisma.employee.findFirst({
+          where: { name: "麥田 隆紀", isActive: true },
+          select: { lineUserId: true },
+        })
+        if (mugita?.lineUserId) {
+          const projLabel = beforeTask?.project?.name ?? beforeTask?.business?.name ?? ""
+          const assigneeNames = (beforeTask?.assignees ?? [])
+            .map((a) => a.employee?.name)
+            .filter(Boolean)
+            .join("、")
+          const message =
+            `✅ タスク完了\n` +
+            (projLabel ? `[${projLabel}] ` : "") +
+            `${beforeTask?.title ?? ""}\n` +
+            `担当: ${assigneeNames || "（なし）"}\n` +
+            `完了者: ${completedBy || "（不明）"}`
+          await pushLineMessage(mugita.lineUserId, message)
+        }
+      } catch (e) {
+        logger.error("麥田さんへのタスク完了通知失敗", e)
+      }
+    }
 
     return result
   }

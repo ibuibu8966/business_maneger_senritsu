@@ -30,6 +30,8 @@ import { DeleteChecklistTemplate } from "@/server/use-cases/delete-checklist-tem
 import { UpdateChecklistTemplate } from "@/server/use-cases/update-checklist-template.use-case"
 import { ApplyChecklistTemplate } from "@/server/use-cases/apply-checklist-template.use-case"
 import { requireRole } from "@/lib/auth-guard"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import {
   createBusinessSchema,
   updateBusinessSchema,
@@ -196,7 +198,9 @@ export class BusinessTaskController {
     try {
       const body = await req.json()
       const data = updateTaskSchema.parse(body)
-      const r = await UpdateBusinessTask.execute(id, data)
+      const session = await getServerSession(authOptions)
+      const completedBy = session?.user?.name ?? undefined
+      const r = await UpdateBusinessTask.execute(id, data, completedBy)
       return NextResponse.json(r)
     } catch (e) {
       return handleApiError(e, { resource: "タスク", action: "更新" })
