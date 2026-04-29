@@ -21,22 +21,30 @@ interface Props {
   onOpenChange: (open: boolean) => void
   accounts: AccountDetailDTO[]
   onSave: (data: Record<string, unknown>) => void
-  initialValues?: { accountId?: string }
+  initialValues?: { accountId?: string; counterpartyAccountId?: string; type?: "lend" | "borrow" }
 }
 
 export function LendingModal({ open, onOpenChange, accounts, onSave, initialValues }: Props) {
   const { data: session } = useSession()
   const userName = session?.user?.name ?? ""
   const [accountId, setAccountId] = useState("")
-
-  useEffect(() => {
-    if (open && initialValues?.accountId) {
-      setAccountId(initialValues.accountId)
-    }
-  }, [open, initialValues])
   const [counterpartyMode, setCounterpartyMode] = useState<"internal" | "external">("internal")
   const [counterpartyAccountId, setCounterpartyAccountId] = useState("")
+
+  useEffect(() => {
+    if (open) {
+      if (initialValues?.accountId) setAccountId(initialValues.accountId)
+      if (initialValues?.counterpartyAccountId) {
+        setCounterpartyAccountId(initialValues.counterpartyAccountId)
+        const cp = accounts.find((a) => a.id === initialValues.counterpartyAccountId)
+        setCounterpartyMode(cp?.ownerType === "external" ? "external" : "internal")
+      }
+    }
+  }, [open, initialValues, accounts])
   const [type, setType] = useState<"lend" | "borrow">("lend")
+  useEffect(() => {
+    if (open && initialValues?.type) setType(initialValues.type)
+  }, [open, initialValues])
   const [principal, setPrincipal] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [dueDate, setDueDate] = useState("")

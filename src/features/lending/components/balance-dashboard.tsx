@@ -122,17 +122,35 @@ export function BalanceDashboard() {
     createTagMutation.mutate({ name, color: "" })
   }
 
-  // ── DnD振替 ──
+  // ── DnD振替/貸借 ──
   const [dragActiveId, setDragActiveId] = useState<string | null>(null)
   const [txInitialValues, setTxInitialValues] = useState<{ accountId?: string; type?: string; toAccountId?: string } | undefined>(undefined)
+  const [lendingInitialValues, setLendingInitialValues] = useState<{ accountId?: string; counterpartyAccountId?: string; type?: "lend" | "borrow" } | undefined>(undefined)
+  const [dndChoiceOpen, setDndChoiceOpen] = useState(false)
+  const [dndFromId, setDndFromId] = useState<string | null>(null)
+  const [dndToId, setDndToId] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const handleDragEnd = (event: DragEndEvent) => {
     setDragActiveId(null)
     const { active, over } = event
     if (over && active.id !== over.id) {
-      setTxInitialValues({ accountId: String(active.id), type: "transfer", toAccountId: String(over.id) })
-      setTxModalOpen(true)
+      setDndFromId(String(active.id))
+      setDndToId(String(over.id))
+      setDndChoiceOpen(true)
     }
+  }
+  const handleDndChoiceTransfer = () => {
+    if (!dndFromId || !dndToId) return
+    setTxInitialValues({ accountId: dndFromId, type: "transfer", toAccountId: dndToId })
+    setTxModalOpen(true)
+    setDndChoiceOpen(false)
+  }
+  const handleDndChoiceLending = () => {
+    if (!dndFromId || !dndToId) return
+    // 貸出：from が貸主（accountId）→ to が借主（counterpartyAccountId）
+    setLendingInitialValues({ accountId: dndFromId, counterpartyAccountId: dndToId, type: "lend" })
+    setLendingModalOpen(true)
+    setDndChoiceOpen(false)
   }
 
   const [accountModalOpen, setAccountModalOpen] = useState(false)
@@ -283,13 +301,25 @@ export function BalanceDashboard() {
 
   // タグ連動サマリー（タグ選択時はクライアントサイドで再計算）
   const filteredSummary = useMemo(() => {
-    if (selectedTag === "all") return summary
+    if (selectedTag === "all") {
+      // 全タグ時：summary（社内のみ）+ 社外含む全体残高
+      const totalAllBalance = accounts
+        .filter(a => !a.isArchived)
+        .reduce((s, a) => s + a.balance, 0)
+      return { ...(summary ?? { totalBalance: 0, totalLent: 0, totalBorrowed: 0, netAssets: 0 }), totalAllBalance }
+    }
     const taggedAccountIds = new Set(
       accounts.filter(a => !a.isArchived && a.ownerType === "internal" && (a.tags ?? []).includes(selectedTag)).map(a => a.id)
     )
+    // 社外含む全体残高用：タグ付きの全口座（社外含む）
+    const taggedAllAccountIds = new Set(
+      accounts.filter(a => !a.isArchived && (a.tags ?? []).includes(selectedTag)).map(a => a.id)
+    )
     let totalBalance = 0
+    let totalAllBalance = 0
     for (const a of accounts) {
       if (taggedAccountIds.has(a.id)) totalBalance += a.balance
+      if (taggedAllAccountIds.has(a.id)) totalAllBalance += a.balance
     }
     let totalLent = 0, totalBorrowed = 0
     const countedPairs = new Set<string>()
@@ -304,7 +334,7 @@ export function BalanceDashboard() {
       if (l.type === "lend") totalLent += l.outstanding
       if (l.type === "borrow") totalBorrowed += l.outstanding
     }
-    return { totalBalance, totalLent, totalBorrowed, netAssets: totalBalance + totalLent - totalBorrowed }
+    return { totalBalance, totalLent, totalBorrowed, netAssets: totalBalance + totalLent - totalBorrowed, totalAllBalance }
   }, [selectedTag, summary, accounts, lendings])
 
   // タグフィルタ済み口座IDセット（取引・貸借テーブルの連動用）
@@ -360,8 +390,13 @@ export function BalanceDashboard() {
       if (showArchivedTx ? !t.isArchived : t.isArchived) return false
       if (txTypeFilter !== "all" && t.type !== txTypeFilter) return false
       if (txAccountFilter !== "all" && t.accountId !== txAccountFilter) return false
-      // タグフィルタ
-      if (taggedAccountIdSet && !taggedAccountIdSet.has(t.accountId)) return false
+      // タグフィルタ：対象口座が直接対象 or 取引相手として絡んでいればOK
+      if (taggedAccountIdSet) {
+        const involves = taggedAccountIdSet.has(t.accountId)
+          || (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
+          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+        if (!involves) return false
+      }
       return true
     })
   }, [transactions, txTypeFilter, txAccountFilter, showArchivedTx, taggedAccountIdSet])
@@ -373,7 +408,13 @@ export function BalanceDashboard() {
       if (t.linkedTransferId && t.id > t.linkedTransferId) return false
       if (showArchivedTx ? !t.isArchived : t.isArchived) return false
       if (txAccountFilter !== "all" && t.accountId !== txAccountFilter) return false
-      if (taggedAccountIdSet && !taggedAccountIdSet.has(t.accountId)) return false
+      // タグフィルタ：対象口座が振替の片方に絡んでいればOK
+      if (taggedAccountIdSet) {
+        const involves = taggedAccountIdSet.has(t.accountId)
+          || (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
+          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+        if (!involves) return false
+      }
       return true
     })
   }, [transactions, txAccountFilter, showArchivedTx, taggedAccountIdSet])
@@ -386,8 +427,12 @@ export function BalanceDashboard() {
       if (showArchivedLending ? !l.isArchived : l.isArchived) return false
       if (lendingTypeFilter !== "all" && l.type !== lendingTypeFilter) return false
       if (lendingStatusFilter !== "all" && l.status !== lendingStatusFilter) return false
-      // タグフィルタ
-      if (taggedAccountIdSet && !taggedAccountIdSet.has(l.accountId)) return false
+      // タグフィルタ：対象口座が貸主・借主どちらかに絡んでいればOK
+      if (taggedAccountIdSet) {
+        const involves = taggedAccountIdSet.has(l.accountId)
+          || (l.counterpartyAccountId !== null && taggedAccountIdSet.has(l.counterpartyAccountId))
+        if (!involves) return false
+      }
       return true
     })
   }, [lendings, lendingTypeFilter, lendingStatusFilter, showArchivedLending, taggedAccountIdSet])
@@ -516,10 +561,18 @@ export function BalanceDashboard() {
 
             {/* サマリーカード */}
             <div className="space-y-2">
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 <Card>
                   <CardContent className="px-3 py-2.5">
-                    <p className="text-[11px] text-muted-foreground">総残高</p>
+                    <p className="text-[11px] text-muted-foreground">全体残高（社内+社外）</p>
+                    <p className={cn("text-lg font-bold tabular-nums", (filteredSummary?.totalAllBalance ?? 0) >= 0 ? "" : "text-red-600")}>
+                      {formatCurrency(filteredSummary?.totalAllBalance ?? 0)}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="px-3 py-2.5">
+                    <p className="text-[11px] text-muted-foreground">総残高（社内）</p>
                     <p className="text-lg font-bold tabular-nums">{formatCurrency(filteredSummary?.totalBalance ?? 0)}</p>
                   </CardContent>
                 </Card>
@@ -644,7 +697,10 @@ export function BalanceDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {lendings.filter((l) => !l.isArchived && l.status !== "completed" && !(l.linkedLendingId && l.id > l.linkedLendingId)).slice(0, 5).map((l) => (
+                    {lendings
+                      .filter((l) => !l.isArchived && l.status !== "completed" && !(l.linkedLendingId && l.id > l.linkedLendingId))
+                      .filter((l) => !taggedAccountIdSet || taggedAccountIdSet.has(l.accountId) || (l.counterpartyAccountId !== null && taggedAccountIdSet.has(l.counterpartyAccountId)))
+                      .slice(0, 5).map((l) => (
                       <Fragment key={l.id}>
                         <TableRow className="">
                           <TableCell className="p-1">
@@ -848,7 +904,15 @@ export function BalanceDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactions.filter((t) => !t.isArchived && t.type !== "transfer").slice(0, 10).map((t) => {
+                    {transactions
+                      .filter((t) => !t.isArchived && t.type !== "transfer")
+                      .filter((t) => {
+                        if (!taggedAccountIdSet) return true
+                        return taggedAccountIdSet.has(t.accountId)
+                          || (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
+                          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+                      })
+                      .slice(0, 10).map((t) => {
                       const isPositive = ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
                       return (
                         <TableRow key={t.id} className="">
@@ -892,7 +956,14 @@ export function BalanceDashboard() {
                         </TableRow>
                       )
                     })}
-                    {transactions.filter((t) => !t.isArchived && t.type !== "transfer").length === 0 && (
+                    {transactions
+                      .filter((t) => !t.isArchived && t.type !== "transfer")
+                      .filter((t) => {
+                        if (!taggedAccountIdSet) return true
+                        return taggedAccountIdSet.has(t.accountId)
+                          || (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
+                          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+                      }).length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">取引データなし</TableCell>
                       </TableRow>
@@ -1352,10 +1423,32 @@ export function BalanceDashboard() {
       />
       <LendingModal
         open={lendingModalOpen}
-        onOpenChange={setLendingModalOpen}
+        onOpenChange={(o) => { setLendingModalOpen(o); if (!o) setLendingInitialValues(undefined) }}
         accounts={accounts}
-        onSave={(data) => { createLendingMutation.mutate(data, { onSuccess: () => toast.success("貸借を登録しました"), onError: () => toast.error("貸借の登録に失敗しました") }); setLendingModalOpen(false) }}
+        initialValues={lendingInitialValues}
+        onSave={(data) => { createLendingMutation.mutate(data, { onSuccess: () => toast.success("貸借を登録しました"), onError: () => toast.error("貸借の登録に失敗しました") }); setLendingModalOpen(false); setLendingInitialValues(undefined) }}
       />
+
+      {/* DnD選択モーダル：振替 or 貸借 */}
+      {dndChoiceOpen && dndFromId && dndToId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setDndChoiceOpen(false)}>
+          <div className="bg-background rounded-lg shadow-xl p-5 w-[400px] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-2">どちらで登録しますか？</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              {accounts.find(a => a.id === dndFromId)?.name ?? "?"}
+              {" → "}
+              {accounts.find(a => a.id === dndToId)?.name ?? "?"}
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={handleDndChoiceTransfer} className="flex-1">振替</Button>
+              <Button onClick={handleDndChoiceLending} variant="outline" className="flex-1">貸借</Button>
+            </div>
+            <div className="mt-3 flex justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setDndChoiceOpen(false)}>取消</Button>
+            </div>
+          </div>
+        </div>
+      )}
       <PaymentModal
         open={paymentModalOpen}
         onOpenChange={setPaymentModalOpen}
