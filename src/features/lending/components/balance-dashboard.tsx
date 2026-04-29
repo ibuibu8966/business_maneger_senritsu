@@ -534,7 +534,7 @@ export function BalanceDashboard() {
             {allTags.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-muted-foreground">タグ絞り込み（AND）:</span>
-                <TagSelect allTags={allTags} selectedTags={selectedTags} onToggle={toggleSelectedTag} onCreate={handleCreateTag} />
+                <TagSelect allTags={allTags} selectedTags={selectedTags} onToggle={toggleSelectedTag} onCreate={handleCreateTag} showSelectedBadges={false} />
                 {selectedTags.map((tagName) => {
                   const tag = allTags.find((t) => t.name === tagName)
                   return (
@@ -983,7 +983,7 @@ export function BalanceDashboard() {
             {allTags.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-muted-foreground">タグ絞り込み（AND）:</span>
-                <TagSelect allTags={allTags} selectedTags={selectedTags} onToggle={toggleSelectedTag} onCreate={handleCreateTag} />
+                <TagSelect allTags={allTags} selectedTags={selectedTags} onToggle={toggleSelectedTag} onCreate={handleCreateTag} showSelectedBadges={false} />
                 {selectedTags.map((tagName) => {
                   const tag = allTags.find((t) => t.name === tagName)
                   return (

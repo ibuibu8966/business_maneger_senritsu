@@ -22,9 +22,11 @@ interface TagSelectProps {
   onCreate?: (name: string) => void
   /** トリガーのサイズ感。compact=テーブル行向き、default=フォーム向き */
   size?: "compact" | "default"
+  /** 選択中タグのバッジ表示。falseにすると外側で別表現したい時用 */
+  showSelectedBadges?: boolean
 }
 
-export function TagSelect({ allTags, selectedTags, onToggle, onCreate, size = "default" }: TagSelectProps) {
+export function TagSelect({ allTags, selectedTags, onToggle, onCreate, size = "default", showSelectedBadges = true }: TagSelectProps) {
   const [search, setSearch] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -46,7 +48,7 @@ export function TagSelect({ allTags, selectedTags, onToggle, onCreate, size = "d
       onClick={stopEvent}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {selectedTags.map((tagName) => {
+      {showSelectedBadges && selectedTags.map((tagName) => {
         const tagMeta = allTags.find((at) => at.name === tagName)
         return (
           <Badge
