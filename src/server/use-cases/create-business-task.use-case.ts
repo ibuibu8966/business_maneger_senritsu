@@ -30,6 +30,7 @@ export class CreateBusinessTask {
     notifyEnabled?: boolean
     notifyMinutesBefore?: number
     issueId?: string | null
+    createdBy?: string
   }) {
     // projectId と businessId のどちらか1つは必須
     if (!data.projectId && !data.businessId) {
@@ -71,6 +72,7 @@ export class CreateBusinessTask {
       notifyEnabled: data.notifyEnabled ?? true,
       notifyMinutesBefore: data.notifyMinutesBefore ?? 10,
       issueId: data.issueId ?? null,
+      createdBy: data.createdBy ?? "",
     })
 
     if (assigneeIds.length > 0) {
@@ -87,8 +89,8 @@ export class CreateBusinessTask {
         entityId: result.id,
         entityName: result.title,
         changes: {},
-        userId: "system",
-        userName: "system",
+        userId: data.createdBy || "system",
+        userName: data.createdBy || "system",
       })
     } catch { /* audit log failure should not break main operation */ }
 

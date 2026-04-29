@@ -15,14 +15,24 @@ export class BusinessTaskRepository {
       where: {
         ...(params?.projectId && { projectId: params.projectId }),
         ...(params?.businessId && { businessId: params.businessId }),
-        ...(params?.assigneeId && { assigneeId: params.assigneeId }),
         ...(params?.status && { status: params.status }),
         ...(params?.contactId && { contactId: params.contactId }),
         ...(params?.issueId && { issueId: params.issueId }),
-        // プロジェクト配下タスクはプロジェクトがACTIVE、事業直下タスクは事業がACTIVEであること
-        OR: [
-          { project: { status: "ACTIVE" } },
-          { business: { status: "ACTIVE" } },
+        AND: [
+          // 複数担当者対応：assigneeId 単体 or 中間テーブル taskAssignees のどちらかにヒットすればOK
+          ...(params?.assigneeId ? [{
+            OR: [
+              { assigneeId: params.assigneeId },
+              { assignees: { some: { employeeId: params.assigneeId } } },
+            ],
+          }] : []),
+          {
+            // プロジェクト配下タスクはプロジェクトがACTIVE、事業直下タスクは事業がACTIVEであること
+            OR: [
+              { project: { status: "ACTIVE" } },
+              { business: { status: "ACTIVE" } },
+            ],
+          },
         ],
       },
       include: {

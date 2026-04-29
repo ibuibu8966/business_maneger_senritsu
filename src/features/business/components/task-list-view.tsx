@@ -983,7 +983,10 @@ export function TaskListView() {
 
   // フィルタリング
   const filteredTasks = allTasks.filter((t) => {
-    if (filterStaffId !== "all" && t.assigneeId !== filterStaffId) return false
+    if (filterStaffId !== "all") {
+      const ids = (t.assigneeIds && t.assigneeIds.length > 0) ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : [])
+      if (!ids.includes(filterStaffId)) return false
+    }
     if (filterStatus === "all") {
       if (t.status === "done") return false // 「すべて」でも完了は除外
     } else if (t.status !== filterStatus) return false
@@ -1049,7 +1052,10 @@ export function TaskListView() {
               >
                 <option value="all">全員</option>
                 {allEmployees.map((s) => {
-                  const count = allTasks.filter((t) => t.assigneeId === s.id && t.status !== "done").length
+                  const count = allTasks.filter((t) => {
+                    const ids = (t.assigneeIds && t.assigneeIds.length > 0) ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : [])
+                    return ids.includes(s.id) && t.status !== "done"
+                  }).length
                   return <option key={s.id} value={s.id}>{s.name}（{count}件）</option>
                 })}
               </select>

@@ -1,4 +1,5 @@
 import { BusinessTaskRepository } from "@/server/repositories/business-task.repository"
+import { prisma } from "@/lib/prisma"
 
 /**
  * 繰り返しタスク自動生成 Use-Case
@@ -65,9 +66,17 @@ export class GenerateRecurringTasks {
 
       if (!shouldGenerate) continue
 
+      // 元タスクの複数担当者を取得
+      const assigneeRows = await prisma.taskAssignee.findMany({
+        where: { taskId: task.id },
+        select: { employeeId: true },
+      })
+      const assigneeIds = assigneeRows.map((r) => r.employeeId)
+
       // 新タスクを作成: status=TODO、元タスクの情報を引き継ぎ、recurringはfalse
-      await BusinessTaskRepository.create({
+      const created = await BusinessTaskRepository.create({
         projectId: task.projectId,
+        businessId: task.businessId,
         title: task.title,
         detail: task.detail,
         assigneeId: task.assigneeId,
@@ -80,7 +89,20 @@ export class GenerateRecurringTasks {
         partnerId: task.partnerId,
         tool: task.tool,
         priority: task.priority,
+        executionTime: task.executionTime,
+        notifyEnabled: task.notifyEnabled,
+        notifyMinutesBefore: task.notifyMinutesBefore,
+        issueId: task.issueId,
+        createdBy: task.createdBy,
       })
+
+      // 複数担当者を新タスクにもコピー
+      if (assigneeIds.length > 0) {
+        await prisma.taskAssignee.createMany({
+          data: assigneeIds.map((employeeId) => ({ taskId: created.id, employeeId })),
+          skipDuplicates: true,
+        })
+      }
 
       // 元タスクの lastGeneratedAt を更新
       await BusinessTaskRepository.updateLastGenerated(task.id, today)
