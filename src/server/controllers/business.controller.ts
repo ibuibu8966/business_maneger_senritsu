@@ -216,7 +216,7 @@ export class BusinessTaskController {
     try {
       const body = await req.json()
       const data = reorderSchema.parse(body)
-      await ReorderBusinessTasks.execute(data.taskIds)
+      await ReorderBusinessTasks.execute(data.taskIds, data.employeeId)
       return NextResponse.json({ success: true })
     } catch (e) {
       return handleApiError(e, { resource: "タスク", action: "更新" })

@@ -1153,9 +1153,17 @@ export function TaskListView() {
     return true
   })
 
+  // 担当者ごとの並び順を取得するヘルパー
+  const getSortValue = (t: TaskItem) => {
+    if (filterStaffId !== "all" && t.userSortOrders && t.userSortOrders[filterStaffId] !== undefined) {
+      return t.userSortOrders[filterStaffId]
+    }
+    return t.sortOrder
+  }
+
   // 並び替え（手動以外）
   const sortedTasks = (() => {
-    if (sortMode === "manual") return [...filteredTasks].sort((a, b) => a.sortOrder - b.sortOrder)
+    if (sortMode === "manual") return [...filteredTasks].sort((a, b) => getSortValue(a) - getSortValue(b))
     if (sortMode === "priority") return [...filteredTasks].sort((a, b) => (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9))
     if (sortMode === "deadline") return [...filteredTasks].sort((a, b) => {
       if (!a.deadline && !b.deadline) return 0
@@ -1167,17 +1175,32 @@ export function TaskListView() {
     return filteredTasks
   })()
 
+  // 担当者フィルタのみが有効（他の絞り込みは無効）の状態を判定
+  const isOnlyAssigneeFilterActive =
+    filterStaffId !== "all" &&
+    filterStatus === "all" &&
+    !showTodayOnly &&
+    !showRecurringOnly &&
+    searchKeyword.trim().length === 0 &&
+    filterPriority === "all" &&
+    filterDeadline === "all" &&
+    filterCreatedBy === "all" &&
+    sortMode === "manual"
+
   // 絞り込み or 並び替え（手動以外）が有効なら D&D 無効化
+  // ただし「担当者フィルタのみ」の状態では並び替え可能にする（人別sortOrderに保存）
   const isFilteringActive =
-    filterStaffId !== "all" ||
-    filterStatus !== "all" ||
-    showTodayOnly ||
-    showRecurringOnly ||
-    searchKeyword.trim().length > 0 ||
-    filterPriority !== "all" ||
-    filterDeadline !== "all" ||
-    filterCreatedBy !== "all" ||
-    sortMode !== "manual"
+    !isOnlyAssigneeFilterActive && (
+      filterStaffId !== "all" ||
+      filterStatus !== "all" ||
+      showTodayOnly ||
+      showRecurringOnly ||
+      searchKeyword.trim().length > 0 ||
+      filterPriority !== "all" ||
+      filterDeadline !== "all" ||
+      filterCreatedBy !== "all" ||
+      sortMode !== "manual"
+    )
 
   const handleToggleTodayFlag = (t: TaskItem) => {
     updateTaskMutation.mutate({ id: t.id, data: { todayFlag: !t.todayFlag } })
@@ -1203,6 +1226,11 @@ export function TaskListView() {
     const newOrder = arrayMove(orderedTasks.map((t) => t.id), oldIndex, newIndex)
     setTaskOrder(newOrder)
 
+    // 担当者フィルタONなら、その人専用の並び順だけ更新（他の人に影響しない）
+    if (isOnlyAssigneeFilterActive && filterStaffId !== "all") {
+      reorderMutation.mutate({ taskIds: newOrder, employeeId: filterStaffId })
+      return
+    }
     // 全タスクの順序を再構築して送信（リロード後も並びが維持されるように）
     // 表示中タスクの新順序 + 非表示タスクは元の sortOrder を維持
     const visibleIdSet = new Set(newOrder)

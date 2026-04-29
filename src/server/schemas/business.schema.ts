@@ -108,6 +108,7 @@ export const createMemoSchema = z.object({
 
 export const reorderSchema = z.object({
   taskIds: z.array(z.string()).min(1),
+  employeeId: z.string().optional(),
 })
 
 // ===== Zod: チェックリスト =====

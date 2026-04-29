@@ -149,6 +149,7 @@ model BusinessTask {
   missedLogs     TaskMissedLog[]
   scheduleEvents ScheduleEvent[]
   assignees      TaskAssignee[]                           // 担当者（複数）
+  userSortOrders TaskUserSortOrder[]                      // 担当者ごとの並び順
 
   @@index([projectId])
   @@index([assigneeId])
@@ -159,6 +160,22 @@ model BusinessTask {
   @@index([todayFlag])
   @@index([issueId])
   @@map("business_tasks")
+}
+
+// ========== タスクの担当者ごと並び順（人別sortOrder） ==========
+model TaskUserSortOrder {
+  id         String       @id @default(cuid())
+  taskId     String
+  task       BusinessTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employeeId String
+  sortOrder  Int          @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([taskId, employeeId])
+  @@index([taskId])
+  @@index([employeeId])
+  @@map("task_user_sort_orders")
 }
 
 // ========== タスク担当者（中間テーブル） ==========

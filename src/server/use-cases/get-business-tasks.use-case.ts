@@ -38,6 +38,9 @@ export class GetBusinessTasks {
       lastGeneratedAt: t.lastGeneratedAt ? t.lastGeneratedAt.toISOString() : null,
       createdBy: t.createdBy,
       sortOrder: t.sortOrder,
+      userSortOrders: Object.fromEntries(
+        ((t.userSortOrders ?? []) as { employeeId: string; sortOrder: number }[]).map((u) => [u.employeeId, u.sortOrder])
+      ) as Record<string, number>,
       createdAt: t.createdAt.toISOString(),
       // 今日やるフラグ
       todayFlag: t.todayFlag ?? false,

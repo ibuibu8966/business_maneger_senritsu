@@ -166,7 +166,7 @@ export function useDeleteBusinessTask() {
 export function useReorderBusinessTasks() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { taskIds: string[] }) =>
+    mutationFn: (data: { taskIds: string[]; employeeId?: string }) =>
       reorderBusinessTasks(data),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.businessTasks.all })

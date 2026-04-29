@@ -370,6 +370,7 @@ export interface BusinessTaskDTO {
   lastGeneratedAt: string | null
   createdBy: string
   sortOrder: number
+  userSortOrders?: Record<string, number>
   createdAt: string
   // 今日やるフラグ
   todayFlag: boolean
