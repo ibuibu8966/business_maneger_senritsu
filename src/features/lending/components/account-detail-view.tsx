@@ -816,6 +816,7 @@ export function AccountDetailView({ accountId }: Props) {
                 const isPositive = ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain", "revenue", "misc_income"].includes(t.type)
                 const isEditing = editingTxId === t.id
                 const isAutoType = ["initial", "lend", "borrow", "repayment_receive", "repayment_pay", "interest_receive", "interest_pay"].includes(t.type)
+                const isInitial = t.type === "initial"
 
                 if (isEditing) {
                   return (
@@ -869,6 +870,11 @@ export function AccountDetailView({ accountId }: Props) {
                       <div className="flex gap-0.5">
                         {!isAutoType && (
                           <Button size="sm" variant="ghost" onClick={() => startEditingTx(t)} className="h-6 w-6 p-0">
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {isInitial && (
+                          <Button size="sm" variant="ghost" onClick={() => setInitialBalanceModalOpen(true)} className="h-6 w-6 p-0" title="初期残高を編集">
                             <Pencil className="h-3 w-3" />
                           </Button>
                         )}
