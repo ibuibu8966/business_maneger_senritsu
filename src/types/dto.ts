@@ -83,6 +83,7 @@ export interface AccountTransactionDTO {
   editedBy: string
   tags: string[]
   isArchived: boolean
+  balanceAfter: number            // この取引を反映した直後の口座残高（時点残高）
   createdAt: string
 }
 
@@ -104,6 +105,7 @@ export interface LendingDTO {
   tags: string[]
   isArchived: boolean
   createdAt: string
+  date: string | null             // 実行日（紐づくAccountTransaction.date "YYYY-MM-DD"）。なければnull
   payments: LendingPaymentDTO[]
 }
 

@@ -522,7 +522,7 @@ export function AccountDetailView({ accountId }: Props) {
                         </button>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{l.createdAt.split("T")[0]}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{l.date ?? l.createdAt.split("T")[0]}</TableCell>
                     <TableCell className="text-sm font-medium">
                       {l.linkedLendingId
                         ? (l.type === "lend"
@@ -635,6 +635,7 @@ export function AccountDetailView({ accountId }: Props) {
                 <TableHead>やりとり</TableHead>
                 <TableHead>入/出</TableHead>
                 <TableHead className="text-right">金額</TableHead>
+                <TableHead className="text-right">時点残高</TableHead>
                 <TableHead>メモ</TableHead>
                 <TableHead className="w-16"></TableHead>
               </TableRow>
@@ -645,6 +646,12 @@ export function AccountDetailView({ accountId }: Props) {
                 const fromName = t.fromAccountName ?? "不明"
                 const toName = t.toAccountName ?? "不明"
                 const isEditing = editingTxId === t.id
+                // 振替は同じレコード(t)が片方の口座目線で見えている。
+                // 表示中の口座(accountId)と一致するレコードのbalanceAfterが時点残高。
+                // ただしtransferTxs はlinkedTransferIdの片方しか残してないため、
+                // 表示口座と異なるレコードの場合はaccountIdで取得しなおすのが安全。
+                // ここではt.accountId === accountId の場合だけbalanceAfterが該当口座の値となる。
+                // 片側のみ表示しているのでt.accountIdが表示口座と異なるケースも存在する。
 
                 if (isEditing) {
                   return (
@@ -663,6 +670,7 @@ export function AccountDetailView({ accountId }: Props) {
                       <TableCell>
                         <Input type="number" value={editTxAmount} onChange={(e) => setEditTxAmount(e.target.value)} className="h-7 text-xs text-right w-24" />
                       </TableCell>
+                      <TableCell></TableCell>
                       <TableCell>
                         <Input value={editTxMemo} onChange={(e) => setEditTxMemo(e.target.value)} className="h-7 text-xs" />
                       </TableCell>
@@ -692,6 +700,9 @@ export function AccountDetailView({ accountId }: Props) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-right tabular-nums">{formatCurrency(t.amount ?? 0)}</TableCell>
+                    <TableCell className="text-sm text-right tabular-nums text-muted-foreground">
+                      {t.accountId === accountId ? formatCurrency(t.balanceAfter ?? 0) : "-"}
+                    </TableCell>
                     <TableCell className="text-sm max-w-[200px]">
                       <div>
                         <div className="truncate">{t.memo || <span className="text-muted-foreground">-</span>}</div>
@@ -727,7 +738,7 @@ export function AccountDetailView({ accountId }: Props) {
               })}
               {transferTxs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">
+                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">
                     振替データなし
                   </TableCell>
                 </TableRow>
@@ -753,6 +764,7 @@ export function AccountDetailView({ accountId }: Props) {
                 <TableHead className="w-24">日付</TableHead>
                 <TableHead>カテゴリ</TableHead>
                 <TableHead className="text-right">金額</TableHead>
+                <TableHead className="text-right">時点残高</TableHead>
                 <TableHead>メモ</TableHead>
                 <TableHead className="w-16"></TableHead>
               </TableRow>
@@ -775,6 +787,7 @@ export function AccountDetailView({ accountId }: Props) {
                       <TableCell>
                         <Input type="number" value={editTxAmount} onChange={(e) => setEditTxAmount(e.target.value)} className="h-7 text-xs text-right w-24" />
                       </TableCell>
+                      <TableCell></TableCell>
                       <TableCell>
                         <Input value={editTxMemo} onChange={(e) => setEditTxMemo(e.target.value)} className="h-7 text-xs" />
                       </TableCell>
@@ -800,6 +813,9 @@ export function AccountDetailView({ accountId }: Props) {
                     </TableCell>
                     <TableCell className={cn("text-sm text-right font-medium tabular-nums", isPositive ? "text-emerald-600" : "text-red-600")}>
                       {isPositive ? "+" : "-"}{formatCurrency(t.amount ?? 0)}
+                    </TableCell>
+                    <TableCell className="text-sm text-right tabular-nums text-muted-foreground">
+                      {formatCurrency(t.balanceAfter ?? 0)}
                     </TableCell>
                     <TableCell className="text-sm max-w-[200px]">
                       <div>
@@ -838,7 +854,7 @@ export function AccountDetailView({ accountId }: Props) {
               })}
               {nonTransferTxs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">
                     取引データなし
                   </TableCell>
                 </TableRow>

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
+import { recomputeBalanceAfter } from "@/lib/recompute-balance-after"
 import type { LendingDTO, LendingPaymentDTO } from "@/types/dto"
 import type { LendingType, AccountTransactionType } from "@/generated/prisma/client"
 
@@ -40,6 +41,7 @@ function toLendingDTO(r: {
     tags: r.tags ?? [],
     isArchived: r.isArchived,
     createdAt: r.createdAt.toISOString(),
+    date: null,
     payments: r.payments.map((p): LendingPaymentDTO => ({
       id: p.id,
       lendingId: p.lendingId,
@@ -166,10 +168,14 @@ export class CreateLending {
           data: { balance: { increment: pairDelta } },
         })
 
-        return updated
+        // 7. 両口座の時点残高を再計算
+        await recomputeBalanceAfter(tx, data.accountId)
+        await recomputeBalanceAfter(tx, data.counterpartyAccountId!)
+
+        return { updated, txDate }
       })
 
-      const dto = toLendingDTO(result)
+      const dto = { ...toLendingDTO(result.updated), date: result.txDate.toISOString().split("T")[0] }
 
       try {
         await AuditLogRepository.create({
@@ -204,12 +210,14 @@ export class CreateLending {
       })
 
       // AccountTransaction 自動計上 + 残高更新
+      // 入力された実行日(txDate)を使う。以前はnew Date()だったが、これは実行日が
+      // 反映されないバグだったため修正済み。
       await tx.accountTransaction.create({
         data: {
           accountId: data.accountId,
           type: txType,
           amount: data.principal,
-          date: new Date(),
+          date: txDate,
           counterparty: data.counterparty,
           linkedTransactionId: lending.id,
           lendingId: lending.id,
@@ -223,10 +231,13 @@ export class CreateLending {
         data: { balance: { increment: delta } },
       })
 
+      // 時点残高を再計算
+      await recomputeBalanceAfter(tx, data.accountId)
+
       return lending
     })
 
-    const dto = toLendingDTO(r)
+    const dto = { ...toLendingDTO(r), date: txDate.toISOString().split("T")[0] }
 
     try {
       await AuditLogRepository.create({

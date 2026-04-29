@@ -384,6 +384,8 @@ model AccountTransaction {
   editedBy        String                   @default("")         // 編集者
   tags            String[]                 @default([])         // タグ（絞り込み用）
   isArchived      Boolean                  @default(false)      // アーカイブ
+  // この取引を反映した直後の口座残高（時点残高）
+  balanceAfter    Int                      @default(0)
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
 

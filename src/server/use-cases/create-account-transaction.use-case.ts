@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
+import { recomputeBalanceAfter } from "@/lib/recompute-balance-after"
 import type { AccountTransactionDTO, AccountTransactionTypeDTO } from "@/types/dto"
 import type { AccountTransactionType } from "@/generated/prisma/client"
 import { BALANCE_DELTA } from "@/lib/balance-delta"
@@ -46,6 +47,7 @@ function toDTO(r: {
   editedBy: string
   tags: string[]
   isArchived: boolean
+  balanceAfter: number
   createdAt: Date
 }): AccountTransactionDTO {
   return {
@@ -70,6 +72,7 @@ function toDTO(r: {
     editedBy: r.editedBy,
     tags: r.tags,
     isArchived: r.isArchived,
+    balanceAfter: r.balanceAfter,
     createdAt: r.createdAt.toISOString(),
   }
 }
@@ -146,7 +149,16 @@ export class CreateAccountTransaction {
           data: { balance: { increment: data.amount } },
         })
 
-        const transferResult = toDTO(rFrom)
+        // 両口座の時点残高を再計算
+        await recomputeBalanceAfter(tx, data.fromAccountId)
+        await recomputeBalanceAfter(tx, data.toAccountId)
+
+        // recompute後の最新値を取得
+        const refreshed = await tx.accountTransaction.findUniqueOrThrow({
+          where: { id: rFrom.id },
+          include: includeRelations,
+        })
+        const transferResult = toDTO(refreshed)
 
         try {
           await AuditLogRepository.create({
@@ -189,7 +201,15 @@ export class CreateAccountTransaction {
         })
       }
 
-      const result = toDTO(r)
+      // 時点残高を再計算
+      await recomputeBalanceAfter(tx, data.accountId)
+
+      // recompute後の最新値を取得
+      const refreshed = await tx.accountTransaction.findUniqueOrThrow({
+        where: { id: r.id },
+        include: includeRelations,
+      })
+      const result = toDTO(refreshed)
 
       try {
         await AuditLogRepository.create({

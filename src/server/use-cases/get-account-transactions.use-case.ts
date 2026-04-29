@@ -52,6 +52,7 @@ export class GetAccountTransactions {
       editedBy: r.editedBy,
       tags: r.tags,
       isArchived: r.isArchived,
+      balanceAfter: r.balanceAfter,
       createdAt: r.createdAt.toISOString(),
     }))
   }

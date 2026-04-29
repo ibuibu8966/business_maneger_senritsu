@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { BALANCE_DELTA } from "@/lib/balance-delta"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
+import { recomputeBalanceAfter } from "@/lib/recompute-balance-after"
 import type { LendingDTO, LendingPaymentDTO } from "@/types/dto"
 import type { LendingStatus } from "@/generated/prisma/client"
 
@@ -167,6 +168,24 @@ export class UpdateLending {
         }
       }
 
+      // 影響を受けた口座の時点残高を再計算
+      const affected = new Set<string>()
+      affected.add(current.accountId)
+      if (current.counterpartyAccountId) affected.add(current.counterpartyAccountId)
+      for (const aid of affected) {
+        await recomputeBalanceAfter(tx, aid)
+      }
+
+      // 紐づくAccountTransactionから実行日を取得（メイン側のLEND/BORROW）
+      const linkedTx = await tx.accountTransaction.findFirst({
+        where: {
+          lendingId: id,
+          type: { in: ["LEND", "BORROW"] },
+        },
+        select: { date: true },
+        orderBy: { createdAt: "asc" },
+      })
+
       const result: LendingDTO = {
         id: r.id,
         accountId: r.account.id,
@@ -185,6 +204,7 @@ export class UpdateLending {
         tags: r.tags ?? [],
         isArchived: r.isArchived,
         createdAt: r.createdAt.toISOString(),
+        date: linkedTx ? linkedTx.date.toISOString().split("T")[0] : null,
         payments: r.payments.map(
           (p): LendingPaymentDTO => ({
             id: p.id,

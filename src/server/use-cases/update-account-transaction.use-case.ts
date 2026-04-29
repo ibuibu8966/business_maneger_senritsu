@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { BALANCE_DELTA } from "@/lib/balance-delta"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
+import { recomputeBalanceAfter } from "@/lib/recompute-balance-after"
 import type { AccountTransactionDTO, AccountTransactionTypeDTO } from "@/types/dto"
 import type { AccountTransactionType } from "@/generated/prisma/client"
 
@@ -35,6 +36,7 @@ function toDTO(r: {
   editedBy: string
   tags: string[]
   isArchived: boolean
+  balanceAfter: number
   createdAt: Date
 }): AccountTransactionDTO {
   return {
@@ -59,6 +61,7 @@ function toDTO(r: {
     editedBy: r.editedBy,
     tags: r.tags,
     isArchived: r.isArchived,
+    balanceAfter: r.balanceAfter,
     createdAt: r.createdAt.toISOString(),
   }
 }
@@ -112,10 +115,9 @@ export class UpdateAccountTransaction {
       if (data.tags !== undefined) updateData.tags = data.tags
       if (data.isArchived !== undefined) updateData.isArchived = data.isArchived
 
-      const updated = await tx.accountTransaction.update({
+      await tx.accountTransaction.update({
         where: { id },
         data: updateData,
-        include: includeRelations,
       })
 
       // 3. 振替ペア同期（TRANSFER時）
@@ -268,7 +270,24 @@ export class UpdateAccountTransaction {
         }
       }
 
-      const result = toDTO(updated)
+      // 5. 影響を受けた口座の時点残高を再計算
+      const affected = new Set<string>()
+      affected.add(current.accountId)
+      if (current.fromAccountId) affected.add(current.fromAccountId)
+      if (current.toAccountId) affected.add(current.toAccountId)
+      // 振替アーカイブ等で他口座にも影響している可能性
+      if (data.fromAccountId) affected.add(data.fromAccountId)
+      if (data.toAccountId) affected.add(data.toAccountId)
+      for (const aid of affected) {
+        await recomputeBalanceAfter(tx, aid)
+      }
+
+      // 再計算後の最新値を取得してDTO化
+      const refreshed = await tx.accountTransaction.findUniqueOrThrow({
+        where: { id },
+        include: includeRelations,
+      })
+      const result = toDTO(refreshed)
 
       try {
         const changes: Record<string, { old: unknown; new: unknown }> = {}

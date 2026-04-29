@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
+import { recomputeBalanceAfter } from "@/lib/recompute-balance-after"
 import type { LendingPaymentDTO } from "@/types/dto"
 import type { AccountTransactionType } from "@/generated/prisma/client"
 
@@ -103,6 +104,16 @@ export class CreateLendingPayment {
               data: { balance: { increment: pairDelta } },
             })
           }
+        }
+
+        // 影響を受けた口座の時点残高を再計算
+        await recomputeBalanceAfter(tx, lending.accountId)
+        if (lending.linkedLendingId) {
+          const pair = await tx.lending.findUnique({
+            where: { id: lending.linkedLendingId },
+            select: { accountId: true },
+          })
+          if (pair) await recomputeBalanceAfter(tx, pair.accountId)
         }
       }
 
