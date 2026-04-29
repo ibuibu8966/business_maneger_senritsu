@@ -16,7 +16,7 @@ import {
 // Native <select> used instead of Radix Select
 // Tabs removed — using nav buttons matching accounting layout
 import { Badge } from "@/components/ui/badge"
-import { Plus, ChevronDown, ChevronRight, Archive, ArrowLeftRight } from "lucide-react"
+import { Plus, ChevronDown, ChevronRight, Archive, ArrowLeftRight, X } from "lucide-react"
 import { DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import type { DragEndEvent } from "@dnd-kit/core"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -161,7 +161,10 @@ export function BalanceDashboard() {
   const [expandedLendings, setExpandedLendings] = useState<Set<string>>(new Set())
 
   // フィルター
-  const [selectedTag, setSelectedTag] = useState<string>("all")
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const toggleSelectedTag = (tagName: string) => {
+    setSelectedTags((prev) => prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName])
+  }
   const [txTypeFilter, setTxTypeFilter] = useState<string>("all")
   const [txAccountFilter, setTxAccountFilter] = useState<string>("all")
   const [lendingTypeFilter, setLendingTypeFilter] = useState<string>("all")
@@ -299,9 +302,16 @@ export function BalanceDashboard() {
 
   const loading = accLoading || sumLoading || txLoading || lendLoading
 
+  // 全タグAND判定：tagsが選択タグ全てを含むか
+  const matchesAllTags = (tags: string[] | undefined) => {
+    if (selectedTags.length === 0) return true
+    const set = tags ?? []
+    return selectedTags.every((t) => set.includes(t))
+  }
+
   // タグ連動サマリー（タグ選択時はクライアントサイドで再計算）
   const filteredSummary = useMemo(() => {
-    if (selectedTag === "all") {
+    if (selectedTags.length === 0) {
       // 全タグ時：summary（社内のみ）+ 社外含む全体残高
       const totalAllBalance = accounts
         .filter(a => !a.isArchived)
@@ -309,11 +319,11 @@ export function BalanceDashboard() {
       return { ...(summary ?? { totalBalance: 0, totalLent: 0, totalBorrowed: 0, netAssets: 0 }), totalAllBalance }
     }
     const taggedAccountIds = new Set(
-      accounts.filter(a => !a.isArchived && a.ownerType === "internal" && (a.tags ?? []).includes(selectedTag)).map(a => a.id)
+      accounts.filter(a => !a.isArchived && a.ownerType === "internal" && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
     )
     // 社外含む全体残高用：タグ付きの全口座（社外含む）
     const taggedAllAccountIds = new Set(
-      accounts.filter(a => !a.isArchived && (a.tags ?? []).includes(selectedTag)).map(a => a.id)
+      accounts.filter(a => !a.isArchived && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
     )
     let totalBalance = 0
     let totalAllBalance = 0
@@ -335,13 +345,13 @@ export function BalanceDashboard() {
       if (l.type === "borrow") totalBorrowed += l.outstanding
     }
     return { totalBalance, totalLent, totalBorrowed, netAssets: totalBalance + totalLent - totalBorrowed, totalAllBalance }
-  }, [selectedTag, summary, accounts, lendings])
+  }, [selectedTags, summary, accounts, lendings])
 
   // タグフィルタ済み口座IDセット（取引・貸借テーブルの連動用）
   const taggedAccountIdSet = useMemo(() => {
-    if (selectedTag === "all") return null
-    return new Set(accounts.filter(a => (a.tags ?? []).includes(selectedTag)).map(a => a.id))
-  }, [selectedTag, accounts])
+    if (selectedTags.length === 0) return null
+    return new Set(accounts.filter(a => selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id))
+  }, [selectedTags, accounts])
 
   // 当月の売上・支出・利益
   const INCOME_TYPES = new Set(["revenue", "misc_income", "gain", "interest_receive"])
@@ -361,14 +371,15 @@ export function BalanceDashboard() {
     return { income, expense, profit: income - expense, month: now.getMonth() + 1 }
   }, [transactions, taggedAccountIdSet])
 
-  // アーカイブフィルタ + タグフィルタ
+  // アーカイブフィルタ + タグフィルタ（複数タグAND）
   const visibleAccounts = useMemo(() => {
     return accounts.filter((a) => {
       if (showArchived ? !a.isArchived : a.isArchived) return false
-      if (selectedTag !== "all" && !(a.tags ?? []).includes(selectedTag)) return false
+      if (!matchesAllTags(a.tags)) return false
       return true
     })
-  }, [accounts, showArchived, selectedTag])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts, showArchived, selectedTags])
 
   // 口座をセクション分け
   const accountSections = useMemo(() => {
@@ -519,43 +530,33 @@ export function BalanceDashboard() {
         {/* ── 全体タブ ── */}
         {activeTab === "overview" && (
           <div className="space-y-4">
-            {/* タグフィルター */}
+            {/* タグフィルター（複数選択AND） */}
             {allTags.length > 0 && (
-              <div className="inline-flex items-center rounded-lg border bg-muted p-0.5 gap-0.5">
-                <button
-                  onClick={() => setSelectedTag("all")}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
-                    selectedTag === "all"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  すべて
-                </button>
-                {allTags.map((tag) => {
-                  const isActive = selectedTag === tag.name
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground">タグ絞り込み（AND）:</span>
+                <TagSelect allTags={allTags} selectedTags={selectedTags} onToggle={toggleSelectedTag} onCreate={handleCreateTag} />
+                {selectedTags.map((tagName) => {
+                  const tag = allTags.find((t) => t.name === tagName)
                   return (
-                    <button
-                      key={tag.id}
-                      onClick={() => setSelectedTag(isActive ? "all" : tag.name)}
-                      className={cn(
-                        "px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer inline-flex items-center gap-1.5",
-                        isActive
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {tag.color && (
+                    <Badge key={tagName} variant="outline" className="gap-1 pr-1 text-xs">
+                      {tag?.color && (
                         <span className={cn(
                           "inline-block w-2 h-2 rounded-full shrink-0",
                           getTagColorClass(tag.color).split(" ")[0] || "bg-muted-foreground"
                         )} />
                       )}
-                      {tag.name}
-                    </button>
+                      {tagName}
+                      <button onClick={() => toggleSelectedTag(tagName)} className="ml-0.5 hover:bg-muted rounded p-0.5" aria-label="解除">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
                   )
                 })}
+                {selectedTags.length > 0 && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedTags([])}>
+                    全解除
+                  </Button>
+                )}
               </div>
             )}
 
@@ -980,41 +981,31 @@ export function BalanceDashboard() {
           <div className="space-y-4">
             {/* タグフィルター */}
             {allTags.length > 0 && (
-              <div className="inline-flex items-center rounded-lg border bg-muted p-0.5 gap-0.5">
-                <button
-                  onClick={() => setSelectedTag("all")}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
-                    selectedTag === "all"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  すべて
-                </button>
-                {allTags.map((tag) => {
-                  const isActive = selectedTag === tag.name
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground">タグ絞り込み（AND）:</span>
+                <TagSelect allTags={allTags} selectedTags={selectedTags} onToggle={toggleSelectedTag} onCreate={handleCreateTag} />
+                {selectedTags.map((tagName) => {
+                  const tag = allTags.find((t) => t.name === tagName)
                   return (
-                    <button
-                      key={tag.id}
-                      onClick={() => setSelectedTag(isActive ? "all" : tag.name)}
-                      className={cn(
-                        "px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer inline-flex items-center gap-1.5",
-                        isActive
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {tag.color && (
+                    <Badge key={tagName} variant="outline" className="gap-1 pr-1 text-xs">
+                      {tag?.color && (
                         <span className={cn(
                           "inline-block w-2 h-2 rounded-full shrink-0",
                           getTagColorClass(tag.color).split(" ")[0] || "bg-muted-foreground"
                         )} />
                       )}
-                      {tag.name}
-                    </button>
+                      {tagName}
+                      <button onClick={() => toggleSelectedTag(tagName)} className="ml-0.5 hover:bg-muted rounded p-0.5" aria-label="解除">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
                   )
                 })}
+                {selectedTags.length > 0 && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedTags([])}>
+                    全解除
+                  </Button>
+                )}
               </div>
             )}
             <div className="flex justify-end gap-2">
