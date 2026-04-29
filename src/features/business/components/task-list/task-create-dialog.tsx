@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { PRIORITY_CONFIG, type ProjectNode } from "../mock-data"
-import { useCreateBusinessTask } from "@/hooks/use-business"
+import { useCreateBusinessTask, useChecklistTemplates, useAddTaskChecklistItem } from "@/hooks/use-business"
 import { useCreateScheduleEvent } from "@/hooks/use-schedule"
 import { toast } from "sonner"
 
@@ -60,6 +60,7 @@ export function TaskCreateDialog({
   const [contactId, setContactId] = useState("")
   const [partnerId, setPartnerId] = useState("")
   const [priority, setPriority] = useState("medium")
+  const [status, setStatus] = useState<"todo" | "in-progress" | "waiting" | "done">("todo")
   const [tool, setTool] = useState("")
   const [issueId, setIssueId] = useState("")
   const [addToCalendar, setAddToCalendar] = useState(false)
@@ -69,6 +70,10 @@ export function TaskCreateDialog({
   const [calendarEventType, setCalendarEventType] = useState<"meeting" | "holiday" | "outing" | "work" | "other">("work")
   const createTaskMutation = useCreateBusinessTask()
   const createScheduleEventMutation = useCreateScheduleEvent()
+  const addChecklistItemMutation = useAddTaskChecklistItem()
+  const { data: checklistTemplates = [] } = useChecklistTemplates()
+  const [checklistItems, setChecklistItems] = useState<string[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState("")
 
   const resetForm = () => {
     setTitle("")
@@ -87,6 +92,7 @@ export function TaskCreateDialog({
     setContactId("")
     setPartnerId("")
     setPriority("medium")
+    setStatus("todo")
     setTool("")
     setIssueId("")
     setAddToCalendar(false)
@@ -94,6 +100,8 @@ export function TaskCreateDialog({
     setCalendarStartTime("09:00")
     setCalendarEndTime("10:00")
     setCalendarEventType("work")
+    setChecklistItems([])
+    setSelectedTemplateId("")
   }
 
   const handleCreate = async () => {
@@ -114,7 +122,7 @@ export function TaskCreateDialog({
         assigneeIds,
         assigneeNames: selectedStaff.map((s) => s.name),
         deadline: deadline || null,
-        status: "todo",
+        status,
         memo: "",
         recurring,
         recurringPattern: recurring && recurringPattern ? recurringPattern : null,
@@ -134,8 +142,20 @@ export function TaskCreateDialog({
         issueId: issueId || null,
       })
 
+      // チェックリスト項目を一括作成（空白除く）
+      const newTaskId = (newTask as { id?: string } | undefined)?.id
+      if (newTaskId) {
+        const validItems = checklistItems.map((s) => s.trim()).filter(Boolean)
+        if (validItems.length > 0) {
+          await Promise.all(
+            validItems.map((title, i) =>
+              addChecklistItemMutation.mutateAsync({ taskId: newTaskId, title, sortOrder: i })
+            )
+          )
+        }
+      }
+
       if (addToCalendar && calendarDate) {
-        const newTaskId = (newTask as { id?: string } | undefined)?.id
         const mainEmployeeId = assigneeIds[0] ?? employees[0]?.id ?? ""
         const participantIds = assigneeIds.slice(1)
         if (!mainEmployeeId) {
@@ -284,6 +304,15 @@ export function TaskCreateDialog({
               </select>
             </div>
             <div>
+              <Label className="text-xs">ステータス</Label>
+              <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
+                <option value="todo">未着手</option>
+                <option value="in-progress">進行中</option>
+                <option value="waiting">確認待ち</option>
+                <option value="done">完了</option>
+              </select>
+            </div>
+            <div>
               <Label className="text-xs">連絡ツール</Label>
               <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={tool} onChange={(e) => setTool(e.target.value)}>
                 <option value="">なし</option>
@@ -308,6 +337,73 @@ export function TaskCreateDialog({
                 <option key={i.id} value={i.id}>{i.title}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <Label className="text-xs">チェックリスト（任意）</Label>
+            {checklistTemplates.length > 0 && (
+              <div className="flex gap-1 mt-1">
+                <select
+                  className="flex-1 text-xs border rounded-md p-1.5 bg-background"
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                >
+                  <option value="">テンプレートから選択（任意）</option>
+                  {checklistTemplates.map((tpl: { id: string; name: string }) => (
+                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  disabled={!selectedTemplateId}
+                  onClick={() => {
+                    const tpl = checklistTemplates.find((t: { id: string }) => t.id === selectedTemplateId) as { items: { title: string }[] } | undefined
+                    if (tpl) {
+                      setChecklistItems((prev) => [...prev, ...tpl.items.map((i: { title: string }) => i.title)])
+                      setSelectedTemplateId("")
+                    }
+                  }}
+                >
+                  追加
+                </Button>
+              </div>
+            )}
+            <div className="space-y-1 mt-1">
+              {checklistItems.map((item, i) => (
+                <div key={i} className="flex gap-1 items-center">
+                  <Input
+                    value={item}
+                    onChange={(e) => {
+                      const next = [...checklistItems]
+                      next[i] = e.target.value
+                      setChecklistItems(next)
+                    }}
+                    placeholder={`項目${i + 1}`}
+                    className="h-7 text-xs"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setChecklistItems(checklistItems.filter((_, idx) => idx !== i))}
+                  >
+                    ×
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs w-full"
+                onClick={() => setChecklistItems([...checklistItems, ""])}
+              >
+                ＋ 項目追加
+              </Button>
+            </div>
           </div>
           <label className="flex items-center gap-2 text-xs cursor-pointer">
             <input type="checkbox" checked={addToCalendar} onChange={(e) => setAddToCalendar(e.target.checked)} className="rounded" />

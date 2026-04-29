@@ -132,9 +132,8 @@ function ProjectSidePanel({
     updateProjectMutation.mutate({ id, data })
   }
 
-  const bizGroups = allBusinesses.filter((biz) =>
-    allProjects.some((p) => p.businessId === biz.id)
-  )
+  // 全事業を表示（プロジェクトを持たない事業もOK）
+  const bizGroups = allBusinesses
 
   return (
     <div className="border-l bg-card h-full flex flex-col">
@@ -224,6 +223,30 @@ function ProjectSidePanel({
                   {/* メモ */}
                   <MemoSection businessId={biz.id} compact />
 
+                  {/* 事業直下タスク（プロジェクトに紐づかないタスク） */}
+                  {(() => {
+                    const directTasks = allTasks.filter((t) => t.businessId === biz.id && !t.projectId)
+                    if (directTasks.length === 0) return null
+                    return (
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-1">事業直下タスク（{directTasks.length}件）</p>
+                        <div className="space-y-0.5">
+                          {directTasks.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => onSelectTask(t.id)}
+                              className={`block w-full text-left text-xs px-1.5 py-0.5 rounded hover:bg-muted ${selectedTask?.id === t.id ? "bg-muted font-bold" : ""}`}
+                            >
+                              <span className="text-muted-foreground mr-1">#{t.seqNumber ?? ""}</span>
+                              {t.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   {/* 配下のプロジェクト（再帰ツリー） */}
                   {topProjects.map((proj) => (
                     <ProjectTreeNode
@@ -262,6 +285,8 @@ function TaskDetailPanel({
   contacts,
   partners,
   issues,
+  businesses,
+  projects,
 }: {
   task: TaskItem
   onClose: () => void
@@ -272,6 +297,8 @@ function TaskDetailPanel({
   contacts: { id: string; name: string }[]
   partners: { id: string; name: string }[]
   issues: { id: string; title: string; projectId: string }[]
+  businesses: { id: string; name: string }[]
+  projects: ProjectNode[]
 }) {
   const [showRecurring, setShowRecurring] = useState(false)
   const [showScheduleForm, setShowScheduleForm] = useState(false)
@@ -407,6 +434,38 @@ function TaskDetailPanel({
           {task.seqNumber && <span className="font-mono font-bold mr-1">#{task.seqNumber}</span>}
           {task.businessName} &gt; {task.projectName}
         </span>
+      </div>
+
+      {/* 紐づけ先（事業/プロジェクト） */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-1">紐づけ先（事業/プロジェクト）</p>
+        <select
+          className="w-full text-sm border rounded-md p-1.5 bg-background cursor-pointer"
+          value={task.projectId ? `proj:${task.projectId}` : (task.businessId ? `biz:${task.businessId}` : "")}
+          onChange={(e) => {
+            const v = e.target.value
+            if (!v) return
+            const [kind, id] = v.split(":")
+            if (kind === "proj") {
+              updateTaskMutation.mutate({ id: task.id, data: { projectId: id, businessId: null } })
+            } else {
+              updateTaskMutation.mutate({ id: task.id, data: { projectId: null, businessId: id } })
+            }
+          }}
+        >
+          <option value="">選択してください</option>
+          {businesses.map((biz) => {
+            const projs = projects.filter((p) => p.businessId === biz.id)
+            return (
+              <optgroup key={biz.id} label={biz.name}>
+                <option value={`biz:${biz.id}`}>（事業直下）{biz.name}</option>
+                {projs.map((p) => (
+                  <option key={p.id} value={`proj:${p.id}`}>{p.name}</option>
+                ))}
+              </optgroup>
+            )
+          })}
+        </select>
       </div>
 
       {/* 紐づく課題 */}
@@ -1013,6 +1072,11 @@ export function TaskListView() {
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all")
   const [showTodayOnly, setShowTodayOnly] = useState<boolean>(false)
   const [showRecurringOnly, setShowRecurringOnly] = useState<boolean>(false)
+  const [searchKeyword, setSearchKeyword] = useState<string>("")
+  const [filterPriority, setFilterPriority] = useState<"all" | "highest" | "high" | "medium" | "low">("all")
+  const [filterDeadline, setFilterDeadline] = useState<"all" | "today" | "thisweek" | "overdue" | "none" | "exists">("all")
+  const [filterCreatedBy, setFilterCreatedBy] = useState<string>("all")
+  const [sortMode, setSortMode] = useState<"manual" | "priority" | "deadline" | "created">("manual")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [taskOrder, setTaskOrder] = useState<string[]>([])
 
@@ -1044,6 +1108,25 @@ export function TaskListView() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
+  // 期限判定ヘルパー
+  const isOverdue = (deadline: string | null) => {
+    if (!deadline) return false
+    return new Date(deadline) < new Date(new Date().toDateString())
+  }
+  const isToday = (deadline: string | null) => {
+    if (!deadline) return false
+    return deadline === new Date().toISOString().split("T")[0]
+  }
+  const isThisWeek = (deadline: string | null) => {
+    if (!deadline) return false
+    const d = new Date(deadline)
+    const today = new Date(new Date().toDateString())
+    const weekLater = new Date(today)
+    weekLater.setDate(weekLater.getDate() + 7)
+    return d >= today && d <= weekLater
+  }
+  const PRIORITY_RANK: Record<string, number> = { highest: 0, high: 1, medium: 2, low: 3 }
+
   // フィルタリング
   const filteredTasks = allTasks.filter((t) => {
     if (filterStaffId !== "all") {
@@ -1055,22 +1138,63 @@ export function TaskListView() {
     } else if (t.status !== filterStatus) return false
     if (showTodayOnly && !t.todayFlag) return false
     if (showRecurringOnly && !t.recurring) return false
+    if (searchKeyword.trim()) {
+      const kw = searchKeyword.trim().toLowerCase()
+      const hit = t.title.toLowerCase().includes(kw) || (t.detail ?? "").toLowerCase().includes(kw)
+      if (!hit) return false
+    }
+    if (filterPriority !== "all" && t.priority !== filterPriority) return false
+    if (filterDeadline === "today" && !isToday(t.deadline)) return false
+    if (filterDeadline === "thisweek" && !isThisWeek(t.deadline)) return false
+    if (filterDeadline === "overdue" && (!isOverdue(t.deadline) || t.status === "done")) return false
+    if (filterDeadline === "none" && t.deadline) return false
+    if (filterDeadline === "exists" && !t.deadline) return false
+    if (filterCreatedBy !== "all" && t.createdBy !== filterCreatedBy) return false
     return true
-  }).sort((a, b) => a.sortOrder - b.sortOrder)
+  })
+
+  // 並び替え（手動以外）
+  const sortedTasks = (() => {
+    if (sortMode === "manual") return [...filteredTasks].sort((a, b) => a.sortOrder - b.sortOrder)
+    if (sortMode === "priority") return [...filteredTasks].sort((a, b) => (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9))
+    if (sortMode === "deadline") return [...filteredTasks].sort((a, b) => {
+      if (!a.deadline && !b.deadline) return 0
+      if (!a.deadline) return 1
+      if (!b.deadline) return -1
+      return a.deadline.localeCompare(b.deadline)
+    })
+    if (sortMode === "created") return [...filteredTasks].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return filteredTasks
+  })()
+
+  // 絞り込み or 並び替え（手動以外）が有効なら D&D 無効化
+  const isFilteringActive =
+    filterStaffId !== "all" ||
+    filterStatus !== "all" ||
+    showTodayOnly ||
+    showRecurringOnly ||
+    searchKeyword.trim().length > 0 ||
+    filterPriority !== "all" ||
+    filterDeadline !== "all" ||
+    filterCreatedBy !== "all" ||
+    sortMode !== "manual"
 
   const handleToggleTodayFlag = (t: TaskItem) => {
     updateTaskMutation.mutate({ id: t.id, data: { todayFlag: !t.todayFlag } })
   }
 
-  // カスタム順序の適用
-  const orderedTasks = taskOrder.length > 0
-    ? taskOrder
-        .map((id) => filteredTasks.find((t) => t.id === id))
-        .filter((t): t is TaskItem => !!t)
-        .concat(filteredTasks.filter((t) => !taskOrder.includes(t.id)))
-    : filteredTasks
+  // カスタム順序の適用（絞り込み・並び替え中は適用しない）
+  const orderedTasks = isFilteringActive
+    ? sortedTasks
+    : (taskOrder.length > 0
+        ? taskOrder
+            .map((id) => sortedTasks.find((t) => t.id === id))
+            .filter((t): t is TaskItem => !!t)
+            .concat(sortedTasks.filter((t) => !taskOrder.includes(t.id)))
+        : sortedTasks)
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (isFilteringActive) return
     const { active, over } = event
     if (!over || active.id === over.id) return
     const oldIndex = orderedTasks.findIndex((t) => t.id === active.id)
@@ -1174,6 +1298,69 @@ export function TaskListView() {
           </Button>
         </div>
 
+        {/* 第2ヘッダー: 検索＋絞り込み＋並び順 */}
+        <div className="px-3 py-2 border-b flex items-center gap-2 flex-wrap bg-muted/20">
+          <Input
+            type="text"
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            placeholder="タイトル・詳細を検索"
+            className="h-7 text-xs w-44"
+          />
+          <select
+            className="text-xs border rounded-md p-1 bg-background"
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value as typeof filterPriority)}
+          >
+            <option value="all">優先度：すべて</option>
+            <option value="highest">最高</option>
+            <option value="high">高</option>
+            <option value="medium">中</option>
+            <option value="low">低</option>
+          </select>
+          <select
+            className="text-xs border rounded-md p-1 bg-background"
+            value={filterDeadline}
+            onChange={(e) => setFilterDeadline(e.target.value as typeof filterDeadline)}
+          >
+            <option value="all">期限：すべて</option>
+            <option value="today">今日</option>
+            <option value="thisweek">今週</option>
+            <option value="overdue">期限切れ</option>
+            <option value="exists">期限あり</option>
+            <option value="none">期限なし</option>
+          </select>
+          <select
+            className="text-xs border rounded-md p-1 bg-background"
+            value={filterCreatedBy}
+            onChange={(e) => setFilterCreatedBy(e.target.value)}
+          >
+            <option value="all">作成者：すべて</option>
+            {Array.from(new Set(allTasks.map((t) => t.createdBy).filter(Boolean))).map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <Separator orientation="vertical" className="h-5 mx-1" />
+          <Label className="text-xs shrink-0">並び順:</Label>
+          <select
+            className="text-xs border rounded-md p-1 bg-background"
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
+          >
+            <option value="manual">手動順</option>
+            <option value="priority">優先度高い順</option>
+            <option value="deadline">期限近い順</option>
+            <option value="created">作成日新しい順</option>
+          </select>
+        </div>
+
+        {/* 絞り込み中メッセージ */}
+        {isFilteringActive && (
+          <div className="px-3 py-1.5 text-[11px] text-muted-foreground bg-yellow-50 dark:bg-yellow-950/20 border-b border-yellow-200 dark:border-yellow-900">
+            絞り込み中／並び替え中のためドラッグ&ドロップは無効です。手動で並び替えるには絞り込みを解除してください。
+          </div>
+        )}
+
         {/* タスクリスト（フラット表示） */}
         <div className="p-3">
           {orderedTasks.length === 0 ? (
@@ -1231,6 +1418,8 @@ export function TaskListView() {
               contacts={contactsList as unknown as { id: string; name: string }[]}
               partners={partnersList as unknown as { id: string; name: string }[]}
               issues={(issues as unknown as { id: string; title: string; projectId: string }[])}
+              businesses={allBusinesses as unknown as { id: string; name: string }[]}
+              projects={allProjects}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
