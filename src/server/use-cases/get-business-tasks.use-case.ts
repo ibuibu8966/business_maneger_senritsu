@@ -32,6 +32,7 @@ export class GetBusinessTasks {
       recurring: t.recurring,
       recurringPattern: t.recurringPattern ?? null,
       recurringDay: t.recurringDay ?? null,
+      recurringDays: t.recurringDays ?? [],
       recurringWeek: t.recurringWeek ?? null,
       recurringEndDate: t.recurringEndDate ? t.recurringEndDate.toISOString().split("T")[0] : null,
       lastGeneratedAt: t.lastGeneratedAt ? t.lastGeneratedAt.toISOString() : null,

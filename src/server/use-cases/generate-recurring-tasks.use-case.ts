@@ -48,8 +48,12 @@ export class GenerateRecurringTasks {
           break
 
         case "weekly":
-          // recurringDay(0=日〜6=土) が今日の曜日と一致
-          shouldGenerate = task.recurringDay === todayDay
+          // 複数曜日対応：recurringDays（配列）が空でなければそちらを優先、なければ recurringDay（単一）で判定
+          if (task.recurringDays && task.recurringDays.length > 0) {
+            shouldGenerate = task.recurringDays.includes(todayDay)
+          } else {
+            shouldGenerate = task.recurringDay === todayDay
+          }
           break
 
         case "monthly_date":

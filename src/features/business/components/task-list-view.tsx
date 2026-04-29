@@ -323,7 +323,20 @@ function TaskDetailPanel({
   const recurringLabel = task.recurringPattern
     ? (() => {
         const p = PATTERN_LABELS[task.recurringPattern] ?? task.recurringPattern
-        if (task.recurringPattern === "weekly" && task.recurringDay != null) return `${p} ${WEEKDAY_LABELS[task.recurringDay] ?? ""}`
+        if (task.recurringPattern === "weekly") {
+          const days = (task.recurringDays && task.recurringDays.length > 0)
+            ? task.recurringDays
+            : (task.recurringDay != null ? [task.recurringDay] : [])
+          if (days.length === 0) return p
+          // 平日／週末のプリセット表示
+          const sorted = [...days].sort()
+          const sortedStr = sorted.join(",")
+          if (sortedStr === "1,2,3,4,5") return `${p} 平日`
+          if (sortedStr === "0,6") return `${p} 週末`
+          if (sortedStr === "0,1,2,3,4,5,6") return `${p} 毎日`
+          const SHORT: Record<number, string> = { 0: "日", 1: "月", 2: "火", 3: "水", 4: "木", 5: "金", 6: "土" }
+          return `${p} ${sorted.map((d) => SHORT[d]).join("・")}`
+        }
         if (task.recurringPattern === "monthly_date" && task.recurringDay != null) return `${p} ${task.recurringDay}日`
         if (task.recurringPattern === "monthly_weekday" && task.recurringWeek != null && task.recurringDay != null) return `${p} 第${task.recurringWeek}${WEEKDAY_LABELS[task.recurringDay] ?? ""}`
         return p
@@ -544,23 +557,72 @@ function TaskDetailPanel({
           </div>
           {task.recurringPattern === "weekly" && (
             <div>
-              <Label className="text-xs">曜日</Label>
-              <select
-                className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer"
-                value={task.recurringDay != null ? String(task.recurringDay) : ""}
-                onChange={(e) => {
-                  updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })
-                }}
-              >
-                <option value="">選択してください</option>
-                <option value="1">月曜日</option>
-                <option value="2">火曜日</option>
-                <option value="3">水曜日</option>
-                <option value="4">木曜日</option>
-                <option value="5">金曜日</option>
-                <option value="6">土曜日</option>
-                <option value="0">日曜日</option>
-              </select>
+              <Label className="text-xs">曜日（複数選択可）</Label>
+              <div className="flex gap-1 mt-1">
+                <button
+                  type="button"
+                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [1, 2, 3, 4, 5], recurringDay: null } })}
+                >
+                  平日のみ
+                </button>
+                <button
+                  type="button"
+                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [0, 6], recurringDay: null } })}
+                >
+                  週末のみ
+                </button>
+                <button
+                  type="button"
+                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [0, 1, 2, 3, 4, 5, 6], recurringDay: null } })}
+                >
+                  毎日
+                </button>
+                <button
+                  type="button"
+                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [], recurringDay: null } })}
+                >
+                  クリア
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {[
+                  { v: 1, l: "月" },
+                  { v: 2, l: "火" },
+                  { v: 3, l: "水" },
+                  { v: 4, l: "木" },
+                  { v: 5, l: "金" },
+                  { v: 6, l: "土" },
+                  { v: 0, l: "日" },
+                ].map(({ v, l }) => {
+                  const currentDays: number[] = (task.recurringDays && task.recurringDays.length > 0)
+                    ? task.recurringDays
+                    : (task.recurringDay != null ? [task.recurringDay] : [])
+                  const checked = currentDays.includes(v)
+                  return (
+                    <label
+                      key={v}
+                      className={`text-xs px-2 py-1 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...currentDays, v].sort()
+                            : currentDays.filter((d) => d !== v)
+                          updateTaskMutation.mutate({ id: task.id, data: { recurringDays: next, recurringDay: null } })
+                        }}
+                      />
+                      {l}
+                    </label>
+                  )
+                })}
+              </div>
             </div>
           )}
           {task.recurringPattern === "monthly_date" && (

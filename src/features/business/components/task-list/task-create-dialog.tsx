@@ -54,6 +54,7 @@ export function TaskCreateDialog({
   const [recurring, setRecurring] = useState(false)
   const [recurringPattern, setRecurringPattern] = useState("")
   const [recurringDay, setRecurringDay] = useState("")
+  const [recurringDays, setRecurringDays] = useState<number[]>([])
   const [recurringWeek, setRecurringWeek] = useState("")
   const [recurringEndDate, setRecurringEndDate] = useState("")
   const [contactId, setContactId] = useState("")
@@ -80,6 +81,7 @@ export function TaskCreateDialog({
     setRecurring(false)
     setRecurringPattern("")
     setRecurringDay("")
+    setRecurringDays([])
     setRecurringWeek("")
     setRecurringEndDate("")
     setContactId("")
@@ -117,6 +119,7 @@ export function TaskCreateDialog({
         recurring,
         recurringPattern: recurring && recurringPattern ? recurringPattern : null,
         recurringDay: recurring && recurringDay !== "" ? Number(recurringDay) : null,
+        recurringDays: recurring && recurringPattern === "weekly" ? recurringDays : [],
         recurringWeek: recurring && recurringWeek !== "" ? Number(recurringWeek) : null,
         recurringEndDate: recurring && recurringEndDate ? recurringEndDate : null,
         createdBy: currentUserName,
@@ -383,21 +386,67 @@ export function TaskCreateDialog({
               </div>
               {recurringPattern === "weekly" && (
                 <div>
-                  <Label className="text-xs">曜日</Label>
-                  <select
-                    className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background"
-                    value={recurringDay}
-                    onChange={(e) => setRecurringDay(e.target.value)}
-                  >
-                    <option value="">選択してください</option>
-                    <option value="1">月曜日</option>
-                    <option value="2">火曜日</option>
-                    <option value="3">水曜日</option>
-                    <option value="4">木曜日</option>
-                    <option value="5">金曜日</option>
-                    <option value="6">土曜日</option>
-                    <option value="0">日曜日</option>
-                  </select>
+                  <Label className="text-xs">曜日（複数選択可）</Label>
+                  <div className="flex gap-1 mt-1">
+                    <button
+                      type="button"
+                      className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                      onClick={() => setRecurringDays([1, 2, 3, 4, 5])}
+                    >
+                      平日のみ
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                      onClick={() => setRecurringDays([0, 6])}
+                    >
+                      週末のみ
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                      onClick={() => setRecurringDays([0, 1, 2, 3, 4, 5, 6])}
+                    >
+                      毎日
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                      onClick={() => setRecurringDays([])}
+                    >
+                      クリア
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {[
+                      { v: 1, l: "月" },
+                      { v: 2, l: "火" },
+                      { v: 3, l: "水" },
+                      { v: 4, l: "木" },
+                      { v: 5, l: "金" },
+                      { v: 6, l: "土" },
+                      { v: 0, l: "日" },
+                    ].map(({ v, l }) => {
+                      const checked = recurringDays.includes(v)
+                      return (
+                        <label
+                          key={v}
+                          className={`text-xs px-2 py-1 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="hidden"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) setRecurringDays([...recurringDays, v].sort())
+                              else setRecurringDays(recurringDays.filter((d) => d !== v))
+                            }}
+                          />
+                          {l}
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
               {recurringPattern === "monthly_date" && (

@@ -63,6 +63,7 @@ export const createTaskSchema = z.object({
   recurring: z.boolean().optional(),
   recurringPattern: z.enum(["daily", "weekly", "monthly_date", "monthly_weekday"]).nullable().optional(),
   recurringDay: z.number().int().nullable().optional(),
+  recurringDays: z.array(z.number().int()).optional(),
   recurringWeek: z.number().int().nullable().optional(),
   recurringEndDate: z.string().nullable().optional(),
   createdBy: z.string().optional(),

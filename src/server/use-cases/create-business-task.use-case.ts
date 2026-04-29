@@ -19,6 +19,7 @@ export class CreateBusinessTask {
     recurring?: boolean
     recurringPattern?: string | null
     recurringDay?: number | null
+    recurringDays?: number[]
     recurringWeek?: number | null
     recurringEndDate?: string | null
     sortOrder?: number
@@ -61,6 +62,7 @@ export class CreateBusinessTask {
       recurring: data.recurring ?? false,
       recurringPattern: data.recurringPattern ?? null,
       recurringDay: data.recurringDay ?? null,
+      recurringDays: data.recurringDays ?? [],
       recurringWeek: data.recurringWeek ?? null,
       recurringEndDate: data.recurringEndDate ? new Date(data.recurringEndDate) : null,
       sortOrder: data.sortOrder ?? 0,

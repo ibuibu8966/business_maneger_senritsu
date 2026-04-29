@@ -364,6 +364,7 @@ export interface BusinessTaskDTO {
   recurring: boolean
   recurringPattern: string | null
   recurringDay: number | null
+  recurringDays: number[]
   recurringWeek: number | null
   recurringEndDate: string | null
   lastGeneratedAt: string | null

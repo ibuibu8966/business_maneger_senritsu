@@ -127,6 +127,7 @@ export interface TaskItem {
   recurring: boolean
   recurringPattern: string | null
   recurringDay: number | null
+  recurringDays?: number[]
   recurringWeek: number | null
   recurringEndDate: string | null
   createdBy: string

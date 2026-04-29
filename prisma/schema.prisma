@@ -121,7 +121,8 @@ model BusinessTask {
   attachments Json               @default("[]")       // 添付 [{id,name,url,type}]
   recurring         Boolean            @default(false)      // 繰り返し
   recurringPattern  String?                                  // "daily"|"weekly"|"monthly_date"|"monthly_weekday"
-  recurringDay      Int?                                     // 曜日(0-6) or 日(1-31)
+  recurringDay      Int?                                     // 曜日(0-6) or 日(1-31) ※互換用。新しい weekly は recurringDays を使う
+  recurringDays     Int[]              @default([])           // 複数曜日 0=日〜6=土 ※weekly複数選択用
   recurringWeek     Int?                                     // 第何週(1-5) ※monthly_weekdayのみ
   recurringEndDate  DateTime?          @db.Date              // 繰り返し終了日
   lastGeneratedAt   DateTime?                                // 最終生成日時
