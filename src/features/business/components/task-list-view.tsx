@@ -1162,7 +1162,7 @@ export function TaskListView() {
   }
 
   // 並び替え（手動以外）
-  const sortedTasks = (() => {
+  const baseSorted = (() => {
     if (sortMode === "manual") return [...filteredTasks].sort((a, b) => getSortValue(a) - getSortValue(b))
     if (sortMode === "priority") return [...filteredTasks].sort((a, b) => (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9))
     if (sortMode === "deadline") return [...filteredTasks].sort((a, b) => {
@@ -1174,6 +1174,11 @@ export function TaskListView() {
     if (sortMode === "created") return [...filteredTasks].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     return filteredTasks
   })()
+  // どの並び替えでも「今日やる」フラグONのタスクを常に上位固定
+  const sortedTasks = [
+    ...baseSorted.filter((t) => t.todayFlag),
+    ...baseSorted.filter((t) => !t.todayFlag),
+  ]
 
   // 担当者フィルタのみが有効（他の絞り込みは無効）の状態を判定
   const isOnlyAssigneeFilterActive =

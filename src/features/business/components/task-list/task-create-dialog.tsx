@@ -187,19 +187,19 @@ export function TaskCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>タスクを登録</DialogTitle>
+      <DialogContent className="sm:max-w-[480px] max-h-[90vh] flex flex-col p-4">
+        <DialogHeader className="shrink-0 pb-2">
+          <DialogTitle className="text-base">タスクを登録</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
-          <div>
+        <div className="space-y-2 overflow-y-auto flex-1 pr-1">
+          <div className="grid grid-cols-1 gap-1.5">
             <Label className="text-xs">タイトル *</Label>
-            <Input className="mt-1" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="タスク名を入力" autoFocus />
+            <Input className="h-8 text-sm" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="タスク名を入力" autoFocus />
           </div>
-          <div>
+          <div className="grid grid-cols-1 gap-1.5">
             <Label className="text-xs">紐づけ先 *</Label>
             <select
-              className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background"
+              className="h-8 text-sm border rounded-md px-2 bg-background"
               value={targetValue}
               onChange={(e) => setTargetValue(e.target.value)}
             >
@@ -217,19 +217,19 @@ export function TaskCreateDialog({
               })}
             </select>
           </div>
-          <div>
+          <div className="grid grid-cols-1 gap-1.5">
             <Label className="text-xs">詳細</Label>
-            <Textarea className="mt-1 text-sm min-h-[50px]" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="タスクの詳細（任意）" />
+            <Textarea className="text-sm min-h-[40px]" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="タスクの詳細（任意）" />
           </div>
-          <div>
+          <div className="grid grid-cols-1 gap-1.5">
             <Label className="text-xs">担当者（複数選択可）</Label>
-            <div className="mt-1 flex flex-wrap gap-2 p-2 border rounded-md bg-background">
+            <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background">
               {employees.map((s) => {
                 const checked = assigneeIds.includes(s.id)
                 return (
                   <label
                     key={s.id}
-                    className={`flex items-center gap-1 text-xs px-2 py-1 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
+                    className={`flex items-center gap-1 text-xs px-1.5 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
                   >
                     <input
                       type="checkbox"
@@ -245,24 +245,24 @@ export function TaskCreateDialog({
               })}
             </div>
           </div>
-          <div>
+          <div className="grid grid-cols-1 gap-1.5">
             <Label className="text-xs">期限</Label>
-            <Input type="date" className="mt-1 h-8 text-sm" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+            <Input type="date" className="h-8 text-sm" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">実行時刻（LINE通知の対象）</Label>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-1 gap-1">
+              <Label className="text-xs">実行時刻（LINE通知）</Label>
               <Input
                 type="time"
-                className="mt-1 h-8 text-sm w-[120px]"
+                className="h-7 text-xs"
                 value={executionTime}
                 onChange={(e) => setExecutionTime(e.target.value)}
               />
             </div>
-            <div>
+            <div className="grid grid-cols-1 gap-1">
               <Label className="text-xs">事前通知</Label>
               <select
-                className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background"
+                className="h-7 text-xs border rounded-md px-1.5 bg-background"
                 value={notifyMinutesBefore}
                 onChange={(e) => setNotifyMinutesBefore(Number(e.target.value))}
               >
@@ -275,46 +275,46 @@ export function TaskCreateDialog({
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-1 gap-1">
               <Label className="text-xs">連絡先</Label>
-              <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={contactId} onChange={(e) => setContactId(e.target.value)}>
+              <select className="h-7 text-xs border rounded-md px-1.5 bg-background cursor-pointer" value={contactId} onChange={(e) => setContactId(e.target.value)}>
                 <option value="">なし</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>
-            <div>
+            <div className="grid grid-cols-1 gap-1">
               <Label className="text-xs">取引先</Label>
-              <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
+              <select className="h-7 text-xs border rounded-md px-1.5 bg-background cursor-pointer" value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
                 <option value="">なし</option>
                 {partners.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
-            <div>
+            <div className="grid grid-cols-1 gap-1">
               <Label className="text-xs">優先度</Label>
-              <select className={`w-full mt-1 text-sm border rounded-md p-1.5 cursor-pointer ${PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.bgClassName ?? "bg-background"}`} value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <select className={`h-7 text-xs border rounded-md px-1.5 cursor-pointer ${PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.bgClassName ?? "bg-background"}`} value={priority} onChange={(e) => setPriority(e.target.value)}>
                 <option value="highest">最高</option>
                 <option value="high">高</option>
                 <option value="medium">中</option>
                 <option value="low">低</option>
               </select>
             </div>
-            <div>
+            <div className="grid grid-cols-1 gap-1">
               <Label className="text-xs">ステータス</Label>
-              <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
+              <select className="h-7 text-xs border rounded-md px-1.5 bg-background cursor-pointer" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
                 <option value="todo">未着手</option>
                 <option value="in-progress">進行中</option>
                 <option value="waiting">確認待ち</option>
                 <option value="done">完了</option>
               </select>
             </div>
-            <div>
+            <div className="grid grid-cols-1 gap-1 col-span-2">
               <Label className="text-xs">連絡ツール</Label>
-              <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={tool} onChange={(e) => setTool(e.target.value)}>
+              <select className="h-7 text-xs border rounded-md px-1.5 bg-background cursor-pointer" value={tool} onChange={(e) => setTool(e.target.value)}>
                 <option value="">なし</option>
                 <option value="LINE">LINE</option>
                 <option value="TELEGRAM">Telegram</option>
@@ -325,9 +325,9 @@ export function TaskCreateDialog({
               </select>
             </div>
           </div>
-          <div>
+          <div className="grid grid-cols-1 gap-1">
             <Label className="text-xs">紐づく課題</Label>
-            <select className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer" value={issueId} onChange={(e) => setIssueId(e.target.value)}>
+            <select className="h-7 text-xs border rounded-md px-1.5 bg-background cursor-pointer" value={issueId} onChange={(e) => setIssueId(e.target.value)}>
               <option value="">なし</option>
               {issues.filter((i) => {
                 const [kind, id] = targetValue.split(":")
@@ -338,112 +338,112 @@ export function TaskCreateDialog({
               ))}
             </select>
           </div>
-          <div>
+          <div className="grid grid-cols-1 gap-1">
             <Label className="text-xs">チェックリスト（任意）</Label>
-            {checklistTemplates.length > 0 && (
-              <div className="flex gap-1 mt-1">
-                <select
-                  className="flex-1 text-xs border rounded-md p-1.5 bg-background"
-                  value={selectedTemplateId}
-                  onChange={(e) => setSelectedTemplateId(e.target.value)}
-                >
-                  <option value="">テンプレートから選択（任意）</option>
-                  {checklistTemplates.map((tpl: { id: string; name: string }) => (
-                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
-                  ))}
-                </select>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  disabled={!selectedTemplateId}
-                  onClick={() => {
-                    const tpl = checklistTemplates.find((t: { id: string }) => t.id === selectedTemplateId) as { items: { title: string }[] } | undefined
-                    if (tpl) {
-                      setChecklistItems((prev) => [...prev, ...tpl.items.map((i: { title: string }) => i.title)])
-                      setSelectedTemplateId("")
-                    }
-                  }}
-                >
-                  追加
-                </Button>
-              </div>
-            )}
-            <div className="space-y-1 mt-1">
-              {checklistItems.map((item, i) => (
-                <div key={i} className="flex gap-1 items-center">
-                  <Input
-                    value={item}
-                    onChange={(e) => {
-                      const next = [...checklistItems]
-                      next[i] = e.target.value
-                      setChecklistItems(next)
-                    }}
-                    placeholder={`項目${i + 1}`}
-                    className="h-7 text-xs"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setChecklistItems(checklistItems.filter((_, idx) => idx !== i))}
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
+            <div className="flex gap-1">
+              <select
+                className="flex-1 h-7 text-xs border rounded-md px-1.5 bg-background"
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+              >
+                <option value="">{checklistTemplates.length === 0 ? "テンプレートなし" : "テンプレートから追加"}</option>
+                {checklistTemplates.map((tpl: { id: string; name: string }) => (
+                  <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                ))}
+              </select>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-7 text-xs w-full"
-                onClick={() => setChecklistItems([...checklistItems, ""])}
+                className="h-7 text-xs px-2"
+                disabled={!selectedTemplateId}
+                onClick={() => {
+                  const tpl = checklistTemplates.find((t: { id: string }) => t.id === selectedTemplateId) as { items: { title: string }[] } | undefined
+                  if (tpl) {
+                    setChecklistItems((prev) => [...prev, ...tpl.items.map((i: { title: string }) => i.title)])
+                    setSelectedTemplateId("")
+                  }
+                }}
               >
-                ＋ 項目追加
+                追加
               </Button>
             </div>
+            {checklistItems.length > 0 && (
+              <div className="space-y-0.5">
+                {checklistItems.map((item, i) => (
+                  <div key={i} className="flex gap-1 items-center">
+                    <Input
+                      value={item}
+                      onChange={(e) => {
+                        const next = [...checklistItems]
+                        next[i] = e.target.value
+                        setChecklistItems(next)
+                      }}
+                      placeholder={`項目${i + 1}`}
+                      className="h-6 text-xs"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-1.5 text-xs"
+                      onClick={() => setChecklistItems(checklistItems.filter((_, idx) => idx !== i))}
+                    >
+                      ×
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 text-xs"
+              onClick={() => setChecklistItems([...checklistItems, ""])}
+            >
+              ＋ 項目を手入力で追加
+            </Button>
           </div>
           <label className="flex items-center gap-2 text-xs cursor-pointer">
             <input type="checkbox" checked={addToCalendar} onChange={(e) => setAddToCalendar(e.target.checked)} className="rounded" />
             カレンダーにも登録
           </label>
           {addToCalendar && (
-            <div className="space-y-2 pl-4 border-l-2 border-green-200">
-              <div className="grid grid-cols-3 gap-2">
-                <div>
+            <div className="space-y-1.5 pl-3 border-l-2 border-green-200">
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-1 gap-1">
                   <Label className="text-xs">日付</Label>
                   <Input
                     type="date"
-                    className="mt-1 h-8 text-sm"
+                    className="h-7 text-xs"
                     value={calendarDate}
                     onChange={(e) => setCalendarDate(e.target.value)}
                   />
                 </div>
-                <div>
+                <div className="grid grid-cols-1 gap-1">
                   <Label className="text-xs">開始</Label>
                   <Input
                     type="time"
-                    className="mt-1 h-8 text-sm"
+                    className="h-7 text-xs"
                     value={calendarStartTime}
                     onChange={(e) => setCalendarStartTime(e.target.value)}
                   />
                 </div>
-                <div>
+                <div className="grid grid-cols-1 gap-1">
                   <Label className="text-xs">終了</Label>
                   <Input
                     type="time"
-                    className="mt-1 h-8 text-sm"
+                    className="h-7 text-xs"
                     value={calendarEndTime}
                     onChange={(e) => setCalendarEndTime(e.target.value)}
                   />
                 </div>
               </div>
-              <div>
+              <div className="grid grid-cols-1 gap-1">
                 <Label className="text-xs">予定種別</Label>
                 <select
-                  className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background"
+                  className="h-7 text-xs border rounded-md px-1.5 bg-background"
                   value={calendarEventType}
                   onChange={(e) => setCalendarEventType(e.target.value as typeof calendarEventType)}
                 >
@@ -461,11 +461,11 @@ export function TaskCreateDialog({
             繰り返しタスク
           </label>
           {recurring && (
-            <div className="space-y-2 pl-4 border-l-2 border-blue-200">
-              <div>
+            <div className="space-y-1.5 pl-3 border-l-2 border-blue-200">
+              <div className="grid grid-cols-1 gap-1">
                 <Label className="text-xs">繰り返しパターン</Label>
                 <select
-                  className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background"
+                  className="h-7 text-xs border rounded-md px-1.5 bg-background"
                   value={recurringPattern}
                   onChange={(e) => {
                     setRecurringPattern(e.target.value)
