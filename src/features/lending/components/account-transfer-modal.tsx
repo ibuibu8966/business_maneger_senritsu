@@ -41,11 +41,11 @@ export function AccountTransferModal({ open, onOpenChange, accounts, onSave, ini
 
   const handleSave = () => {
     if (!fromAccountId || !toAccountId || !amount) return
+    // 複式簿記版：1取引=1レコード（fromAccountId/toAccountId 必須）
     onSave({
-      accountId: fromAccountId,
+      type: "transfer",
       fromAccountId,
       toAccountId,
-      type: "transfer",
       amount: Number(amount),
       date,
       memo,

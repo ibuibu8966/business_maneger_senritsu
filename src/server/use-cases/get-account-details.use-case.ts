@@ -2,8 +2,64 @@ import { prisma } from "@/lib/prisma"
 import { AccountRepository } from "@/server/repositories/account.repository"
 import { LendingRepository } from "@/server/repositories/lending.repository"
 import type { AccountDetailDTO } from "@/types/dto"
-import type { AccountTransactionType } from "@/generated/prisma/client"
-import { BALANCE_DELTA } from "@/lib/balance-delta"
+
+/**
+ * 残高計算（複式簿記版）
+ * 直近スナップショット.balance + Σ(toAccount=対象 ＆ date>スナップ日) − Σ(fromAccount=対象 ＆ date>スナップ日)
+ */
+async function calcBalance(accountId: string): Promise<number> {
+  const snap = await prisma.accountBalanceSnapshot.findFirst({
+    where: { accountId },
+    orderBy: { date: "desc" },
+  })
+  const baseDate = snap?.date ?? new Date(0)
+  const baseBalance = snap?.balance ?? 0
+
+  const [inflow, outflow] = await Promise.all([
+    prisma.accountTransaction.aggregate({
+      _sum: { amount: true },
+      where: {
+        toAccountId: accountId,
+        date: { gt: baseDate },
+        isArchived: false,
+      },
+    }),
+    prisma.accountTransaction.aggregate({
+      _sum: { amount: true },
+      where: {
+        fromAccountId: accountId,
+        date: { gt: baseDate },
+        isArchived: false,
+      },
+    }),
+  ])
+
+  return baseBalance + (inflow._sum.amount ?? 0) - (outflow._sum.amount ?? 0)
+}
+
+/**
+ * Lending の未返済額計算（principal − SUM(REPAYMENT)）
+ * LEND側: 返済受取（toAccountId=自分） / BORROW側: 返済支払（fromAccountId=自分）
+ */
+async function calcOutstanding(lending: {
+  id: string
+  principal: number
+  accountId: string
+  type: "LEND" | "BORROW"
+}): Promise<number> {
+  const sum = await prisma.accountTransaction.aggregate({
+    _sum: { amount: true },
+    where: {
+      lendingId: lending.id,
+      type: "REPAYMENT",
+      isArchived: false,
+      ...(lending.type === "LEND"
+        ? { toAccountId: lending.accountId }
+        : { fromAccountId: lending.accountId }),
+    },
+  })
+  return lending.principal - (sum._sum.amount ?? 0)
+}
 
 export class GetAccountDetails {
   static async execute(params: {
@@ -14,21 +70,23 @@ export class GetAccountDetails {
   } = {}): Promise<AccountDetailDTO[]> {
     const rows = await AccountRepository.findAll(params)
 
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      ownerType: r.ownerType.toLowerCase() as "internal" | "external",
-      accountType: r.accountType.toLowerCase() as "bank" | "securities",
-      businessId: r.business?.id ?? null,
-      businessName: r.business?.name ?? null,
-      balance: r.balance,
-      purpose: r.purpose,
-      investmentPolicy: r.investmentPolicy,
-      tags: r.tags,
-      isArchived: r.isArchived,
-      isActive: r.isActive,
-      createdAt: r.createdAt.toISOString(),
-    }))
+    return await Promise.all(
+      rows.map(async (r) => ({
+        id: r.id,
+        name: r.name,
+        ownerType: r.ownerType.toLowerCase() as "internal" | "external",
+        accountType: r.accountType.toLowerCase() as "bank" | "securities",
+        businessId: r.business?.id ?? null,
+        businessName: r.business?.name ?? null,
+        balance: await calcBalance(r.id),
+        purpose: r.purpose,
+        investmentPolicy: r.investmentPolicy,
+        tags: r.tags,
+        isArchived: r.isArchived,
+        isActive: r.isActive,
+        createdAt: r.createdAt.toISOString(),
+      }))
+    )
   }
 
   static async executeOne(id: string): Promise<AccountDetailDTO | null> {
@@ -41,7 +99,7 @@ export class GetAccountDetails {
       accountType: r.accountType.toLowerCase() as "bank" | "securities",
       businessId: r.business?.id ?? null,
       businessName: r.business?.name ?? null,
-      balance: r.balance,
+      balance: await calcBalance(r.id),
       purpose: r.purpose,
       investmentPolicy: r.investmentPolicy,
       tags: r.tags,
@@ -51,63 +109,38 @@ export class GetAccountDetails {
     }
   }
 
-  // 純資産サマリー: 社内口座のみで計算
+  // 純資産サマリー: 社内口座のみで計算（複式簿記版）
   static async getSummary() {
-    const [internalAccounts, lendings, transactions] = await Promise.all([
+    const [internalAccounts, lendings] = await Promise.all([
       AccountRepository.findAll({ ownerType: "INTERNAL", isActive: true }),
       LendingRepository.findMany({ isArchived: false }),
-      prisma.accountTransaction.findMany({
-        where: { isArchived: false },
-        select: { accountId: true, type: true, amount: true, fromAccountId: true, toAccountId: true },
-      }),
     ])
 
-    // 社内口座IDのセット
+    const balances = await Promise.all(internalAccounts.map((a) => calcBalance(a.id)))
+    const totalBalance = balances.reduce((s, b) => s + b, 0)
+
     const internalIds = new Set(internalAccounts.map((a) => a.id))
 
-    // 口座ごとの残高を取引から計算
-    const balanceByAccount = new Map<string, number>()
-    for (const t of transactions) {
-      if (t.type === "TRANSFER") {
-        if (t.fromAccountId) {
-          balanceByAccount.set(t.fromAccountId, (balanceByAccount.get(t.fromAccountId) ?? 0) - t.amount)
-        }
-        if (t.toAccountId) {
-          balanceByAccount.set(t.toAccountId, (balanceByAccount.get(t.toAccountId) ?? 0) + t.amount)
-        }
-      } else {
-        const delta = BALANCE_DELTA[t.type as AccountTransactionType]
-        if (delta !== 0) {
-          balanceByAccount.set(t.accountId, (balanceByAccount.get(t.accountId) ?? 0) + delta * t.amount)
-        }
-      }
-    }
-
-    // 社内口座の残高のみ合算
-    let totalBalance = 0
-    for (const id of internalIds) {
-      totalBalance += balanceByAccount.get(id) ?? 0
-    }
-
-    // 貸借: 社内口座に紐づくもののみ
-    // ペア貸借は重複カウントを防ぐ（ペアの2件目をスキップ）
+    // 貸借: 社内口座に紐づくもののみ。ペアは1件にカウント
     let totalLent = 0
     let totalBorrowed = 0
     const countedPairs = new Set<string>()
     for (const l of lendings) {
-      if (l.status === "COMPLETED") continue
       if (!internalIds.has(l.accountId)) continue
       if (l.linkedLendingId) {
         const pairKey = [l.id, l.linkedLendingId].sort().join("-")
         if (countedPairs.has(pairKey)) continue
         countedPairs.add(pairKey)
       }
-      if (l.type === "LEND") {
-        totalLent += l.outstanding
-      }
-      if (l.type === "BORROW") {
-        totalBorrowed += l.outstanding
-      }
+      const outstanding = await calcOutstanding({
+        id: l.id,
+        principal: l.principal,
+        accountId: l.accountId,
+        type: l.type,
+      })
+      if (outstanding === 0) continue
+      if (l.type === "LEND") totalLent += outstanding
+      if (l.type === "BORROW") totalBorrowed += outstanding
     }
 
     return {
@@ -118,3 +151,6 @@ export class GetAccountDetails {
     }
   }
 }
+
+// 他ファイルから利用するヘルパーとしてエクスポート
+export { calcBalance, calcOutstanding }

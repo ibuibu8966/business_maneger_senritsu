@@ -50,7 +50,7 @@ import { AccountSelectItems } from "./account-select-items"
 import type { AccountTransactionDTO, LendingDTO } from "@/types/dto"
 import { TagSelect } from "./tag-select"
 
-import { TRANSACTION_TYPE_LABELS, PLUS_TYPES, getTxTypeColor, LENDING_STATUS_LABELS } from "./balance-dashboard/constants"
+import { TRANSACTION_TYPE_LABELS, getTxTypeColor, LENDING_STATUS_LABELS } from "./balance-dashboard/constants"
 import type { TxEditField, LendingEditField } from "./balance-dashboard/types"
 
 // ── ドラッグ＆ドロップ対応口座カード ──
@@ -192,9 +192,8 @@ export function BalanceDashboard() {
       case "amount": setTxEditValue(String(t.amount)); break
       case "counterparty": {
         if (t.type === "transfer") {
-          // 自分がfrom側なら相手はto、自分がto側なら相手はfrom
-          const counterpartyId = t.accountId === t.fromAccountId ? t.toAccountId : t.fromAccountId
-          setTxEditValue(counterpartyId ?? "")
+          // 複式簿記版：振替は from→to の1レコード。toAccount を「相手」として表示
+          setTxEditValue(t.toAccountId ?? "")
         } else {
           const match = accounts.find((a) => a.name === t.counterparty)
           setTxEditValue(match?.id ?? "")
@@ -229,12 +228,8 @@ export function BalanceDashboard() {
       const acct = accounts.find((a) => a.id === value)
       patch.counterparty = acct?.name ?? value
       if (tx?.type === "transfer") {
-        // 自分がfrom側なら相手はto、自分がto側なら相手はfrom
-        if (tx.accountId === tx.fromAccountId) {
-          patch.toAccountId = value
-        } else {
-          patch.fromAccountId = value
-        }
+        // 複式簿記版：ダッシュボードでは「対象口座」概念がないので、toAccountId を相手として上書き
+        patch.toAccountId = value
       }
     } else {
       patch[txEditField] = value
@@ -353,16 +348,21 @@ export function BalanceDashboard() {
     return new Set(accounts.filter(a => selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id))
   }, [selectedTags, accounts])
 
-  // 当月の売上・支出・利益
-  const INCOME_TYPES = new Set(["revenue", "misc_income", "gain", "interest_receive"])
-  const EXPENSE_TYPES = new Set(["misc_expense", "loss", "interest_pay"])
+  // 当月の売上・支出・利益（複式簿記版：interest は from/to で方向判定）
+  const INCOME_TYPES = new Set(["revenue", "misc_income", "gain"])
+  const EXPENSE_TYPES = new Set(["misc_expense", "loss"])
   const monthlyPL = useMemo(() => {
     const now = new Date()
     const year = now.getFullYear()
     const month = now.getMonth()
     const monthTxs = transactions.filter(t => {
       if (t.isArchived) return false
-      if (taggedAccountIdSet && !taggedAccountIdSet.has(t.accountId)) return false
+      // タグフィルタ：from または to が対象口座セットに含まれていれば通過
+      if (taggedAccountIdSet) {
+        const involves = (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
+          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+        if (!involves) return false
+      }
       const d = new Date(t.date)
       return d.getFullYear() === year && d.getMonth() === month
     })
@@ -392,20 +392,15 @@ export function BalanceDashboard() {
     return sections.filter((s) => s.items.length > 0)
   }, [visibleAccounts])
 
-  // フィルタリング
+  // フィルタリング（複式簿記版：accountId は from/to に統合）
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
-      // 振替は別セクションで表示
       if (t.type === "transfer") return false
-      // アーカイブフィルタ
       if (showArchivedTx ? !t.isArchived : t.isArchived) return false
       if (txTypeFilter !== "all" && t.type !== txTypeFilter) return false
-      if (txAccountFilter !== "all" && t.accountId !== txAccountFilter) return false
-      // タグフィルタ：対象口座が直接対象 or 取引相手として絡んでいればOK
+      if (txAccountFilter !== "all" && t.fromAccountId !== txAccountFilter && t.toAccountId !== txAccountFilter) return false
       if (taggedAccountIdSet) {
-        const involves = taggedAccountIdSet.has(t.accountId)
-          || (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
-          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+        const involves = taggedAccountIdSet.has(t.fromAccountId) || taggedAccountIdSet.has(t.toAccountId)
         if (!involves) return false
       }
       return true
@@ -415,15 +410,11 @@ export function BalanceDashboard() {
   const filteredTransfers = useMemo(() => {
     return transactions.filter((t) => {
       if (t.type !== "transfer") return false
-      // ペアの片方だけ表示
-      if (t.linkedTransferId && t.id > t.linkedTransferId) return false
+      // 複式簿記版：振替は1レコード化済みなので linkedTransferId フィルタ不要
       if (showArchivedTx ? !t.isArchived : t.isArchived) return false
-      if (txAccountFilter !== "all" && t.accountId !== txAccountFilter) return false
-      // タグフィルタ：対象口座が振替の片方に絡んでいればOK
+      if (txAccountFilter !== "all" && t.fromAccountId !== txAccountFilter && t.toAccountId !== txAccountFilter) return false
       if (taggedAccountIdSet) {
-        const involves = taggedAccountIdSet.has(t.accountId)
-          || (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
-          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+        const involves = taggedAccountIdSet.has(t.fromAccountId) || taggedAccountIdSet.has(t.toAccountId)
         if (!involves) return false
       }
       return true
@@ -837,14 +828,14 @@ export function BalanceDashboard() {
                   </TableHeader>
                   <TableBody>
                     {filteredTransfers.filter((t) => !t.isArchived).slice(0, 10).map((t) => {
-                      const isIncoming = t.toAccountId === t.accountId
+                      // 複式簿記版：振替は1レコード（fromAccount→toAccount）。ダッシュボードでは方向を「振替」一律表示
                       return (
                         <TableRow key={t.id}>
                           <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
                           <TableCell className="text-sm">{t.fromAccountName ?? "-"} → {t.toAccountName ?? "-"}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" : "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800")}>
-                              {isIncoming ? "入金" : "出金"}
+                            <Badge variant="outline" className="text-xs border bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                              振替
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-right font-medium tabular-nums" onDoubleClick={() => startTxEdit(t, "amount")}>
@@ -909,12 +900,13 @@ export function BalanceDashboard() {
                       .filter((t) => !t.isArchived && t.type !== "transfer")
                       .filter((t) => {
                         if (!taggedAccountIdSet) return true
-                        return taggedAccountIdSet.has(t.accountId)
-                          || (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
-                          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+                        return taggedAccountIdSet.has(t.fromAccountId) || taggedAccountIdSet.has(t.toAccountId)
                       })
                       .slice(0, 10).map((t) => {
-                      const isPositive = ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
+                      // 複式簿記版：from→toで方向。「対象口座」を明示できないので、内部口座(toがINTERNAL)に到達=入金として暫定判定
+                      // ※精緻な判定は account-detail-view 側で行う。ここは概況用
+                      const internalIds = new Set(accounts.filter(a => a.ownerType === "internal").map(a => a.id))
+                      const isPositive = internalIds.has(t.toAccountId) && !internalIds.has(t.fromAccountId)
                       return (
                         <TableRow key={t.id} className="">
                           <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
@@ -925,9 +917,9 @@ export function BalanceDashboard() {
                               <span className="cursor-text">{formatDate(t.date)}</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-sm">{t.accountName}</TableCell>
+                          <TableCell className="text-sm">{t.toAccountName ?? t.fromAccountName ?? "-"}</TableCell>
                           <TableCell>
-                              <Badge variant="outline" className={cn("text-xs border", getTxTypeColor(t.type))}>{t.categoryName}</Badge>
+                              <Badge variant="outline" className={cn("text-xs border", getTxTypeColor({ type: t.type, isInflow: isPositive }))}>{t.categoryName}</Badge>
                           </TableCell>
                           <TableCell className={cn("text-sm text-right font-medium tabular-nums", isPositive ? "text-emerald-600" : "text-red-600")} onDoubleClick={() => startTxEdit(t, "amount")}>
                             {isTxEditing(t.id, "amount") ? (
@@ -961,9 +953,7 @@ export function BalanceDashboard() {
                       .filter((t) => !t.isArchived && t.type !== "transfer")
                       .filter((t) => {
                         if (!taggedAccountIdSet) return true
-                        return taggedAccountIdSet.has(t.accountId)
-                          || (t.fromAccountId !== null && taggedAccountIdSet.has(t.fromAccountId))
-                          || (t.toAccountId !== null && taggedAccountIdSet.has(t.toAccountId))
+                        return taggedAccountIdSet.has(t.fromAccountId) || taggedAccountIdSet.has(t.toAccountId)
                       }).length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">取引データなし</TableCell>
@@ -1077,14 +1067,14 @@ export function BalanceDashboard() {
                   </TableHeader>
                   <TableBody>
                     {filteredTransfers.slice(0, 50).map((t) => {
-                      const isIncoming = t.toAccountId === t.accountId
+                      // 複式簿記版：振替は1レコード（fromAccount→toAccount）。一律「振替」表示
                       return (
                         <TableRow key={t.id}>
                           <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
                           <TableCell className="text-sm">{t.fromAccountName ?? "-"} → {t.toAccountName ?? "-"}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("text-xs border", isIncoming ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" : "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800")}>
-                              {isIncoming ? "入金" : "出金"}
+                            <Badge variant="outline" className="text-xs border bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                              振替
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-right font-medium tabular-nums" onDoubleClick={() => startTxEdit(t, "amount")}>
@@ -1168,7 +1158,9 @@ export function BalanceDashboard() {
                   </TableHeader>
                   <TableBody>
                     {filteredTransactions.slice(0, 50).map((t) => {
-                      const isPositive = ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain"].includes(t.type)
+                      // 複式簿記版：内部口座への入金（外部→内部 or LENDING/REPAYMENTで自分宛）を「+」、出金を「-」表示
+                      const internalIds = new Set(accounts.filter(a => a.ownerType === "internal").map(a => a.id))
+                      const isPositive = internalIds.has(t.toAccountId) && !internalIds.has(t.fromAccountId)
                       return (
                         <TableRow key={t.id} className="">
                           <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
@@ -1179,9 +1171,9 @@ export function BalanceDashboard() {
                               <span className="cursor-text">{formatDate(t.date)}</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-sm">{t.accountName}</TableCell>
+                          <TableCell className="text-sm">{t.toAccountName ?? t.fromAccountName ?? "-"}</TableCell>
                           <TableCell>
-                              <Badge variant="outline" className={cn("text-xs border", getTxTypeColor(t.type))}>{t.categoryName}</Badge>
+                              <Badge variant="outline" className={cn("text-xs border", getTxTypeColor({ type: t.type, isInflow: isPositive }))}>{t.categoryName}</Badge>
                           </TableCell>
                           <TableCell className={cn("text-sm text-right font-medium tabular-nums", isPositive ? "text-emerald-600" : "text-red-600")} onDoubleClick={() => startTxEdit(t, "amount")}>
                             {isTxEditing(t.id, "amount") ? (

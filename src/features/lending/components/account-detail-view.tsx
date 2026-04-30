@@ -49,11 +49,10 @@ const LENDING_STATUS_LABELS: Record<string, string> = {
   overdue: "延滞",
 }
 
-// 入金=緑、出金=赤、振替=グレー
-const PLUS_TYPES = new Set(["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain", "revenue", "misc_income"])
-function getTxTypeColor(type: string): string {
-  if (type === "transfer") return "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
-  return PLUS_TYPES.has(type)
+// 取引の色：対象口座から見て入金（toAccount=自分）=緑、出金（fromAccount=自分）=赤、振替=グレー
+function getTxTypeColor(args: { type: string; isInflow: boolean }): string {
+  if (args.type === "transfer") return "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+  return args.isInflow
     ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800"
     : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800"
 }
@@ -68,10 +67,10 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   securities: "証券口座",
 }
 
-// 手動編集可能な取引種別（貸借系は自動計上のみ）
+// 手動編集可能な取引種別（貸借系・返済・利息は自動計上のみ）
+// 複式簿記版：12種に統合済
 const EDITABLE_TX_TYPES = [
-  { value: "deposit", label: "純入金" },
-  { value: "withdrawal", label: "純出金" },
+  { value: "deposit_withdrawal", label: "純入出金" },
   { value: "investment", label: "出資" },
   { value: "transfer", label: "振替" },
   { value: "gain", label: "運用益" },
@@ -98,18 +97,13 @@ export function AccountDetailView({ accountId }: Props) {
   const [showArchivedLending, setShowArchivedLending] = useState(false)
   const { data: transactions = [], isLoading: txLoading } = useAccountTransactions({ accountId, isArchived: showArchivedTx ? true : false })
   const { data: transferTxsRaw = [] } = useAccountTransactions({ accountId, isArchived: showArchivedTransfer ? true : false })
+  // 複式簿記版：振替は1レコード（重複なし）、from/to のいずれかが対象口座のレコードを表示
   const transferTxs = transferTxsRaw
     .filter((t: { type: string }) => t.type === "transfer")
-    .filter((t: { id: string; linkedTransferId?: string | null }) => {
-      // ペアのうち片方だけ表示（linkedTransferIdが自分のIDより大きい方を除外）
-      if (!t.linkedTransferId) return true
-      return t.id < t.linkedTransferId
-    })
-  // 取引履歴は振替も含めて全表示（時点残高が連続して読める）
-  // ただしaccountIdがこの口座と一致するレコードのみ（振替の相手側レコードは除外）
-  // 初期残高は同日の他取引より必ず先頭（=表示の末尾）に来るようソート
+    .filter((t: { fromAccountId: string; toAccountId: string }) => t.fromAccountId === accountId || t.toAccountId === accountId)
+  // 取引履歴：from/to で対象口座が関わるレコードを全表示
   const nonTransferTxs = transactions
-    .filter((t: { accountId: string }) => t.accountId === accountId)
+    .filter((t: { fromAccountId: string; toAccountId: string }) => t.fromAccountId === accountId || t.toAccountId === accountId)
     .slice()
     .sort((a: { date: string; type: string; createdAt: string }, b: { date: string; type: string; createdAt: string }) => {
       if (a.date !== b.date) return b.date.localeCompare(a.date)
@@ -139,20 +133,21 @@ export function AccountDetailView({ accountId }: Props) {
   const [editTxCounterparty, setEditTxCounterparty] = useState("")
   const [editTxMemo, setEditTxMemo] = useState("")
 
-  const startEditingTx = useCallback((t: { id: string; date: string; type: string; amount: number; counterparty: string; memo: string; accountId: string; fromAccountId: string | null; toAccountId: string | null }) => {
+  const startEditingTx = useCallback((t: { id: string; date: string; type: string; amount: number; counterparty: string; memo: string; fromAccountId: string; toAccountId: string }) => {
     setEditingTxId(t.id)
     setEditTxDate(t.date)
     setEditTxType(t.type)
     setEditTxAmount(String(t.amount))
     if (t.type === "transfer") {
-      const counterpartyId = t.accountId === t.fromAccountId ? t.toAccountId : t.fromAccountId
+      // 振替：対象口座以外の側を「相手」として表示
+      const counterpartyId = accountId === t.fromAccountId ? t.toAccountId : t.fromAccountId
       setEditTxCounterparty(counterpartyId ?? "")
     } else {
       const match = allAccounts.find((a) => a.name === t.counterparty)
       setEditTxCounterparty(match?.id ?? t.counterparty)
     }
     setEditTxMemo(t.memo)
-  }, [allAccounts])
+  }, [allAccounts, accountId])
 
   const cancelEditingTx = useCallback(() => setEditingTxId(null), [])
 
@@ -168,7 +163,8 @@ export function AccountDetailView({ accountId }: Props) {
       editedBy: userName,
     }
     if (tx?.type === "transfer" && acct) {
-      if (tx.accountId === tx.fromAccountId) {
+      // 対象口座が from なら相手は to。対象口座が to なら相手は from
+      if (accountId === tx.fromAccountId) {
         patch.toAccountId = acct.id
       } else {
         patch.fromAccountId = acct.id
@@ -286,9 +282,9 @@ export function AccountDetailView({ accountId }: Props) {
     return { balance, totalLent, totalBorrowed, netAssets: balance + totalLent - totalBorrowed }
   }, [account, lendings, accountId])
 
-  // 当月の売上・支出・利益
-  const INCOME_TYPES = new Set(["revenue", "misc_income", "gain", "interest_receive"])
-  const EXPENSE_TYPES = new Set(["misc_expense", "loss", "interest_pay"])
+  // 当月の売上・支出・利益（複式簿記版：interestはfrom/toで方向判定）
+  const INCOME_TYPES = new Set(["revenue", "misc_income", "gain"])
+  const EXPENSE_TYPES = new Set(["misc_expense", "loss"])
   const monthlyPL = useMemo(() => {
     const now = new Date()
     const year = now.getFullYear()
@@ -752,7 +748,8 @@ export function AccountDetailView({ accountId }: Props) {
                     </TableCell>
                     <TableCell className="text-sm text-right tabular-nums">{formatCurrency(t.amount ?? 0)}</TableCell>
                     <TableCell className="text-sm text-right tabular-nums text-muted-foreground">
-                      {t.accountId === accountId ? formatCurrency(t.balanceAfter ?? 0) : "-"}
+                      {/* 時点残高表示は廃止（複式簿記版・スナップショット集計予定） */}
+                      -
                     </TableCell>
                     <TableCell className="text-sm max-w-[200px]">
                       <div>
@@ -828,12 +825,11 @@ export function AccountDetailView({ accountId }: Props) {
             </TableHeader>
             <TableBody>
               {nonTransferTxs.map((t) => {
-                const isPositive = t.type === "transfer"
-                  ? t.direction === "in"
-                  : ["initial", "deposit", "investment", "borrow", "repayment_receive", "interest_receive", "gain", "revenue", "misc_income"].includes(t.type)
+                // 複式簿記版：toAccountId=対象口座 なら入金（緑）、fromAccountId=対象口座 なら出金（赤）
+                const isPositive = t.toAccountId === accountId
                 const isEditing = editingTxId === t.id
-                // 振替は編集を「振替」セクションで行うため、ここではインライン編集を無効化
-                const isAutoType = ["initial", "transfer", "lend", "borrow", "repayment_receive", "repayment_pay", "interest_receive", "interest_pay"].includes(t.type)
+                // 自動計上type（手動編集を許可しない）
+                const isAutoType = ["initial", "transfer", "lending", "repayment", "interest"].includes(t.type)
                 const isInitial = t.type === "initial"
 
                 if (isEditing) {
@@ -844,7 +840,7 @@ export function AccountDetailView({ accountId }: Props) {
                         <Input type="date" value={editTxDate} onChange={(e) => setEditTxDate(e.target.value)} className="h-7 text-xs w-28" />
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={cn("text-xs border", getTxTypeColor(editTxType))}>{EDITABLE_TX_TYPES.find((tt) => tt.value === editTxType)?.label ?? editTxType}</Badge>
+                        <Badge variant="outline" className={cn("text-xs border", getTxTypeColor({ type: editTxType, isInflow: false }))}>{EDITABLE_TX_TYPES.find((tt) => tt.value === editTxType)?.label ?? editTxType}</Badge>
                       </TableCell>
                       <TableCell>
                         <Input type="number" value={editTxAmount} onChange={(e) => setEditTxAmount(e.target.value)} className="h-7 text-xs text-right w-24" />
@@ -872,13 +868,13 @@ export function AccountDetailView({ accountId }: Props) {
                     <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
                     <TableCell className="text-sm">{formatDate(t.date)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn("text-xs border", getTxTypeColor(t.type))}>{t.categoryName}</Badge>
+                      <Badge variant="outline" className={cn("text-xs border", getTxTypeColor({ type: t.type, isInflow: isPositive }))}>{t.categoryName}</Badge>
                     </TableCell>
                     <TableCell className={cn("text-sm text-right font-medium tabular-nums", isPositive ? "text-emerald-600" : "text-red-600")}>
                       {isPositive ? "+" : "-"}{formatCurrency(t.amount ?? 0)}
                     </TableCell>
                     <TableCell className="text-sm text-right tabular-nums text-muted-foreground">
-                      {formatCurrency(t.balanceAfter ?? 0)}
+                      -
                     </TableCell>
                     <TableCell className="text-sm max-w-[200px]">
                       <div>

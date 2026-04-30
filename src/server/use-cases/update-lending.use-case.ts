@@ -1,19 +1,32 @@
 import { prisma } from "@/lib/prisma"
-import { BALANCE_DELTA } from "@/lib/balance-delta"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
-import { recomputeBalanceAfter } from "@/lib/recompute-balance-after"
+import { calcOutstanding } from "@/server/use-cases/get-account-details.use-case"
 import type { LendingDTO, LendingPaymentDTO } from "@/types/dto"
-import type { LendingStatus } from "@/generated/prisma/client"
 
+function computeStatus(args: {
+  outstanding: number
+  dueDate: Date | null
+  today?: Date
+}): "active" | "completed" | "overdue" {
+  const today = args.today ?? new Date()
+  if (args.outstanding === 0) return "completed"
+  if (args.dueDate && args.dueDate < today) return "overdue"
+  return "active"
+}
+
+/**
+ * 貸借更新（複式簿記版）
+ * - outstanding / status は廃止（都度計算）
+ * - LENDING取引は1レコードのみなので、ペア同期は Lending 側のみ（共通フィールド）
+ * - balance 直接更新は廃止
+ */
 export class UpdateLending {
   static async execute(
     id: string,
     data: {
       counterparty?: string
       counterpartyAccountId?: string | null
-      outstanding?: number
       dueDate?: string | null
-      status?: "active" | "completed" | "overdue"
       memo?: string
       editedBy?: string
       tags?: string[]
@@ -21,33 +34,22 @@ export class UpdateLending {
     }
   ): Promise<LendingDTO> {
     return await prisma.$transaction(async (tx) => {
-      // 1. 現在のレコード取得
       const current = await tx.lending.findUniqueOrThrow({
         where: { id },
         include: {
           account: { select: { id: true, name: true } },
           counterpartyAccount: { select: { id: true, name: true } },
-          payments: { orderBy: { date: "desc" } },
         },
       })
 
-      // 2. メイン更新
       const updateData: Record<string, unknown> = {}
-      if (data.counterparty !== undefined)
-        updateData.counterparty = data.counterparty
-      if (data.counterpartyAccountId !== undefined)
-        updateData.counterpartyAccountId = data.counterpartyAccountId
-      if (data.outstanding !== undefined)
-        updateData.outstanding = data.outstanding
-      if (data.dueDate !== undefined)
-        updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null
-      if (data.status !== undefined)
-        updateData.status = data.status.toUpperCase() as LendingStatus
+      if (data.counterparty !== undefined) updateData.counterparty = data.counterparty
+      if (data.counterpartyAccountId !== undefined) updateData.counterpartyAccountId = data.counterpartyAccountId
+      if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null
       if (data.memo !== undefined) updateData.memo = data.memo
       if (data.editedBy !== undefined) updateData.editedBy = data.editedBy
       if (data.tags !== undefined) updateData.tags = data.tags
-      if (data.isArchived !== undefined)
-        updateData.isArchived = data.isArchived
+      if (data.isArchived !== undefined) updateData.isArchived = data.isArchived
 
       const r = await tx.lending.update({
         where: { id },
@@ -55,136 +57,51 @@ export class UpdateLending {
         include: {
           account: { select: { id: true, name: true } },
           counterpartyAccount: { select: { id: true, name: true } },
-          payments: { orderBy: { date: "desc" } },
         },
       })
 
-      // 3. ペア同期: linkedLendingIdでペアを探して共通フィールドを同期
-      //    counterpartyは同期しない（互いの口座名が入るため）
+      // ペア Lending を同期（counterparty は同期しない＝互いの口座名を保持）
       if (current.linkedLendingId) {
         const pairUpdate: Record<string, unknown> = {}
-        if (data.outstanding !== undefined)
-          pairUpdate.outstanding = data.outstanding
-        if (data.dueDate !== undefined)
-          pairUpdate.dueDate = data.dueDate ? new Date(data.dueDate) : null
-        if (data.status !== undefined)
-          pairUpdate.status = data.status.toUpperCase() as LendingStatus
+        if (data.dueDate !== undefined) pairUpdate.dueDate = data.dueDate ? new Date(data.dueDate) : null
         if (data.memo !== undefined) pairUpdate.memo = data.memo
         if (data.editedBy !== undefined) pairUpdate.editedBy = data.editedBy
-        if (data.isArchived !== undefined)
-          pairUpdate.isArchived = data.isArchived
+        if (data.isArchived !== undefined) pairUpdate.isArchived = data.isArchived
 
         if (Object.keys(pairUpdate).length > 0) {
-          await tx.lending.update({
-            where: { id: current.linkedLendingId },
-            data: pairUpdate,
-          })
+          await tx.lending.update({ where: { id: current.linkedLendingId }, data: pairUpdate })
         }
       }
 
-      // 4. AccountTransaction同期 + 残高調整
-      const isArchiving =
-        data.isArchived === true && current.isArchived === false
-      const isUnarchiving =
-        data.isArchived === false && current.isArchived === true
-
+      // isArchived の変更時は LENDING 取引も同期（両側の Lending に紐づく LENDING 取引が同じ1件）
       if (data.isArchived !== undefined) {
-        // メイン側のAccountTransactionをアーカイブ同期
-        const mainAcctTxs = await tx.accountTransaction.findMany({
-          where: {
-            linkedTransactionId: id,
-            type: { in: ["LEND", "BORROW", "REPAYMENT_RECEIVE", "REPAYMENT_PAY", "INTEREST_RECEIVE", "INTEREST_PAY"] },
-          },
+        const lendingIds = [id, current.linkedLendingId].filter(Boolean) as string[]
+        await tx.accountTransaction.updateMany({
+          where: { lendingId: { in: lendingIds }, type: "LENDING" },
+          data: { isArchived: data.isArchived },
         })
-
-        if (mainAcctTxs.length > 0) {
-          await tx.accountTransaction.updateMany({
-            where: {
-              linkedTransactionId: id,
-              type: { in: ["LEND", "BORROW", "REPAYMENT_RECEIVE", "REPAYMENT_PAY", "INTEREST_RECEIVE", "INTEREST_PAY"] },
-            },
-            data: { isArchived: data.isArchived },
-          })
-
-          // 残高調整（メイン口座）
-          for (const acctTx of mainAcctTxs) {
-            const delta = BALANCE_DELTA[acctTx.type] ?? 0
-            if (delta !== 0) {
-              if (isArchiving) {
-                // アーカイブ: 残高を戻す
-                await tx.account.update({
-                  where: { id: acctTx.accountId },
-                  data: { balance: { increment: -delta * acctTx.amount } },
-                })
-              }
-              if (isUnarchiving) {
-                // アンアーカイブ: 残高を再適用
-                await tx.account.update({
-                  where: { id: acctTx.accountId },
-                  data: { balance: { increment: delta * acctTx.amount } },
-                })
-              }
-            }
-          }
-        }
-
-        // ペア側のAccountTransactionをアーカイブ同期
-        if (current.linkedLendingId) {
-          const pairAcctTxs = await tx.accountTransaction.findMany({
-            where: {
-              linkedTransactionId: current.linkedLendingId,
-              type: { in: ["LEND", "BORROW", "REPAYMENT_RECEIVE", "REPAYMENT_PAY", "INTEREST_RECEIVE", "INTEREST_PAY"] },
-            },
-          })
-
-          if (pairAcctTxs.length > 0) {
-            await tx.accountTransaction.updateMany({
-              where: {
-                linkedTransactionId: current.linkedLendingId,
-                type: { in: ["LEND", "BORROW", "REPAYMENT_RECEIVE", "REPAYMENT_PAY", "INTEREST_RECEIVE", "INTEREST_PAY"] },
-              },
-              data: { isArchived: data.isArchived },
-            })
-
-            // 残高調整（ペア口座）
-            for (const acctTx of pairAcctTxs) {
-              const delta = BALANCE_DELTA[acctTx.type] ?? 0
-              if (delta !== 0) {
-                if (isArchiving) {
-                  await tx.account.update({
-                    where: { id: acctTx.accountId },
-                    data: { balance: { increment: -delta * acctTx.amount } },
-                  })
-                }
-                if (isUnarchiving) {
-                  await tx.account.update({
-                    where: { id: acctTx.accountId },
-                    data: { balance: { increment: delta * acctTx.amount } },
-                  })
-                }
-              }
-            }
-          }
-        }
       }
 
-      // 影響を受けた口座の時点残高を再計算
-      const affected = new Set<string>()
-      affected.add(current.accountId)
-      if (current.counterpartyAccountId) affected.add(current.counterpartyAccountId)
-      for (const aid of affected) {
-        await recomputeBalanceAfter(tx, aid)
-      }
-
-      // 紐づくAccountTransactionから実行日を取得（メイン側のLEND/BORROW）
+      // 紐づくLENDING取引の実行日
       const linkedTx = await tx.accountTransaction.findFirst({
-        where: {
-          lendingId: id,
-          type: { in: ["LEND", "BORROW"] },
-        },
+        where: { lendingId: id, type: "LENDING" },
         select: { date: true },
         orderBy: { createdAt: "asc" },
       })
+
+      // 返済履歴
+      const repayments = await tx.accountTransaction.findMany({
+        where: { lendingId: id, type: "REPAYMENT", isArchived: false },
+        orderBy: { date: "desc" },
+      })
+
+      const outstanding = await calcOutstanding({
+        id: r.id,
+        principal: r.principal,
+        accountId: r.accountId,
+        type: r.type,
+      })
+      const status = computeStatus({ outstanding, dueDate: r.dueDate })
 
       const result: LendingDTO = {
         id: r.id,
@@ -196,32 +113,28 @@ export class UpdateLending {
         linkedLendingId: r.linkedLendingId,
         type: r.type.toLowerCase() as "lend" | "borrow",
         principal: r.principal,
-        outstanding: r.outstanding,
+        outstanding,
         dueDate: r.dueDate ? r.dueDate.toISOString().split("T")[0] : null,
-        status: r.status.toLowerCase() as "active" | "completed" | "overdue",
+        status,
         memo: r.memo,
         editedBy: r.editedBy ?? "",
         tags: r.tags ?? [],
         isArchived: r.isArchived,
         createdAt: r.createdAt.toISOString(),
         date: linkedTx ? linkedTx.date.toISOString().split("T")[0] : null,
-        payments: r.payments.map(
-          (p): LendingPaymentDTO => ({
-            id: p.id,
-            lendingId: p.lendingId,
-            amount: p.amount,
-            date: p.date.toISOString().split("T")[0],
-            memo: p.memo,
-            createdAt: p.createdAt.toISOString(),
-          })
-        ),
+        payments: repayments.map((p): LendingPaymentDTO => ({
+          id: p.id,
+          lendingId: p.lendingId!,
+          amount: p.amount,
+          date: p.date.toISOString().split("T")[0],
+          memo: p.memo,
+          createdAt: p.createdAt.toISOString(),
+        })),
       }
 
       try {
         const changes: Record<string, { old: unknown; new: unknown }> = {}
         if (data.counterparty !== undefined && data.counterparty !== current.counterparty) changes.counterparty = { old: current.counterparty, new: data.counterparty }
-        if (data.outstanding !== undefined && data.outstanding !== current.outstanding) changes.outstanding = { old: current.outstanding, new: data.outstanding }
-        if (data.status !== undefined && data.status !== current.status.toLowerCase()) changes.status = { old: current.status, new: data.status.toUpperCase() }
         if (data.memo !== undefined && data.memo !== current.memo) changes.memo = { old: current.memo, new: data.memo }
         if (data.isArchived !== undefined && data.isArchived !== current.isArchived) changes.isArchived = { old: current.isArchived, new: data.isArchived }
 

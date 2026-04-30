@@ -1,11 +1,10 @@
 import { prisma } from "@/lib/prisma"
-import type { LendingType, LendingStatus } from "@/generated/prisma/client"
+import type { LendingType } from "@/generated/prisma/client"
 
 export class LendingRepository {
   static async findMany(params: {
     accountId?: string
     type?: LendingType
-    status?: LendingStatus
     isArchived?: boolean
   }) {
     return prisma.lending.findMany({
@@ -17,13 +16,12 @@ export class LendingRepository {
           ],
         }),
         ...(params.type && { type: params.type }),
-        ...(params.status && { status: params.status }),
         ...(params.isArchived !== undefined && { isArchived: params.isArchived }),
       },
       include: {
         account: { select: { id: true, name: true } },
         counterpartyAccount: { select: { id: true, name: true } },
-        payments: { orderBy: { date: "desc" } },
+        // payments リレーション廃止：返済は AccountTransaction(type=REPAYMENT, lendingId) で取得
       },
       orderBy: { createdAt: "desc" },
     })
@@ -35,7 +33,6 @@ export class LendingRepository {
       include: {
         account: { select: { id: true, name: true } },
         counterpartyAccount: { select: { id: true, name: true } },
-        payments: { orderBy: { date: "desc" } },
       },
     })
   }
@@ -47,7 +44,6 @@ export class LendingRepository {
     linkedLendingId?: string | null
     type: LendingType
     principal: number
-    outstanding: number
     dueDate?: Date | null
     memo?: string
   }) {
@@ -59,14 +55,13 @@ export class LendingRepository {
         linkedLendingId: data.linkedLendingId ?? null,
         type: data.type,
         principal: data.principal,
-        outstanding: data.outstanding,
         dueDate: data.dueDate ?? null,
         memo: data.memo ?? "",
+        // outstanding / status は廃止（都度計算）
       },
       include: {
         account: { select: { id: true, name: true } },
         counterpartyAccount: { select: { id: true, name: true } },
-        payments: { orderBy: { date: "desc" } },
       },
     })
   }
@@ -76,9 +71,8 @@ export class LendingRepository {
     data: {
       counterparty?: string
       counterpartyAccountId?: string | null
-      outstanding?: number
+      // outstanding / status は廃止
       dueDate?: Date | null
-      status?: LendingStatus
       memo?: string
       editedBy?: string
       tags?: string[]
@@ -91,7 +85,6 @@ export class LendingRepository {
       include: {
         account: { select: { id: true, name: true } },
         counterpartyAccount: { select: { id: true, name: true } },
-        payments: { orderBy: { date: "desc" } },
       },
     })
   }
@@ -100,24 +93,12 @@ export class LendingRepository {
     return prisma.lending.delete({ where: { id } })
   }
 
-  // 返済
-  static async createPayment(data: {
-    lendingId: string
-    amount: number
-    date: Date
-    memo?: string
-  }) {
-    return prisma.lendingPayment.create({
-      data: {
-        lendingId: data.lendingId,
-        amount: data.amount,
-        date: data.date,
-        memo: data.memo ?? "",
-      },
+  // 返済（type=REPAYMENT の AccountTransaction として記録）
+  // LendingPayment テーブル廃止に伴い、AccountTransaction で代替
+  static async findPayments(lendingId: string) {
+    return prisma.accountTransaction.findMany({
+      where: { lendingId, type: "REPAYMENT" },
+      orderBy: { date: "desc" },
     })
-  }
-
-  static async deletePayment(id: string) {
-    return prisma.lendingPayment.delete({ where: { id } })
   }
 }

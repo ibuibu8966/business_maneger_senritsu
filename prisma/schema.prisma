@@ -10,60 +10,60 @@ datasource db {
 // ========== 事業管理 Enum ==========
 
 enum BusinessStatus {
-  ACTIVE    // 進行中
-  ON_HOLD   // 保留
+  ACTIVE // 進行中
+  ON_HOLD // 保留
   COMPLETED // 完了
 }
 
 enum BusinessPriority {
   HIGHEST // 最高
-  HIGH    // 高
-  MEDIUM  // 中
-  LOW     // 低
+  HIGH // 高
+  MEDIUM // 中
+  LOW // 低
 }
 
 enum ProjectStatus {
-  ACTIVE    // 進行中
-  ON_HOLD   // 保留
+  ACTIVE // 進行中
+  ON_HOLD // 保留
   COMPLETED // 完了
 }
 
 enum BusinessTaskStatus {
-  TODO        // 未着手
+  TODO // 未着手
   IN_PROGRESS // 進行中
-  WAITING     // 確認待ち
-  DONE        // 完了
+  WAITING // 確認待ち
+  DONE // 完了
 }
 
 enum BusinessIssueStatus {
-  UNRESOLVED  // 未対応
+  UNRESOLVED // 未対応
   IN_PROGRESS // 対応中
-  RESOLVED    // 対応済み
+  RESOLVED // 対応済み
 }
 
 // ========== 事業 ==========
 model Business {
   id           String           @id @default(cuid()) // 事業ID
-  name         String                                // 事業名（例: アビトラ、スーパーサロン）
-  purpose      String           @default("")         // 目的
-  revenue      Int              @default(0)          // 売上（円）
-  expense      Int              @default(0)          // 支出（円）
-  status       BusinessStatus   @default(ACTIVE)     // ステータス
-  priority     BusinessPriority @default(MEDIUM)     // 優先度
-  contractMemo String           @default("")         // 契約内容メモ
-  attachments  Json             @default("[]")       // 添付 [{id,name,url,type}]
-  isActive     Boolean          @default(true)       // 有効フラグ
-  createdAt    DateTime         @default(now())      // 作成日時
-  updatedAt    DateTime         @updatedAt           // 更新日時
+  name         String // 事業名（例: アビトラ、スーパーサロン）
+  purpose      String           @default("") // 目的
+  revenue      Int              @default(0) // 売上（円）
+  expense      Int              @default(0) // 支出（円）
+  status       BusinessStatus   @default(ACTIVE) // ステータス
+  priority     BusinessPriority @default(MEDIUM) // 優先度
+  contractMemo String           @default("") // 契約内容メモ
+  attachments  Json             @default("[]") // 添付 [{id,name,url,type}]
+  isActive     Boolean          @default(true) // 有効フラグ
+  createdAt    DateTime         @default(now()) // 作成日時
+  updatedAt    DateTime         @updatedAt // 更新日時
 
-  accounts          Account[]                        // この事業に紐づく口座
-  partnerBusinesses PartnerBusiness[]                // CRM: この事業の取引先
-  projects          Project[]                        // 配下のプロジェクト
-  assignees         BusinessAssignee[]               // 担当者（複数）
-  contactBusinesses  ContactBusiness[]                // CRM: 直接紐づく顧客
-  checklistTemplates ChecklistTemplate[]              // チェックリストテンプレート
-  memos              BusinessMemo[]                   // メモ（複数）
-  directTasks        BusinessTask[]    @relation("BusinessDirectTasks") // 事業直下タスク（プロジェクト経由しない）
+  accounts           Account[] // この事業に紐づく口座
+  partnerBusinesses  PartnerBusiness[] // CRM: この事業の取引先
+  projects           Project[] // 配下のプロジェクト
+  assignees          BusinessAssignee[] // 担当者（複数）
+  contactBusinesses  ContactBusiness[] // CRM: 直接紐づく顧客
+  checklistTemplates ChecklistTemplate[] // チェックリストテンプレート
+  memos              BusinessMemo[] // メモ（複数）
+  directTasks        BusinessTask[]      @relation("BusinessDirectTasks") // 事業直下タスク（プロジェクト経由しない）
 
   @@map("businesses")
 }
@@ -71,32 +71,32 @@ model Business {
 // ========== プロジェクト ==========
 model Project {
   id           String           @id @default(cuid())
-  businessId   String                                // 所属事業
+  businessId   String // 所属事業
   business     Business         @relation(fields: [businessId], references: [id])
-  parentId     String?                               // 親プロジェクト（ツリー構造）
+  parentId     String? // 親プロジェクト（ツリー構造）
   parent       Project?         @relation("ProjectTree", fields: [parentId], references: [id])
   children     Project[]        @relation("ProjectTree")
-  name         String                                // プロジェクト名
-  purpose      String           @default("")         // 目的
-  deadline     DateTime?        @db.Date             // 期限
-  revenue      Int              @default(0)          // 売上（円）
-  expense      Int              @default(0)          // 支出（円）
-  status       ProjectStatus    @default(ACTIVE)     // ステータス
-  priority     BusinessPriority @default(MEDIUM)     // 優先度
-  contractMemo String           @default("")         // 契約内容メモ
-  attachments  Json             @default("[]")       // 添付 [{id,name,url,type}]
-  accountNames String[]         @default([])         // 紐づき口座名
-  partnerNames String[]         @default([])         // 外部会社名
-  sortOrder    Int              @default(0)          // 表示順
+  name         String // プロジェクト名
+  purpose      String           @default("") // 目的
+  deadline     DateTime?        @db.Date // 期限
+  revenue      Int              @default(0) // 売上（円）
+  expense      Int              @default(0) // 支出（円）
+  status       ProjectStatus    @default(ACTIVE) // ステータス
+  priority     BusinessPriority @default(MEDIUM) // 優先度
+  contractMemo String           @default("") // 契約内容メモ
+  attachments  Json             @default("[]") // 添付 [{id,name,url,type}]
+  accountNames String[]         @default([]) // 紐づき口座名
+  partnerNames String[]         @default([]) // 外部会社名
+  sortOrder    Int              @default(0) // 表示順
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  tasks             BusinessTask[]
-  issues            BusinessIssue[]
-  partnerProjects   PartnerProject[]
-  assignees         ProjectAssignee[]                // 担当者（複数）
-  contactProjects   ContactProject[]                 // CRM: 直接紐づく顧客
-  memos             BusinessMemo[]                   // メモ（複数）
+  tasks           BusinessTask[]
+  issues          BusinessIssue[]
+  partnerProjects PartnerProject[]
+  assignees       ProjectAssignee[] // 担当者（複数）
+  contactProjects ContactProject[] // CRM: 直接紐づく顧客
+  memos           BusinessMemo[] // メモ（複数）
 
   @@index([businessId])
   @@index([parentId])
@@ -105,51 +105,51 @@ model Project {
 
 // ========== 事業タスク ==========
 model BusinessTask {
-  id          String             @id @default(cuid())
-  seqNumber   Int?               @unique              // 通し番号（タスク・課題共通シーケンス）
-  projectId   String?                                 // 所属プロジェクト（事業直下タスクの場合はnull）
-  project     Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  businessId  String?                                 // 所属事業（プロジェクト経由しない直下タスクの場合に使用）
-  business    Business?          @relation("BusinessDirectTasks", fields: [businessId], references: [id], onDelete: Cascade)
-  title       String                                  // タスク名
-  detail      String             @default("")         // 詳細
-  assigneeId  String?                                 // 担当者
-  assignee    Employee?          @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  deadline    DateTime?          @db.Date             // 期限
-  status      BusinessTaskStatus @default(TODO)       // ステータス
-  memo        String             @default("")         // メモ
-  attachments Json               @default("[]")       // 添付 [{id,name,url,type}]
-  recurring         Boolean            @default(false)      // 繰り返し
-  recurringPattern  String?                                  // "daily"|"weekly"|"monthly_date"|"monthly_weekday"
-  recurringDay      Int?                                     // 曜日(0-6) or 日(1-31) ※互換用。新しい weekly は recurringDays を使う
-  recurringDays     Int[]              @default([])           // 複数曜日 0=日〜6=土 ※weekly複数選択用
-  recurringWeek     Int?                                     // 第何週(1-5) ※monthly_weekdayのみ
-  recurringEndDate  DateTime?          @db.Date              // 繰り返し終了日
-  lastGeneratedAt   DateTime?                                // 最終生成日時
-  createdBy   String             @default("")         // 作成者
-  sortOrder   Int                @default(0)          // 表示順（D&D用）
-  contactId   String?                                 // 連絡先（任意）
-  contact     Contact?           @relation(fields: [contactId], references: [id])
-  partnerId   String?                                 // 取引先（任意）
-  partner     Partner?           @relation(fields: [partnerId], references: [id])
-  tool        TicketTool?                             // 連絡ツール（任意）
-  priority    BusinessPriority   @default(MEDIUM)     // 優先度
-  todayFlag       Boolean   @default(false)           // 今日やるフラグ（深夜2時リセット）
-  todayFlaggedAt  DateTime?                           // 今日やるフラグを立てた日時
-  executionTime   String?                             // 実行時刻（"HH:MM"形式、デフォルト09:00）
-  notifyEnabled       Boolean @default(true)          // 事前通知ON/OFF
-  notifyMinutesBefore Int     @default(10)            // 実行時刻の何分前に通知するか（0=なし扱い, 5/10/15/30/60）
-  notifiedExecAt  String?                             // 最後にLINE通知済みの "YYYY-MM-DD HH:MM" 文字列（重複防止）
-  issueId     String?                                 // 紐づく課題（任意）
-  issue       BusinessIssue?     @relation(fields: [issueId], references: [id], onDelete: SetNull)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id                  String             @id @default(cuid())
+  seqNumber           Int?               @unique // 通し番号（タスク・課題共通シーケンス）
+  projectId           String? // 所属プロジェクト（事業直下タスクの場合はnull）
+  project             Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  businessId          String? // 所属事業（プロジェクト経由しない直下タスクの場合に使用）
+  business            Business?          @relation("BusinessDirectTasks", fields: [businessId], references: [id], onDelete: Cascade)
+  title               String // タスク名
+  detail              String             @default("") // 詳細
+  assigneeId          String? // 担当者
+  assignee            Employee?          @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  deadline            DateTime?          @db.Date // 期限
+  status              BusinessTaskStatus @default(TODO) // ステータス
+  memo                String             @default("") // メモ
+  attachments         Json               @default("[]") // 添付 [{id,name,url,type}]
+  recurring           Boolean            @default(false) // 繰り返し
+  recurringPattern    String? // "daily"|"weekly"|"monthly_date"|"monthly_weekday"
+  recurringDay        Int? // 曜日(0-6) or 日(1-31) ※互換用。新しい weekly は recurringDays を使う
+  recurringDays       Int[]              @default([]) // 複数曜日 0=日〜6=土 ※weekly複数選択用
+  recurringWeek       Int? // 第何週(1-5) ※monthly_weekdayのみ
+  recurringEndDate    DateTime?          @db.Date // 繰り返し終了日
+  lastGeneratedAt     DateTime? // 最終生成日時
+  createdBy           String             @default("") // 作成者
+  sortOrder           Int                @default(0) // 表示順（D&D用）
+  contactId           String? // 連絡先（任意）
+  contact             Contact?           @relation(fields: [contactId], references: [id])
+  partnerId           String? // 取引先（任意）
+  partner             Partner?           @relation(fields: [partnerId], references: [id])
+  tool                TicketTool? // 連絡ツール（任意）
+  priority            BusinessPriority   @default(MEDIUM) // 優先度
+  todayFlag           Boolean            @default(false) // 今日やるフラグ（深夜2時リセット）
+  todayFlaggedAt      DateTime? // 今日やるフラグを立てた日時
+  executionTime       String? // 実行時刻（"HH:MM"形式、デフォルト09:00）
+  notifyEnabled       Boolean            @default(true) // 事前通知ON/OFF
+  notifyMinutesBefore Int                @default(10) // 実行時刻の何分前に通知するか（0=なし扱い, 5/10/15/30/60）
+  notifiedExecAt      String? // 最後にLINE通知済みの "YYYY-MM-DD HH:MM" 文字列（重複防止）
+  issueId             String? // 紐づく課題（任意）
+  issue               BusinessIssue?     @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   checklistItems TaskChecklistItem[]
   missedLogs     TaskMissedLog[]
   scheduleEvents ScheduleEvent[]
-  assignees      TaskAssignee[]                           // 担当者（複数）
-  userSortOrders TaskUserSortOrder[]                      // 担当者ごとの並び順
+  assignees      TaskAssignee[] // 担当者（複数）
+  userSortOrders TaskUserSortOrder[] // 担当者ごとの並び順
 
   @@index([projectId])
   @@index([assigneeId])
@@ -196,16 +196,16 @@ model TaskAssignee {
 // ========== 未達成ログ（深夜2時Cronで記録） ==========
 model TaskMissedLog {
   id             String             @id @default(cuid())
-  taskId         String                                      // 対象タスク
+  taskId         String // 対象タスク
   task           BusinessTask       @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  taskTitle      String                                      // 記録時点のタスク名（削除耐性）
-  projectId      String                                      // 所属プロジェクトID
-  projectName    String             @default("")             // 記録時点のプロジェクト名
-  assigneeId     String?                                     // 記録時点の担当者ID（nullable）
-  assigneeName   String             @default("")             // 記録時点の担当者名（削除耐性）
-  scheduledDate  DateTime           @db.Date                 // 予定日（対象日）
-  missedAt       DateTime           @default(now())          // 記録日時
-  statusAtMissed BusinessTaskStatus                           // 記録時点のステータス
+  taskTitle      String // 記録時点のタスク名（削除耐性）
+  projectId      String // 所属プロジェクトID
+  projectName    String             @default("") // 記録時点のプロジェクト名
+  assigneeId     String? // 記録時点の担当者ID（nullable）
+  assigneeName   String             @default("") // 記録時点の担当者名（削除耐性）
+  scheduledDate  DateTime           @db.Date // 予定日（対象日）
+  missedAt       DateTime           @default(now()) // 記録日時
+  statusAtMissed BusinessTaskStatus // 記録時点のステータス
 
   @@index([taskId])
   @@index([scheduledDate])
@@ -215,25 +215,25 @@ model TaskMissedLog {
 
 // ========== 事業課題 ==========
 model BusinessIssue {
-  id          String              @id @default(cuid())
-  seqNumber   Int?                @unique              // 通し番号（タスク・課題共通シーケンス）
-  projectId   String                                   // 所属プロジェクト
-  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title       String                                   // 課題名
-  detail      String              @default("")         // 詳細
-  assigneeId  String?                                  // 旗振り役
-  assignee    Employee?           @relation("IssueAssignee", fields: [assigneeId], references: [id])
-  createdBy   String              @default("")         // 作成者名
-  deadline    DateTime?           @db.Date             // 期限
-  priority    BusinessPriority    @default(MEDIUM)     // 優先度
-  status      BusinessIssueStatus @default(UNRESOLVED) // ステータス
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id         String              @id @default(cuid())
+  seqNumber  Int?                @unique // 通し番号（タスク・課題共通シーケンス）
+  projectId  String // 所属プロジェクト
+  project    Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title      String // 課題名
+  detail     String              @default("") // 詳細
+  assigneeId String? // 旗振り役
+  assignee   Employee?           @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  createdBy  String              @default("") // 作成者名
+  deadline   DateTime?           @db.Date // 期限
+  priority   BusinessPriority    @default(MEDIUM) // 優先度
+  status     BusinessIssueStatus @default(UNRESOLVED) // ステータス
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 
   progressNotes BusinessIssueNote[]
   tasks         BusinessTask[]
   memos         BusinessMemo[]
-  assignees     IssueAssignee[]                            // 旗振り役（複数）
+  assignees     IssueAssignee[] // 旗振り役（複数）
 
   @@index([projectId])
   @@index([assigneeId])
@@ -260,11 +260,11 @@ model IssueAssignee {
 // ========== 課題経過記録 ==========
 model BusinessIssueNote {
   id        String        @id @default(cuid())
-  issueId   String                                    // 対象課題
+  issueId   String // 対象課題
   issue     BusinessIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  date      DateTime      @db.Date                   // 記録日
-  content   String                                    // 内容
-  author    String        @default("")                // 記入者名
+  date      DateTime      @db.Date // 記録日
+  content   String // 内容
+  author    String        @default("") // 記入者名
   createdAt DateTime      @default(now())
 
   @@index([issueId])
@@ -273,17 +273,17 @@ model BusinessIssueNote {
 
 // ========== 事業・プロジェクト メモ ==========
 model BusinessMemo {
-  id         String   @id @default(cuid())
-  businessId String?                                   // 事業に紐づく場合
-  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  projectId  String?                                   // プロジェクトに紐づく場合
-  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  issueId    String?                                   // 課題に紐づく場合
+  id         String         @id @default(cuid())
+  businessId String? // 事業に紐づく場合
+  business   Business?      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  projectId  String? // プロジェクトに紐づく場合
+  project    Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issueId    String? // 課題に紐づく場合
   issue      BusinessIssue? @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  date       DateTime  @db.Date                        // 記録日
-  content    String                                    // 内容
-  author     String    @default("")                    // 記入者名
-  createdAt  DateTime  @default(now())
+  date       DateTime       @db.Date // 記録日
+  content    String // 内容
+  author     String         @default("") // 記入者名
+  createdAt  DateTime       @default(now())
 
   @@index([businessId])
   @@index([projectId])
@@ -301,33 +301,35 @@ enum OwnerType {
 
 // 口座種別
 enum AccountType {
-  BANK       // 銀行口座
+  BANK // 銀行口座
   SECURITIES // 証券口座
 }
 
 model Account {
-  id               String        @id @default(cuid()) // 口座ID
-  name             String                             // 口座名（例: 楽天銀行、SBI証券）
-  ownerType        OwnerType     @default(INTERNAL)   // 所有区分（社内/外部）
-  accountType      AccountType   @default(BANK)       // 口座種別（銀行/証券）
-  businessId       String?                            // 紐づく事業ID（任意）
-  business         Business?     @relation(fields: [businessId], references: [id])
-  balance          Int           @default(0)          // 現在残高（円）
-  purpose          String        @default("")         // 目的・用途（例: IB報酬の受取）
-  investmentPolicy String        @default("")         // 運用方針（証券口座のみ）
-  isArchived       Boolean       @default(false)      // アーカイブ済みフラグ
-  tags             String[]      @default([])         // タグ（絞り込み用）
-  isActive         Boolean       @default(true)       // 有効フラグ
-  createdAt        DateTime      @default(now())      // 作成日時
-  updatedAt        DateTime      @updatedAt           // 更新日時
-  // 口座取引（入出金・振替・利息・運用損益等）
-  accountTransactions     AccountTransaction[] @relation("AccountTransactions")
-  fromAccountTransactions AccountTransaction[] @relation("FromAccountTransactions")
-  toAccountTransactions   AccountTransaction[] @relation("ToAccountTransactions")
+  id                      String                   @id @default(cuid()) // 口座ID
+  name                    String // 口座名（例: 楽天銀行、SBI証券）
+  ownerType               OwnerType                @default(INTERNAL) // 所有区分（社内/外部）
+  accountType             AccountType              @default(BANK) // 口座種別（銀行/証券）
+  businessId              String? // 紐づく事業ID（任意）
+  business                Business?                @relation(fields: [businessId], references: [id])
+  // 残高は都度計算（直近スナップショット + 差分）。balance フィールドは廃止
+  recalcRequiredFromDate  DateTime?                @db.Date // 過去日遡り取引フラグ。翌日0時バッチで再計算する開始日
+  purpose                 String                   @default("") // 目的・用途
+  investmentPolicy        String                   @default("") // 運用方針（証券口座のみ）
+  isArchived              Boolean                  @default(false) // アーカイブ済みフラグ
+  tags                    String[]                 @default([]) // タグ（絞り込み用）
+  isActive                Boolean                  @default(true) // 有効フラグ
+  createdAt               DateTime                 @default(now()) // 作成日時
+  updatedAt               DateTime                 @updatedAt // 更新日時
+  // 口座取引（1取引=1レコード。fromAccount/toAccount で接続）
+  fromAccountTransactions AccountTransaction[]     @relation("FromAccountTransactions")
+  toAccountTransactions   AccountTransaction[]     @relation("ToAccountTransactions")
+  // 残高スナップショット（日次キャッシュ）
+  balanceSnapshots        AccountBalanceSnapshot[]
 
   // 貸借
-  lendings              Lending[]
-  counterpartyLendings  Lending[] @relation("CounterpartyLendings")
+  lendings             Lending[]
+  counterpartyLendings Lending[] @relation("CounterpartyLendings")
 
   //
   @@map("accounts")
@@ -337,177 +339,163 @@ model Account {
 
 // カテゴリ区分
 enum CategoryType {
-  INCOME  // 収入カテゴリ
+  INCOME // 収入カテゴリ
   EXPENSE // 支出カテゴリ
 }
 
 model Category {
-  id           String        @id @default(cuid()) // カテゴリID
-  name         String                             // カテゴリ名（例: サロン会費、外注費）
-  type         CategoryType                       // 収入/支出
-  accountType  String?                            // 対応するAccountTransactionType（null=管理会計専用）
-  isActive     Boolean       @default(true)       // 有効フラグ
-  createdAt    DateTime      @default(now())      // 作成日時
-  updatedAt    DateTime      @updatedAt           // 更新日時
+  id          String       @id @default(cuid()) // カテゴリID
+  name        String // カテゴリ名（例: サロン会費、外注費）
+  type        CategoryType // 収入/支出
+  accountType String? // 対応するAccountTransactionType（null=管理会計専用）
+  isActive    Boolean      @default(true) // 有効フラグ
+  createdAt   DateTime     @default(now()) // 作成日時
+  updatedAt   DateTime     @updatedAt // 更新日時
+
   @@map("categories")
 }
 
 // ========== 口座取引 ==========
-// 口座の全お金の動きを一元管理する台帳
-// 貸借系6種（LEND〜INTEREST_PAY）はLending/LendingPayment作成時にuse-caseが自動計上。手動登録不可。
+// 複式簿記版：1取引=1レコード（fromAccount→toAccount）
+// 純入出金・初期残高は外部口座（Account.ownerType=EXTERNAL）を介して記録する
 
-// 口座取引の種別（16種類）
+// 口座取引の種別（12種類・複式簿記版）
+// 方向違いだったtype（LEND/BORROW、REPAYMENT_*、INTEREST_*、DEPOSIT/WITHDRAWAL）はfrom/toで自明なので統合
 enum AccountTransactionType {
-  INITIAL           // 初期残高（口座作成時の元金。手動登録 or CreateAccount自動計上）
-  DEPOSIT           // 純入金
-  WITHDRAWAL        // 純出金
-  INVESTMENT        // 出資
-  TRANSFER          // 振替
-  LEND              // 貸出（自動計上 ← CreateLending）
-  BORROW            // 借入（自動計上 ← CreateLending）
-  REPAYMENT_RECEIVE // 返済受取（自動計上 ← CreateLendingPayment）
-  REPAYMENT_PAY     // 返済支払（自動計上 ← CreateLendingPayment）
-  INTEREST_RECEIVE  // 利息受取（自動計上 ← 未実装）
-  INTEREST_PAY      // 利息支払（自動計上 ← 未実装）
-  GAIN              // 運用益
-  LOSS              // 運用損
-  REVENUE           // 売上
-  MISC_EXPENSE      // 雑費
-  MISC_INCOME       // 雑収入
+  INITIAL // 初期残高（外部口座→対象口座 で記録）
+  INVESTMENT // 出資
+  TRANSFER // 振替（口座間）
+  LENDING // 貸借（旧 LEND/BORROW を統合）
+  REPAYMENT // 返済（旧 REPAYMENT_RECEIVE/PAY を統合）
+  INTEREST // 利息（旧 INTEREST_RECEIVE/PAY を統合）
+  DEPOSIT_WITHDRAWAL // 純入出金（旧 DEPOSIT/WITHDRAWAL を統合・必ず外部口座経由）
+  GAIN // 運用益
+  LOSS // 運用損
+  REVENUE // 売上
+  MISC_EXPENSE // 雑費
+  MISC_INCOME // 雑収入
 }
 
 model AccountTransaction {
-  id              String                   @id @default(cuid())
-  serialNumber    Int                      @unique @default(autoincrement()) // 全口座共通の通し番号（人間が指す用）
-  accountId       String                                        // 対象口座
-  account         Account                  @relation("AccountTransactions", fields: [accountId], references: [id])
-  type            AccountTransactionType                        // 取引種別
-  amount          Int                                           // 金額（常に正の値）
-  date            DateTime                 @db.Date             // 取引日
-  // 振替用
-  fromAccountId   String?                                       // 振替元口座（振替の場合）
-  fromAccount     Account?                 @relation("FromAccountTransactions", fields: [fromAccountId], references: [id])
-  toAccountId     String?                                       // 振替先口座（振替の場合）
-  toAccount       Account?                 @relation("ToAccountTransactions", fields: [toAccountId], references: [id])
-  // 貸借の相手
-  counterparty    String                   @default("")         // 相手名（貸借・利息の場合）
-  // 管理会計連携
-  linkedTransactionId String?                                   // 紐づく管理会計Transaction ID
-  origin              String                   @default("")     // 発信元: "account" | "transaction" | ""
-  // 振替ペア・貸借トレース
-  linkedTransferId   String?                                    // 振替ペアID
-  lendingId          String?                                    // 自動計上元Lending ID
-  lendingPaymentId   String?                                    // 自動計上元LendingPayment ID
-  direction          String?                                    // "out"|"in"
+  id            String                 @id @default(cuid())
+  serialNumber  Int                    @unique @default(autoincrement()) // 全口座共通の通し番号
+  type          AccountTransactionType // 取引種別（12種）
+  amount        Int // 金額（常に正の値）
+  date          DateTime               @db.Date // 取引日
+  // 1取引=1レコード（複式簿記版）：fromAccount→toAccount は必須
+  fromAccountId String // 出金元口座（必須）
+  fromAccount   Account                @relation("FromAccountTransactions", fields: [fromAccountId], references: [id])
+  toAccountId   String // 入金先口座（必須）
+  toAccount     Account                @relation("ToAccountTransactions", fields: [toAccountId], references: [id])
+  // 貸借の相手・トレース
+  counterparty  String                 @default("") // 相手名（外部の場合）
+  lendingId     String? // 紐づくLending ID（type=LENDING/REPAYMENT/INTEREST時）
   // メモ・編集追跡
-  memo            String                   @default("")         // メモ
-  editedBy        String                   @default("")         // 編集者
-  tags            String[]                 @default([])         // タグ（絞り込み用）
-  isArchived      Boolean                  @default(false)      // アーカイブ
-  // この取引を反映した直後の口座残高（時点残高）
-  balanceAfter    Int                      @default(0)
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
+  memo          String                 @default("") // メモ
+  editedBy      String                 @default("") // 編集者
+  tags          String[]               @default([]) // タグ（絞り込み用）
+  isArchived    Boolean                @default(false) // アーカイブ
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
 
-  @@index([accountId])
+  @@index([fromAccountId])
+  @@index([toAccountId])
   @@index([date])
   @@index([type])
-  @@index([accountId, date])
+  @@index([fromAccountId, date])
+  @@index([toAccountId, date])
+  @@index([lendingId])
   @@map("account_transactions")
 }
 
 // ========== 貸借 ==========
+// 複式簿記版：元本記録のみ。未返済額・statusは都度計算。返済はAccountTransaction(type=REPAYMENT, lendingId)で完結
 
 // 貸借の種別
 enum LendingType {
-  LEND   // 貸出
+  LEND // 貸出
   BORROW // 借入
 }
 
-// 貸借の状態
-enum LendingStatus {
-  ACTIVE    // 返済中
-  COMPLETED // 完済
-  OVERDUE   // 延滞
-}
-
 model Lending {
-  id                    String         @id @default(cuid())
-  accountId             String                              // どの口座から
-  account               Account        @relation(fields: [accountId], references: [id])
-  counterparty          String                              // 相手名（社外の場合）
-  counterpartyAccountId String?                             // 相手口座ID（社内口座間の場合）
-  counterpartyAccount   Account?       @relation("CounterpartyLendings", fields: [counterpartyAccountId], references: [id])
-  linkedLendingId       String?        @unique              // ペアの貸借ID（社内口座間で互いにリンク）
-  type                  LendingType                         // 貸出/借入
-  principal             Int                                 // 元本
-  outstanding           Int                                 // 未返済額
-  dueDate               DateTime?      @db.Date             // 返済期限（任意）
-  status                LendingStatus  @default(ACTIVE)     // 状態
-  memo                  String         @default("")         // メモ
-  editedBy              String         @default("")         // 最終編集者
-  tags                  String[]       @default([])         // タグ（絞り込み用）
-  isArchived            Boolean        @default(false)      // アーカイブ
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  id                    String      @id @default(cuid())
+  accountId             String // どの口座から
+  account               Account     @relation(fields: [accountId], references: [id])
+  counterparty          String // 相手名（社外の場合）
+  counterpartyAccountId String? // 相手口座ID（社内口座間の場合）
+  counterpartyAccount   Account?    @relation("CounterpartyLendings", fields: [counterpartyAccountId], references: [id])
+  linkedLendingId       String?     @unique // ペアの貸借ID（社内口座間で互いにリンク）
+  type                  LendingType // 貸出/借入
+  principal             Int // 元本
+  // outstanding（未返済額）は廃止 → principal − SUM(関連返済) で都度計算
+  // status は廃止 → 未返済額と返済期日から自動判定
+  dueDate               DateTime?   @db.Date // 返済期限（任意）
+  memo                  String      @default("") // メモ
+  editedBy              String      @default("") // 最終編集者
+  tags                  String[]    @default([]) // タグ（絞り込み用）
+  isArchived            Boolean     @default(false) // アーカイブ
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  payments LendingPayment[]
+  // 返済はAccountTransaction(type=REPAYMENT, lendingId付き)で完結。LendingPaymentテーブルは廃止
 
   @@index([accountId])
   @@index([counterpartyAccountId])
-  @@index([status])
   @@map("lendings")
 }
 
-// ========== 貸借返済 ==========
-model LendingPayment {
+// ========== 残高スナップショット（日次キャッシュ・新規） ==========
+// 取引数が増えても残高表示をO(1)に近づけるためのキャッシュ層
+// 真実は AccountTransaction、これは派生キャッシュ（整合性ズレても再生成可能）
+model AccountBalanceSnapshot {
   id        String   @id @default(cuid())
-  lendingId String                        // 対象の貸借
-  lending   Lending  @relation(fields: [lendingId], references: [id], onDelete: Cascade)
-  amount    Int                           // 返済金額
-  date      DateTime @db.Date             // 返済日
-  memo      String   @default("")         // メモ
+  accountId String // 対象口座
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date // スナップショット日付（その日の終了時点残高）
+  balance   Int // その日終了時点の残高
   createdAt DateTime @default(now())
 
-  @@index([lendingId])
-  @@map("lending_payments")
+  @@unique([accountId, date])
+  @@index([accountId])
+  @@index([date])
+  @@map("account_balance_snapshots")
 }
 
 // ========== 従業員ロール ==========
 enum EmployeeRole {
   MASTER_ADMIN // マスター管理者
-  ADMIN        // 管理者
-  EMPLOYEE     // 従業員
+  ADMIN // 管理者
+  EMPLOYEE // 従業員
 }
 
 // ========== 従業員 ==========
 model Employee {
-  id            String          @id @default(cuid()) // 従業員ID
-  name          String                               // 名前（例: 野田、大成、麦田）
-  color         String          @default("#3B82F6")  // カレンダー表示色
-  email         String?         @unique              // ログイン用メール（nullable）
-  passwordHash  String?                              // パスワードハッシュ（nullable）
-  role          EmployeeRole    @default(EMPLOYEE)   // ロール（master_admin/admin/employee）
-  lineUserId    String?                              // LINE User ID（Message API用）
-  googleCalId   String?                              // Googleサブカレンダー ID
-  coreTimeStart String?                              // コアタイム開始（例: "14:00"）
-  coreTimeEnd   String?                              // コアタイム終了（例: "18:00"）
-  isActive        Boolean         @default(true)       // 有効フラグ
-  themePreference String          @default("system")   // テーマ設定（light/dark/system）
-  createdAt       DateTime        @default(now())      // 作成日時
-  updatedAt     DateTime        @updatedAt           // 更新日時
-  scheduleEvents ScheduleEvent[]                     // この従業員の予定
-  eventParticipations EventParticipant[]              // 参加しているイベント
-  tickets        Ticket[]                            // CRM: 担当チケット
-  ticketComments TicketComment[]                     // CRM: チケットコメント
+  id                  String             @id @default(cuid()) // 従業員ID
+  name                String // 名前（例: 野田、大成、麦田）
+  color               String             @default("#3B82F6") // カレンダー表示色
+  email               String?            @unique // ログイン用メール（nullable）
+  passwordHash        String? // パスワードハッシュ（nullable）
+  role                EmployeeRole       @default(EMPLOYEE) // ロール（master_admin/admin/employee）
+  lineUserId          String? // LINE User ID（Message API用）
+  googleCalId         String? // Googleサブカレンダー ID
+  coreTimeStart       String? // コアタイム開始（例: "14:00"）
+  coreTimeEnd         String? // コアタイム終了（例: "18:00"）
+  isActive            Boolean            @default(true) // 有効フラグ
+  themePreference     String             @default("system") // テーマ設定（light/dark/system）
+  createdAt           DateTime           @default(now()) // 作成日時
+  updatedAt           DateTime           @updatedAt // 更新日時
+  scheduleEvents      ScheduleEvent[] // この従業員の予定
+  eventParticipations EventParticipant[] // 参加しているイベント
+  tickets             Ticket[] // CRM: 担当チケット
+  ticketComments      TicketComment[] // CRM: チケットコメント
 
   // 事業管理
-  businessAssignees  BusinessAssignee[] @relation("BusinessAssignees")
-  projectAssignees   ProjectAssignee[]  @relation("ProjectAssignees")
-  assignedTasks      BusinessTask[]     @relation("TaskAssignee")
-  assignedIssues     BusinessIssue[]    @relation("IssueAssignee")
-  taskAssignees      TaskAssignee[]     @relation("TaskAssignees")
-  issueAssignees     IssueAssignee[]    @relation("IssueAssignees")
+  businessAssignees BusinessAssignee[] @relation("BusinessAssignees")
+  projectAssignees  ProjectAssignee[]  @relation("ProjectAssignees")
+  assignedTasks     BusinessTask[]     @relation("TaskAssignee")
+  assignedIssues    BusinessIssue[]    @relation("IssueAssignee")
+  taskAssignees     TaskAssignee[]     @relation("TaskAssignees")
+  issueAssignees    IssueAssignee[]    @relation("IssueAssignees")
 
   @@map("employees")
 }
@@ -546,32 +534,32 @@ model ProjectAssignee {
 
 // 予定種別
 enum EventType {
-  MEETING  // 打ち合わせ
-  HOLIDAY  // 休み
-  OUTING   // 外出
-  WORK     // 作業
-  OTHER    // その他
+  MEETING // 打ち合わせ
+  HOLIDAY // 休み
+  OUTING // 外出
+  WORK // 作業
+  OTHER // その他
 }
 
 model ScheduleEvent {
-  id            String    @id @default(cuid()) // 予定ID
-  title         String                         // 予定名
-  description   String    @default("")         // 詳細・メモ
-  startAt       DateTime                       // 開始日時
-  endAt         DateTime                       // 終了日時
-  allDay        Boolean   @default(false)      // 終日フラグ
-  eventType     EventType @default(MEETING)    // 予定種別
-  employeeId    String                         // 従業員ID
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-  googleEventId String?                        // Google Calendar イベントID
-  taskId        String?                        // 紐づくタスク（任意）
+  id            String        @id @default(cuid()) // 予定ID
+  title         String // 予定名
+  description   String        @default("") // 詳細・メモ
+  startAt       DateTime // 開始日時
+  endAt         DateTime // 終了日時
+  allDay        Boolean       @default(false) // 終日フラグ
+  eventType     EventType     @default(MEETING) // 予定種別
+  employeeId    String // 従業員ID
+  employee      Employee      @relation(fields: [employeeId], references: [id])
+  googleEventId String? // Google Calendar イベントID
+  taskId        String? // 紐づくタスク（任意）
   task          BusinessTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  createdAt     DateTime  @default(now())      // 作成日時
-  updatedAt     DateTime  @updatedAt           // 更新日時
+  createdAt     DateTime      @default(now()) // 作成日時
+  updatedAt     DateTime      @updatedAt // 更新日時
 
-  @@index([startAt])      // 日時で検索用
-  @@index([employeeId])   // 従業員別検索用
-  @@index([eventType])    // 種別検索用
+  @@index([startAt]) // 日時で検索用
+  @@index([employeeId]) // 従業員別検索用
+  @@index([eventType]) // 種別検索用
   @@index([employeeId, startAt])
   @@index([taskId])
   @@map("schedule_events")
@@ -580,10 +568,10 @@ model ScheduleEvent {
 // ========== スケジュール参加者（Googleカレンダーのイベントをグループ化） ==========
 model EventParticipant {
   id               String   @id @default(cuid())
-  groupId          String                              // グループID（同じ予定の参加者を紐付け）
-  employeeId       String                              // 参加者（従業員ID）
+  groupId          String // グループID（同じ予定の参加者を紐付け）
+  employeeId       String // 参加者（従業員ID）
   employee         Employee @relation(fields: [employeeId], references: [id])
-  compositeEventId String                              // "calendarId::googleEventId"
+  compositeEventId String // "calendarId::googleEventId"
   createdAt        DateTime @default(now())
 
   @@unique([groupId, employeeId])
@@ -597,43 +585,43 @@ model EventParticipant {
 
 // 連絡先の種別
 enum ContactType {
-  SALON_MEMBER    // サロン生
+  SALON_MEMBER // サロン生
   PARTNER_CONTACT // 取引先担当者
 }
 
 model Contact {
-  id           String      @id @default(cuid())
-  name         String                             // 表示名（呼び名）
-  realName     String      @default("")           // 本名
-  nicknames    String[]    @default([])           // 別名・ニックネーム（複数）
-  type         ContactType                        // サロン生 / 取引先担当者
-  occupation   String      @default("")           // 職業
-  age          Int?                               // 年齢
-  interests    String      @default("")           // 興味・関心
-  mindset      String      @default("")           // 考え方メモ
-  lineId       String      @default("")           // LINE ID
-  discordId    String      @default("")           // Discord ID
-  email        String      @default("")           // メール
-  phone        String      @default("")           // 電話
-  memo         String      @default("")           // その他メモ
-  memberpayId  String      @default("")           // メンバーペイID
-  robotpayId   String      @default("")           // ロボットペイID
-  paypalId     String      @default("")           // PayPal ID
+  id              String      @id @default(cuid())
+  name            String // 表示名（呼び名）
+  realName        String      @default("") // 本名
+  nicknames       String[]    @default([]) // 別名・ニックネーム（複数）
+  type            ContactType // サロン生 / 取引先担当者
+  occupation      String      @default("") // 職業
+  age             Int? // 年齢
+  interests       String      @default("") // 興味・関心
+  mindset         String      @default("") // 考え方メモ
+  lineId          String      @default("") // LINE ID
+  discordId       String      @default("") // Discord ID
+  email           String      @default("") // メール
+  phone           String      @default("") // 電話
+  memo            String      @default("") // その他メモ
+  memberpayId     String      @default("") // メンバーペイID
+  robotpayId      String      @default("") // ロボットペイID
+  paypalId        String      @default("") // PayPal ID
   nextMeetingDate DateTime? // 次回面談予定日
   lastMeetingDate DateTime? // 最終面談日（過去の最新面談日）
-  isFinalMeeting Boolean   @default(false)        // 最終面談済み（次回面談不要）
-  tags         String[]    @default([])            // タグ
-  isArchived   Boolean     @default(false)        // アーカイブ済み
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  isFinalMeeting  Boolean     @default(false) // 最終面談済み（次回面談不要）
+  tags            String[]    @default([]) // タグ
+  isArchived      Boolean     @default(false) // アーカイブ済み
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  subscriptions      Subscription[]
-  tickets            Ticket[]
-  partnerContacts    PartnerContact[]
-  meetings           ContactMeeting[]
-  businessTasks      BusinessTask[]
-  contactBusinesses  ContactBusiness[]
-  contactProjects    ContactProject[]
+  subscriptions     Subscription[]
+  tickets           Ticket[]
+  partnerContacts   PartnerContact[]
+  meetings          ContactMeeting[]
+  businessTasks     BusinessTask[]
+  contactBusinesses ContactBusiness[]
+  contactProjects   ContactProject[]
 
   @@index([type])
   @@index([isArchived])
@@ -647,8 +635,8 @@ model ContactMeeting {
   id        String   @id @default(cuid())
   contactId String
   contact   Contact  @relation(fields: [contactId], references: [id])
-  date      DateTime                          // 面談日
-  summary   String   @default("")             // 要約
+  date      DateTime // 面談日
+  summary   String   @default("") // 要約
   createdAt DateTime @default(now())
 
   @@index([contactId])
@@ -657,11 +645,11 @@ model ContactMeeting {
 
 // ========== CRM: サロン ==========
 model Salon {
-  id        String       @id @default(cuid())
-  name      String                              // サロン名（例: スーパーサロン、トリックサロン）
-  isActive  Boolean      @default(true)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id        String   @id @default(cuid())
+  name      String // サロン名（例: スーパーサロン、トリックサロン）
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   courses SalonCourse[]
 
@@ -671,11 +659,11 @@ model Salon {
 // ========== CRM: サロンコース ==========
 model SalonCourse {
   id              String   @id @default(cuid())
-  salonId         String                          // 所属サロン
+  salonId         String // 所属サロン
   salon           Salon    @relation(fields: [salonId], references: [id])
-  name            String                          // コース名（例: 基本コース、エキスパート）
-  monthlyFee      Int      @default(0)            // 月額（円）
-  discordRoleName String   @default("")           // 付与するDiscordロール名
+  name            String // コース名（例: 基本コース、エキスパート）
+  monthlyFee      Int      @default(0) // 月額（円）
+  discordRoleName String   @default("") // 付与するDiscordロール名
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -691,33 +679,33 @@ model SalonCourse {
 // 決済手段
 enum PaymentMethod {
   MEMBERPAY // メンバーペイ
-  ROBOTPAY  // ロボットペイ
-  PAYPAL    // PayPal
-  UNIVPAY   // UnivaPay
-  OTHER     // その他
+  ROBOTPAY // ロボットペイ
+  PAYPAL // PayPal
+  UNIVPAY // UnivaPay
+  OTHER // その他
 }
 
 // サブスクリプション状態
 enum SubscriptionStatus {
-  ACTIVE    // 有効
+  ACTIVE // 有効
   CANCELLED // 解約
 }
 
 model Subscription {
-  id                   String             @id @default(cuid())
-  contactId            String                                   // サロン生
-  contact              Contact            @relation(fields: [contactId], references: [id])
-  courseId             String                                   // コース
-  course               SalonCourse        @relation(fields: [courseId], references: [id])
-  paymentMethod        PaymentMethod      @default(OTHER)      // 決済手段
-  paymentServiceId     String             @default("")         // 決済サービス側の顧客ID
-  discordRoleAssigned  Boolean            @default(false)      // Discordロール付与済み？
-  isExempt             Boolean            @default(false)      // 決済免除？
-  status               SubscriptionStatus @default(ACTIVE)     // 有効/解約
-  startDate            DateTime           @db.Date             // 入会日
-  endDate              DateTime?          @db.Date             // 解約日
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  id                  String             @id @default(cuid())
+  contactId           String // サロン生
+  contact             Contact            @relation(fields: [contactId], references: [id])
+  courseId            String // コース
+  course              SalonCourse        @relation(fields: [courseId], references: [id])
+  paymentMethod       PaymentMethod      @default(OTHER) // 決済手段
+  paymentServiceId    String             @default("") // 決済サービス側の顧客ID
+  discordRoleAssigned Boolean            @default(false) // Discordロール付与済み？
+  isExempt            Boolean            @default(false) // 決済免除？
+  status              SubscriptionStatus @default(ACTIVE) // 有効/解約
+  startDate           DateTime           @db.Date // 入会日
+  endDate             DateTime?          @db.Date // 解約日
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   paymentChecks PaymentCheck[]
 
@@ -730,32 +718,32 @@ model Subscription {
 // ========== CRM: 月次決済確認 ==========
 model PaymentCheck {
   id             String       @id @default(cuid())
-  subscriptionId String                              // 対象サブスクリプション
+  subscriptionId String // 対象サブスクリプション
   subscription   Subscription @relation(fields: [subscriptionId], references: [id])
-  year           Int                                 // 年
-  month          Int                                 // 月
-  isConfirmed    Boolean      @default(false)        // 確認済み？
-  confirmedBy    String       @default("")           // 確認者
-  confirmedAt    DateTime?                           // 確認日時
+  year           Int // 年
+  month          Int // 月
+  isConfirmed    Boolean      @default(false) // 確認済み？
+  confirmedBy    String       @default("") // 確認者
+  confirmedAt    DateTime? // 確認日時
   createdAt      DateTime     @default(now())
 
-  @@unique([subscriptionId, year, month])            // 1サブスク×1年月で1レコード
+  @@unique([subscriptionId, year, month]) // 1サブスク×1年月で1レコード
   @@index([year, month])
   @@map("payment_checks")
 }
 
 // ========== CRM: 取引先 ==========
 model Partner {
-  id         String    @id @default(cuid())
-  name               String    @default("")          // 会社名（例: ポニーワン、ピーチ）
-  memo               String    @default("")          // メモ
-  businessDescription String   @default("")          // どういう事業をしているか
-  needs              String    @default("")          // 何を望んでいるか
-  relationshipPlan   String    @default("")          // 今後どういう付き合いをしたいか
-  tags               String[]  @default([])          // タグ
-  isArchived         Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id                  String   @id @default(cuid())
+  name                String   @default("") // 会社名（例: ポニーワン、ピーチ）
+  memo                String   @default("") // メモ
+  businessDescription String   @default("") // どういう事業をしているか
+  needs               String   @default("") // 何を望んでいるか
+  relationshipPlan    String   @default("") // 今後どういう付き合いをしたいか
+  tags                String[] @default([]) // タグ
+  isArchived          Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   partnerContacts   PartnerContact[]
   partnerBusinesses PartnerBusiness[]
@@ -769,40 +757,40 @@ model Partner {
 // ========== CRM: 取引先担当者（中間テーブル） ==========
 model PartnerContact {
   id        String   @id @default(cuid())
-  partnerId String                            // 取引先
+  partnerId String // 取引先
   partner   Partner  @relation(fields: [partnerId], references: [id])
-  contactId String                            // 担当者
+  contactId String // 担当者
   contact   Contact  @relation(fields: [contactId], references: [id])
-  role      String   @default("")             // 役職（例: 代表、担当者）
+  role      String   @default("") // 役職（例: 代表、担当者）
   createdAt DateTime @default(now())
 
-  @@unique([partnerId, contactId])            // 同じペアは1つ
+  @@unique([partnerId, contactId]) // 同じペアは1つ
   @@map("partner_contacts")
 }
 
 // ========== CRM: 取引先×事業（中間テーブル） ==========
 model PartnerBusiness {
   id         String   @id @default(cuid())
-  partnerId  String                            // 取引先
+  partnerId  String // 取引先
   partner    Partner  @relation(fields: [partnerId], references: [id])
-  businessId String                            // 事業
+  businessId String // 事業
   business   Business @relation(fields: [businessId], references: [id])
   createdAt  DateTime @default(now())
 
-  @@unique([partnerId, businessId])            // 同じペアは1つ
+  @@unique([partnerId, businessId]) // 同じペアは1つ
   @@map("partner_businesses")
 }
 
 // ========== CRM: 取引先プロジェクト（中間テーブル） ==========
 model PartnerProject {
-  id         String   @id @default(cuid())
-  partnerId  String                            // 取引先
-  partner    Partner  @relation(fields: [partnerId], references: [id])
-  projectId  String                            // プロジェクト
-  project    Project  @relation(fields: [projectId], references: [id])
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  partnerId String // 取引先
+  partner   Partner  @relation(fields: [partnerId], references: [id])
+  projectId String // プロジェクト
+  project   Project  @relation(fields: [projectId], references: [id])
+  createdAt DateTime @default(now())
 
-  @@unique([partnerId, projectId])             // 同じペアは1つ
+  @@unique([partnerId, projectId]) // 同じペアは1つ
   @@map("partner_projects")
 }
 
@@ -824,13 +812,13 @@ model ContactBusiness {
 
 // ========== CRM: 顧客×プロジェクト（中間テーブル） ==========
 model ContactProject {
-  id         String   @id @default(cuid())
-  contactId  String
-  contact    Contact  @relation(fields: [contactId], references: [id])
-  projectId  String
-  project    Project  @relation(fields: [projectId], references: [id])
-  role       String   @default("")
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  role      String   @default("")
+  createdAt DateTime @default(now())
 
   @@unique([contactId, projectId])
   @@index([contactId])
@@ -842,17 +830,17 @@ model ContactProject {
 
 // チケット優先度
 enum TicketPriority {
-  HIGH   // 高
+  HIGH // 高
   MEDIUM // 中（デフォルト）
-  LOW    // 低
+  LOW // 低
 }
 
 // チケットステータス
 enum TicketStatus {
-  OPEN        // 未着手
-  WAITING     // 確認待ち
+  OPEN // 未着手
+  WAITING // 確認待ち
   IN_PROGRESS // 対応中
-  COMPLETED   // 対応完了
+  COMPLETED // 対応完了
 }
 
 // 連絡ツール
@@ -867,19 +855,19 @@ enum TicketTool {
 
 model Ticket {
   id         String         @id @default(cuid())
-  title      String                                // 件名
-  content    String         @default("")           // チケットの内容
-  memo       String         @default("")           // メモ
-  contactId  String?                               // 対象の連絡先（任意）
+  title      String // 件名
+  content    String         @default("") // チケットの内容
+  memo       String         @default("") // メモ
+  contactId  String? // 対象の連絡先（任意）
   contact    Contact?       @relation(fields: [contactId], references: [id])
-  partnerId  String?                               // 対象の取引先（任意）
+  partnerId  String? // 対象の取引先（任意）
   partner    Partner?       @relation(fields: [partnerId], references: [id])
-  assigneeId String                                // 担当者（従業員）
+  assigneeId String // 担当者（従業員）
   assignee   Employee       @relation(fields: [assigneeId], references: [id])
-  tool       TicketTool     @default(LINE)         // 連絡ツール
-  priority   TicketPriority @default(MEDIUM)       // 優先度
-  status     TicketStatus   @default(OPEN)         // ステータス
-  dueDate    DateTime?      @db.Date               // 期限
+  tool       TicketTool     @default(LINE) // 連絡ツール
+  priority   TicketPriority @default(MEDIUM) // 優先度
+  status     TicketStatus   @default(OPEN) // ステータス
+  dueDate    DateTime?      @db.Date // 期限
   isArchived Boolean        @default(false)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
@@ -897,10 +885,10 @@ model Ticket {
 // ========== CRM: チケットコメント ==========
 model TicketComment {
   id        String   @id @default(cuid())
-  ticketId  String                              // 対象チケット
+  ticketId  String // 対象チケット
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  content   String                              // コメント内容
-  authorId  String                              // 投稿者（従業員）
+  content   String // コメント内容
+  authorId  String // 投稿者（従業員）
   author    Employee @relation(fields: [authorId], references: [id])
   createdAt DateTime @default(now())
 
@@ -912,7 +900,7 @@ model TicketComment {
 model AccountTag {
   id        String   @id @default(cuid())
   name      String   @unique
-  color     String   @default("")          // バッジの色（blue, red, green等）
+  color     String   @default("") // バッジの色（blue, red, green等）
   createdAt DateTime @default(now())
 
   @@map("account_tags")
@@ -921,7 +909,7 @@ model AccountTag {
 model CrmTag {
   id        String   @id @default(cuid())
   name      String   @unique
-  color     String   @default("")          // バッジの色（blue, red, green等）
+  color     String   @default("") // バッジの色（blue, red, green等）
   createdAt DateTime @default(now())
 
   @@map("crm_tags")
@@ -930,11 +918,11 @@ model CrmTag {
 // ========== タスクチェックリスト項目 ==========
 model TaskChecklistItem {
   id        String       @id @default(cuid())
-  taskId    String                                    // 対象タスク
+  taskId    String // 対象タスク
   task      BusinessTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  title     String                                    // チェック項目名
-  checked   Boolean      @default(false)              // チェック済み
-  sortOrder Int          @default(0)                  // 表示順
+  title     String // チェック項目名
+  checked   Boolean      @default(false) // チェック済み
+  sortOrder Int          @default(0) // 表示順
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
@@ -945,11 +933,11 @@ model TaskChecklistItem {
 // ========== 操作履歴 ==========
 model AuditLog {
   id         String   @id @default(cuid())
-  action     String                        // "CREATE"|"UPDATE"|"DELETE"
-  entityType String                        // "Business"|"Project"|"BusinessTask"等
+  action     String // "CREATE"|"UPDATE"|"DELETE"
+  entityType String // "Business"|"Project"|"BusinessTask"等
   entityId   String
   entityName String   @default("")
-  changes    Json     @default("{}")       // { field: { old, new } }
+  changes    Json     @default("{}") // { field: { old, new } }
   userId     String
   userName   String   @default("")
   createdAt  DateTime @default(now())
@@ -964,7 +952,7 @@ model AuditLog {
 model DashboardLayout {
   id        String   @id @default(cuid())
   userId    String   @unique
-  layout    Json     @default("[]")       // [{cardType, x, y, w, h}]
+  layout    Json     @default("[]") // [{cardType, x, y, w, h}]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -974,8 +962,8 @@ model DashboardLayout {
 // ========== チェックリストテンプレート ==========
 model ChecklistTemplate {
   id         String                  @id @default(cuid())
-  name       String                                    // テンプレート名
-  businessId String?                                   // 紐づく事業（既存データ互換のためオプショナル）
+  name       String // テンプレート名
+  businessId String? // 紐づく事業（既存データ互換のためオプショナル）
   business   Business?               @relation(fields: [businessId], references: [id])
   items      ChecklistTemplateItem[]
   createdAt  DateTime                @default(now())
@@ -988,10 +976,10 @@ model ChecklistTemplate {
 // ========== チェックリストテンプレート項目 ==========
 model ChecklistTemplateItem {
   id         String            @id @default(cuid())
-  templateId String                                   // 対象テンプレート
+  templateId String // 対象テンプレート
   template   ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  title      String                                   // チェック項目名
-  sortOrder  Int               @default(0)            // 表示順
+  title      String // チェック項目名
+  sortOrder  Int               @default(0) // 表示順
 
   @@index([templateId])
   @@map("checklist_template_items")

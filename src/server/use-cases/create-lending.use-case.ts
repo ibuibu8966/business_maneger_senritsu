@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
-import { recomputeBalanceAfter } from "@/lib/recompute-balance-after"
-import type { LendingDTO, LendingPaymentDTO } from "@/types/dto"
-import type { LendingType, AccountTransactionType } from "@/generated/prisma/client"
+import { AccountRepository } from "@/server/repositories/account.repository"
+import type { LendingDTO } from "@/types/dto"
+import type { LendingType } from "@/generated/prisma/client"
 
 function toLendingDTO(r: {
   id: string
@@ -13,15 +13,12 @@ function toLendingDTO(r: {
   linkedLendingId: string | null
   type: string
   principal: number
-  outstanding: number
   dueDate: Date | null
-  status: string
   memo: string
   editedBy?: string
   tags?: string[]
   isArchived: boolean
   createdAt: Date
-  payments: { id: string; lendingId: string; amount: number; date: Date; memo: string; createdAt: Date }[]
 }): LendingDTO {
   return {
     id: r.id,
@@ -33,32 +30,31 @@ function toLendingDTO(r: {
     linkedLendingId: r.linkedLendingId,
     type: r.type.toLowerCase() as "lend" | "borrow",
     principal: r.principal,
-    outstanding: r.outstanding,
+    outstanding: r.principal,                                      // 新規作成時は principal と同じ
     dueDate: r.dueDate ? r.dueDate.toISOString().split("T")[0] : null,
-    status: r.status.toLowerCase() as "active" | "completed" | "overdue",
+    status: "active",                                              // 新規作成時は ACTIVE
     memo: r.memo,
     editedBy: r.editedBy ?? "",
     tags: r.tags ?? [],
     isArchived: r.isArchived,
     createdAt: r.createdAt.toISOString(),
     date: null,
-    payments: r.payments.map((p): LendingPaymentDTO => ({
-      id: p.id,
-      lendingId: p.lendingId,
-      amount: p.amount,
-      date: p.date.toISOString().split("T")[0],
-      memo: p.memo,
-      createdAt: p.createdAt.toISOString(),
-    })),
+    payments: [],
   }
 }
 
 const lendingInclude = {
   account: { select: { id: true, name: true } },
   counterpartyAccount: { select: { id: true, name: true } },
-  payments: { orderBy: { date: "desc" as const } },
 } as const
 
+/**
+ * 貸借作成（複式簿記版）
+ * - Lending レコード作成 + AccountTransaction(type=LENDING, lendingId=...) を1件作成
+ * - 社内貸借はペア Lending を linkedLendingId で繋ぐ（既存設計を踏襲）
+ * - LENDING取引は1レコード（fromAccount=自分／toAccount=相手 で方向を表現）
+ * - 旧 BORROW 取引（重複）は廃止
+ */
 export class CreateLending {
   static async execute(data: {
     accountId: string
@@ -73,15 +69,17 @@ export class CreateLending {
   }): Promise<LendingDTO> {
     const type = data.type.toUpperCase() as LendingType
     const reverseType = type === "LEND" ? "BORROW" : "LEND"
-
-    const txType = type as AccountTransactionType
-    const reverseTxType = (txType === "LEND" ? "BORROW" : "LEND") as AccountTransactionType
     const txDate = data.date ? new Date(data.date) : new Date()
 
-    // 社内口座間（counterpartyAccountId あり）→ 双方向ペアを作成
+    // 取引の方向（LEND=自分→相手、BORROW=相手→自分）。社外相手なら EXTERNAL口座を使う
+    const externalId = await AccountRepository.findExternalAccountId()
+    const counterpartyForTx = data.counterpartyAccountId ?? externalId
+    const fromAccountForTx = type === "LEND" ? data.accountId : counterpartyForTx
+    const toAccountForTx = type === "LEND" ? counterpartyForTx : data.accountId
+
     if (data.counterpartyAccountId) {
+      // 社内貸借：双方向ペア Lending（既存設計踏襲）+ LENDING取引は1件のみ
       const result = await prisma.$transaction(async (tx) => {
-        // 1. メイン側 Lending
         const main = await tx.lending.create({
           data: {
             accountId: data.accountId,
@@ -89,7 +87,6 @@ export class CreateLending {
             counterpartyAccountId: data.counterpartyAccountId!,
             type,
             principal: data.principal,
-            outstanding: data.principal,
             dueDate: data.dueDate ? new Date(data.dueDate) : null,
             memo: data.memo ?? "",
             editedBy: data.editedBy ?? "",
@@ -97,13 +94,11 @@ export class CreateLending {
           include: lendingInclude,
         })
 
-        // 2. 相手口座の名前を取得
         const mainAccount = await tx.account.findUnique({
           where: { id: data.accountId },
           select: { name: true },
         })
 
-        // 3. 相手側 Lending（逆の type）
         const pair = await tx.lending.create({
           data: {
             accountId: data.counterpartyAccountId!,
@@ -112,65 +107,32 @@ export class CreateLending {
             linkedLendingId: main.id,
             type: reverseType,
             principal: data.principal,
-            outstanding: data.principal,
             dueDate: data.dueDate ? new Date(data.dueDate) : null,
             memo: data.memo ?? "",
             editedBy: data.editedBy ?? "",
           },
         })
 
-        // 4. メイン側にペアIDを紐づけ
         const updated = await tx.lending.update({
           where: { id: main.id },
           data: { linkedLendingId: pair.id },
           include: lendingInclude,
         })
 
-        // 5. AccountTransaction 自動計上（メイン口座）+ 残高更新
+        // LENDING 取引を1件のみ作成（複式簿記版：旧 BORROW 取引重複は廃止）
         await tx.accountTransaction.create({
           data: {
-            accountId: data.accountId,
-            type: txType,
+            type: "LENDING",
             amount: data.principal,
             date: txDate,
+            fromAccountId: fromAccountForTx,
+            toAccountId: toAccountForTx,
             counterparty: data.counterparty,
-            linkedTransactionId: main.id,
             lendingId: main.id,
             memo: `貸借自動計上: ${data.memo ?? ""}`.trim(),
             editedBy: "system",
           },
         })
-        // LEND = 貸出 → 残高減少(-), BORROW = 借入 → 残高増加(+)
-        const mainDelta = txType === "LEND" ? -data.principal : data.principal
-        await tx.account.update({
-          where: { id: data.accountId },
-          data: { balance: { increment: mainDelta } },
-        })
-
-        // 6. AccountTransaction 自動計上（相手口座）+ 残高更新
-        await tx.accountTransaction.create({
-          data: {
-            accountId: data.counterpartyAccountId!,
-            type: reverseTxType,
-            amount: data.principal,
-            date: txDate,
-            counterparty: mainAccount?.name ?? "",
-            linkedTransactionId: pair.id,
-            lendingId: pair.id,
-            memo: `貸借自動計上: ${data.memo ?? ""}`.trim(),
-            editedBy: "system",
-          },
-        })
-        // 相手口座は逆: BORROW → 残高増加(+), LEND → 残高減少(-)
-        const pairDelta = reverseTxType === "LEND" ? -data.principal : data.principal
-        await tx.account.update({
-          where: { id: data.counterpartyAccountId! },
-          data: { balance: { increment: pairDelta } },
-        })
-
-        // 7. 両口座の時点残高を再計算
-        await recomputeBalanceAfter(tx, data.accountId)
-        await recomputeBalanceAfter(tx, data.counterpartyAccountId!)
 
         return { updated, txDate }
       })
@@ -192,7 +154,7 @@ export class CreateLending {
       return dto
     }
 
-    // 社外相手（counterpartyAccountId なし）→ 単体レコード + AccountTransaction
+    // 社外貸借：単体 Lending + LENDING 取引1件
     const r = await prisma.$transaction(async (tx) => {
       const lending = await tx.lending.create({
         data: {
@@ -201,7 +163,6 @@ export class CreateLending {
           counterpartyAccountId: null,
           type,
           principal: data.principal,
-          outstanding: data.principal,
           dueDate: data.dueDate ? new Date(data.dueDate) : null,
           memo: data.memo ?? "",
           editedBy: data.editedBy ?? "",
@@ -209,30 +170,19 @@ export class CreateLending {
         include: lendingInclude,
       })
 
-      // AccountTransaction 自動計上 + 残高更新
-      // 入力された実行日(txDate)を使う。以前はnew Date()だったが、これは実行日が
-      // 反映されないバグだったため修正済み。
       await tx.accountTransaction.create({
         data: {
-          accountId: data.accountId,
-          type: txType,
+          type: "LENDING",
           amount: data.principal,
           date: txDate,
+          fromAccountId: fromAccountForTx,
+          toAccountId: toAccountForTx,
           counterparty: data.counterparty,
-          linkedTransactionId: lending.id,
           lendingId: lending.id,
           memo: `貸借自動計上: ${data.memo ?? ""}`.trim(),
           editedBy: "system",
         },
       })
-      const delta = txType === "LEND" ? -data.principal : data.principal
-      await tx.account.update({
-        where: { id: data.accountId },
-        data: { balance: { increment: delta } },
-      })
-
-      // 時点残高を再計算
-      await recomputeBalanceAfter(tx, data.accountId)
 
       return lending
     })
