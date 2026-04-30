@@ -9,11 +9,17 @@ import { prisma } from "@/lib/prisma"
  */
 export class GenerateRecurringTasks {
   static async execute() {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // JST today（Vercelは UTC で動作するためJST換算）
+    const now = new Date()
+    const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+    const today = new Date(Date.UTC(
+      jstNow.getUTCFullYear(),
+      jstNow.getUTCMonth(),
+      jstNow.getUTCDate()
+    ))
 
-    const todayDay = today.getDay() // 0=日〜6=土
-    const todayDate = today.getDate() // 1-31
+    const todayDay = jstNow.getUTCDay() // 0=日〜6=土（JST）
+    const todayDate = jstNow.getUTCDate() // 1-31（JST）
 
     // 第何週かを計算（1-5）
     const todayWeek = Math.ceil(todayDate / 7)
@@ -87,7 +93,7 @@ export class GenerateRecurringTasks {
         title: task.title,
         detail: task.detail,
         assigneeId: task.assigneeId,
-        deadline: null,
+        deadline: today, // 子タスクは生成日（JST）を期限に。LINE通知の deadline=今日 フィルタで使用
         status: "TODO",
         memo: task.memo,
         recurring: false,
