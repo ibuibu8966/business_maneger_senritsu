@@ -49,9 +49,13 @@ async function run(req: NextRequest) {
 
     // 対象タスクを取得：現在時刻と一致（開始時刻通知）、または N分後と一致かつ notifyMinutesBefore===N かつ notifyEnabled
     const candidateHHMMs = Array.from(new Set<string>([nowHHMM, ...plusMap.values()]))
+    // JST今日のDate（@db.Date 比較用、UTC midnight として扱う）
+    const todayDateAtUTC = new Date(`${dateStr}T00:00:00.000Z`)
     const rawTasks = await prisma.businessTask.findMany({
       where: {
         status: { not: "DONE" },
+        recurring: false, // 繰り返し設定本体（親）は通知対象外。子タスクのみ
+        deadline: todayDateAtUTC, // 期限が今日（JST）のタスクだけ。1回限り通知の実現
         executionTime: { in: candidateHHMMs },
         assignees: { some: {} },
         OR: [
