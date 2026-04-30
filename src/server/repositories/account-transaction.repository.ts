@@ -11,9 +11,9 @@ export class AccountTransactionRepository {
   }) {
     return prisma.accountTransaction.findMany({
       where: {
+        // 1取引=1レコード（複式簿記版）：from/to で対象口座を判定
         ...(params.accountId && {
           OR: [
-            { accountId: params.accountId },
             { fromAccountId: params.accountId },
             { toAccountId: params.accountId },
           ],
@@ -29,7 +29,6 @@ export class AccountTransactionRepository {
         ...(params.isArchived !== undefined && { isArchived: params.isArchived }),
       },
       include: {
-        account: { select: { id: true, name: true } },
         fromAccount: { select: { id: true, name: true } },
         toAccount: { select: { id: true, name: true } },
       },
@@ -41,7 +40,6 @@ export class AccountTransactionRepository {
     return prisma.accountTransaction.findUnique({
       where: { id },
       include: {
-        account: { select: { id: true, name: true } },
         fromAccount: { select: { id: true, name: true } },
         toAccount: { select: { id: true, name: true } },
       },
@@ -49,42 +47,31 @@ export class AccountTransactionRepository {
   }
 
   static async create(data: {
-    accountId: string
     type: AccountTransactionType
     amount: number
     date: Date
-    fromAccountId?: string | null
-    toAccountId?: string | null
+    fromAccountId: string
+    toAccountId: string
     counterparty?: string
-    linkedTransactionId?: string | null
-    linkedTransferId?: string | null
     lendingId?: string | null
-    lendingPaymentId?: string | null
-    direction?: string | null
     memo?: string
     editedBy?: string
     tags?: string[]
   }) {
     return prisma.accountTransaction.create({
       data: {
-        accountId: data.accountId,
         type: data.type,
         amount: data.amount,
         date: data.date,
-        fromAccountId: data.fromAccountId ?? null,
-        toAccountId: data.toAccountId ?? null,
+        fromAccountId: data.fromAccountId,
+        toAccountId: data.toAccountId,
         counterparty: data.counterparty ?? "",
-        linkedTransactionId: data.linkedTransactionId ?? null,
-        linkedTransferId: data.linkedTransferId ?? null,
         lendingId: data.lendingId ?? null,
-        lendingPaymentId: data.lendingPaymentId ?? null,
-        direction: data.direction ?? null,
         memo: data.memo ?? "",
         editedBy: data.editedBy ?? "",
         tags: data.tags ?? [],
       },
       include: {
-        account: { select: { id: true, name: true } },
         fromAccount: { select: { id: true, name: true } },
         toAccount: { select: { id: true, name: true } },
       },
@@ -94,14 +81,12 @@ export class AccountTransactionRepository {
   static async update(
     id: string,
     data: {
-      accountId?: string
       type?: AccountTransactionType
       amount?: number
       date?: Date
-      fromAccountId?: string | null
-      toAccountId?: string | null
+      fromAccountId?: string
+      toAccountId?: string
       counterparty?: string
-      linkedTransactionId?: string | null
       memo?: string
       editedBy?: string
       tags?: string[]
@@ -112,7 +97,6 @@ export class AccountTransactionRepository {
       where: { id },
       data,
       include: {
-        account: { select: { id: true, name: true } },
         fromAccount: { select: { id: true, name: true } },
         toAccount: { select: { id: true, name: true } },
       },

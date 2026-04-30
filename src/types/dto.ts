@@ -28,18 +28,15 @@ export interface EmployeeDTO {
 
 // ========== 貸借・口座管理 ==========
 
+// 複式簿記版：12種に統合（旧16種から「方向違い」を統合）
 export type AccountTransactionTypeDTO =
   | "initial"
-  | "deposit"
-  | "withdrawal"
   | "investment"
   | "transfer"
-  | "lend"
-  | "borrow"
-  | "repayment_receive"
-  | "repayment_pay"
-  | "interest_receive"
-  | "interest_pay"
+  | "lending"            // 旧 lend/borrow 統合
+  | "repayment"          // 旧 repayment_receive/pay 統合
+  | "interest"           // 旧 interest_receive/pay 統合
+  | "deposit_withdrawal" // 旧 deposit/withdrawal 統合
   | "gain"
   | "loss"
   | "revenue"
@@ -53,7 +50,7 @@ export interface AccountDetailDTO {
   accountType: "bank" | "securities"
   businessId: string | null
   businessName: string | null
-  balance: number
+  balance: number                 // バックエンド計算値（スナップショット + 差分）
   purpose: string
   investmentPolicy: string
   tags: string[]
@@ -64,29 +61,25 @@ export interface AccountDetailDTO {
 
 export interface AccountTransactionDTO {
   id: string
-  serialNumber: number              // 全口座共通の通し番号（人間が指す用）
-  accountId: string
-  accountName: string
+  serialNumber: number              // 全口座共通の通し番号
   type: AccountTransactionTypeDTO
-  categoryName: string            // カテゴリ名（管理会計連携時はカテゴリ名、それ以外はtypeラベル）
+  categoryName: string              // 表示用ラベル
   amount: number
-  date: string                    // "YYYY-MM-DD"
-  fromAccountId: string | null
-  fromAccountName: string | null
-  toAccountId: string | null
-  toAccountName: string | null
+  date: string                      // "YYYY-MM-DD"
+  // 1取引=1レコード（複式簿記版）：from/to は常に存在
+  fromAccountId: string
+  fromAccountName: string
+  toAccountId: string
+  toAccountName: string
   counterparty: string
-  linkedTransactionId: string | null
-  linkedTransferId: string | null
   lendingId: string | null
-  lendingPaymentId: string | null
-  direction: string | null
   memo: string
   editedBy: string
   tags: string[]
   isArchived: boolean
-  balanceAfter: number            // この取引を反映した直後の口座残高（時点残高）
   createdAt: string
+  // 旧フィールドは廃止: accountId, accountName, linkedTransactionId, linkedTransferId,
+  //                   lendingPaymentId, direction, balanceAfter
 }
 
 export interface LendingDTO {
@@ -99,20 +92,25 @@ export interface LendingDTO {
   linkedLendingId: string | null
   type: "lend" | "borrow"
   principal: number
-  outstanding: number
+  outstanding: number             // バックエンド計算値（principal − SUM(REPAYMENT)）
   dueDate: string | null          // "YYYY-MM-DD"
-  status: "active" | "completed" | "overdue"
+  status: "active" | "completed" | "overdue"  // バックエンド計算値
   memo: string
   editedBy: string
   tags: string[]
   isArchived: boolean
   createdAt: string
-  date: string | null             // 実行日（紐づくAccountTransaction.date "YYYY-MM-DD"）。なければnull
+  date: string | null             // 実行日（紐づくAccountTransaction.date "YYYY-MM-DD"）
+  // payments: LendingPaymentテーブル廃止に伴い、AccountTransaction(type=REPAYMENT, lendingId)
+  // を返す形に変更（型は LendingPaymentDTO のまま、内部表現が変わるだけ）
   payments: LendingPaymentDTO[]
 }
 
+// 複式簿記版では LendingPayment テーブルは廃止。
+// この DTO は API 互換のため形を保ち、内部実装で AccountTransaction(type=REPAYMENT, lendingId)
+// から組み立てる。
 export interface LendingPaymentDTO {
-  id: string
+  id: string                      // AccountTransaction.id
   lendingId: string
   amount: number
   date: string                    // "YYYY-MM-DD"

@@ -126,21 +126,43 @@ export class LendingController {
       const { error } = await requireRole("master_admin", "admin")
       if (error) return error
       const body = await req.json()
-      const data = createTransactionSchema.parse(body)
 
-      // categoryIdからtypeを解決（振替以外）
-      // モーダルからcategoryIdとして "DEPOSIT" 等のtype文字列が直接送られてくる
-      let resolvedType = data.type as string | undefined  // "transfer" or undefined
-      if (!resolvedType && data.categoryId) {
-        resolvedType = data.categoryId.toLowerCase()
+      // UI互換補完：accountId + direction が来た場合、外部口座を介して from/to を組み立てる
+      // direction: "in" = 外部 → accountId（入金系）, "out" = accountId → 外部（出金系）
+      let payload = { ...body }
+      if (!payload.fromAccountId || !payload.toAccountId) {
+        const acctId = payload.accountId
+        const dir = payload.direction
+        if (acctId && dir) {
+          const { AccountRepository } = await import("@/server/repositories/account.repository")
+          const externalId = await AccountRepository.findExternalAccountId()
+          if (dir === "in") {
+            payload.fromAccountId = payload.fromAccountId ?? externalId
+            payload.toAccountId = payload.toAccountId ?? acctId
+          } else if (dir === "out") {
+            payload.fromAccountId = payload.fromAccountId ?? acctId
+            payload.toAccountId = payload.toAccountId ?? externalId
+          }
+        }
       }
-      if (!resolvedType) {
-        return NextResponse.json({ error: "取引種別を特定できません" }, { status: 400 })
-      }
+      // 旧フィールドは validation で拒否されるので削除
+      delete payload.accountId
+      delete payload.direction
+      delete payload.categoryId
+
+      const data = createTransactionSchema.parse(payload)
 
       const result = await CreateAccountTransaction.execute({
-        ...data,
-        type: resolvedType as import("@/types/dto").AccountTransactionTypeDTO,
+        type: data.type,
+        amount: data.amount,
+        date: data.date,
+        fromAccountId: data.fromAccountId,
+        toAccountId: data.toAccountId,
+        counterparty: data.counterparty,
+        lendingId: data.lendingId,
+        memo: data.memo,
+        editedBy: data.editedBy,
+        tags: data.tags,
       })
       return NextResponse.json(result, { status: 201 })
     } catch (e) {
@@ -192,16 +214,18 @@ export class LendingController {
       const { error } = await requireRole("master_admin", "admin", "employee")
       if (error) return error
       const url = new URL(req.url)
+      const statusFilter = url.searchParams.get("status")?.toLowerCase() as "active" | "completed" | "overdue" | undefined
       const params = {
         accountId: url.searchParams.get("accountId") ?? undefined,
         type: url.searchParams.get("type")?.toUpperCase() as "LEND" | "BORROW" | undefined,
-        status: url.searchParams.get("status")?.toUpperCase() as "ACTIVE" | "COMPLETED" | "OVERDUE" | undefined,
+        // status は廃止（DBに存在しない）→ 取得後にDTO側でフィルタ
         isArchived: url.searchParams.has("isArchived")
           ? url.searchParams.get("isArchived") === "true"
           : undefined,
       }
       const data = await GetLendings.execute(params)
-      return NextResponse.json(data)
+      const filtered = statusFilter ? data.filter((l) => l.status === statusFilter) : data
+      return NextResponse.json(filtered)
     } catch (e) {
       return handleApiError(e, { resource: "貸借", action: "取得" })
     }

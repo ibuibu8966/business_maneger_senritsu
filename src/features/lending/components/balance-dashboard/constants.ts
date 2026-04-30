@@ -1,18 +1,15 @@
 /**
- * balance-dashboard で使う定数
+ * balance-dashboard で使う定数（複式簿記版・12種）
  */
 
 export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
-  deposit: "純入金",
-  withdrawal: "純出金",
+  initial: "初期残高",
   investment: "出資",
   transfer: "振替",
-  lend: "貸出",
-  borrow: "借入",
-  repayment_receive: "返済受取",
-  repayment_pay: "返済支払",
-  interest_receive: "利息受取",
-  interest_pay: "利息支払",
+  lending: "貸借",
+  repayment: "返済",
+  interest: "利息",
+  deposit_withdrawal: "純入出金",
   gain: "運用益",
   loss: "運用損",
   revenue: "売上",
@@ -20,23 +17,17 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   misc_income: "その他売上",
 }
 
-/** 入金系（緑）の取引タイプ */
-export const PLUS_TYPES = new Set([
-  "deposit",
-  "investment",
-  "borrow",
-  "repayment_receive",
-  "interest_receive",
-  "gain",
-  "revenue",
-  "misc_income",
-])
-
-/** 取引タイプのカラークラス */
-export function getTxTypeColor(type: string): string {
-  if (type === "transfer")
+/**
+ * 取引タイプのカラークラス
+ *
+ * 複式簿記版では from→to で方向が決まるので、表示は対象口座から見た方向で判定する。
+ * 呼び出し側で `accountId === toAccountId` の場合は「入金（緑）」、`accountId === fromAccountId` の場合は「出金（赤）」と判定。
+ * 振替は別色（slate）。
+ */
+export function getTxTypeColor(args: { type: string; isInflow: boolean }): string {
+  if (args.type === "transfer")
     return "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
-  return PLUS_TYPES.has(type)
+  return args.isInflow
     ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800"
     : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800"
 }

@@ -46,15 +46,29 @@ export class AccountRepository {
     })
   }
 
+  // 外部口座を取得（複式簿記版で全外部取引の仮想集約口座）
+  // データ移行時に scripts/migrate-double-entry.js で 1件作成済み
+  private static externalIdCache: string | null = null
+  static async findExternalAccountId(): Promise<string> {
+    if (this.externalIdCache) return this.externalIdCache
+    const a = await prisma.account.findFirst({
+      where: { ownerType: "EXTERNAL", name: "外部" },
+      select: { id: true },
+    })
+    if (!a) throw new Error("EXTERNAL口座が存在しません。データ移行を確認してください。")
+    this.externalIdCache = a.id
+    return a.id
+  }
+
   static async create(data: {
     name: string
     ownerType: OwnerType
     accountType: AccountType
     businessId?: string | null
-    balance?: number
     purpose?: string
     investmentPolicy?: string
     tags?: string[]
+    // balance は廃止（初期残高は INITIAL 取引で表現）
   }) {
     return prisma.account.create({
       data: {
@@ -62,7 +76,6 @@ export class AccountRepository {
         ownerType: data.ownerType,
         accountType: data.accountType,
         businessId: data.businessId ?? null,
-        balance: data.balance ?? 0,
         purpose: data.purpose ?? "",
         investmentPolicy: data.investmentPolicy ?? "",
         tags: data.tags ?? [],
@@ -80,12 +93,12 @@ export class AccountRepository {
       ownerType?: OwnerType
       accountType?: AccountType
       businessId?: string | null
-      balance?: number
       purpose?: string
       investmentPolicy?: string
       tags?: string[]
       isArchived?: boolean
       isActive?: boolean
+      recalcRequiredFromDate?: Date | null
     }
   ) {
     return prisma.account.update({
@@ -97,11 +110,19 @@ export class AccountRepository {
     })
   }
 
-  // 残高を加減算
-  static async adjustBalance(id: string, delta: number) {
-    return prisma.account.update({
+  // 過去日付の取引が登録された時に呼ぶ：再計算フラグを更新
+  // 既にフラグがあるならより古い日付に更新（min を取る）
+  static async markRecalcRequired(id: string, date: Date) {
+    const acc = await prisma.account.findUnique({
       where: { id },
-      data: { balance: { increment: delta } },
+      select: { recalcRequiredFromDate: true },
     })
+    const current = acc?.recalcRequiredFromDate
+    if (!current || date < current) {
+      await prisma.account.update({
+        where: { id },
+        data: { recalcRequiredFromDate: date },
+      })
+    }
   }
 }

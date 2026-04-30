@@ -1,8 +1,13 @@
 import { AccountRepository } from "@/server/repositories/account.repository"
 import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
+import { calcBalance } from "@/server/use-cases/get-account-details.use-case"
 import type { AccountDetailDTO } from "@/types/dto"
 import type { OwnerType, AccountType } from "@/generated/prisma/client"
 
+/**
+ * 口座更新（複式簿記版）
+ * - balance フィールドは廃止（都度計算）。直接更新は受け付けない
+ */
 export class UpdateAccount {
   static async execute(
     id: string,
@@ -11,7 +16,6 @@ export class UpdateAccount {
       ownerType?: "internal" | "external"
       accountType?: "bank" | "securities"
       businessId?: string | null
-      balance?: number
       purpose?: string
       investmentPolicy?: string
       tags?: string[]
@@ -25,7 +29,6 @@ export class UpdateAccount {
     if (data.ownerType !== undefined) updateData.ownerType = data.ownerType.toUpperCase() as OwnerType
     if (data.accountType !== undefined) updateData.accountType = data.accountType.toUpperCase() as AccountType
     if (data.businessId !== undefined) updateData.businessId = data.businessId
-    if (data.balance !== undefined) updateData.balance = data.balance
     if (data.purpose !== undefined) updateData.purpose = data.purpose
     if (data.investmentPolicy !== undefined) updateData.investmentPolicy = data.investmentPolicy
     if (data.tags !== undefined) updateData.tags = data.tags
@@ -41,7 +44,7 @@ export class UpdateAccount {
       accountType: r.accountType.toLowerCase() as "bank" | "securities",
       businessId: r.business?.id ?? null,
       businessName: r.business?.name ?? null,
-      balance: r.balance,
+      balance: await calcBalance(r.id),
       purpose: r.purpose,
       investmentPolicy: r.investmentPolicy,
       tags: r.tags,

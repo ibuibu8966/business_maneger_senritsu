@@ -2,6 +2,7 @@
   "crons": [
     { "path": "/api/cron/generate-tasks", "schedule": "0 15 * * *" },
     { "path": "/api/cron/crm-alerts", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/snapshot", "schedule": "0 15 * * *" },
     { "path": "/api/business/tasks/cron-reset", "schedule": "0 17 * * *" },
     { "path": "/api/business/tasks/notify-morning", "schedule": "30 23 * * *" },
     { "path": "/api/business/tasks/notify-execution", "schedule": "* * * * *" }
