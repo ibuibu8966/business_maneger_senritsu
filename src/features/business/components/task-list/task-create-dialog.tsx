@@ -50,6 +50,7 @@ export function TaskCreateDialog({
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [deadline, setDeadline] = useState("")
   const [executionTime, setExecutionTime] = useState("")
+  const [executionDate, setExecutionDate] = useState("") // 任意。指定すると「YYYY-MM-DD HH:MM」で1回のみ通知
   const [notifyMinutesBefore, setNotifyMinutesBefore] = useState(0)
   const [recurring, setRecurring] = useState(false)
   const [recurringPattern, setRecurringPattern] = useState("")
@@ -136,7 +137,10 @@ export function TaskCreateDialog({
         partnerId: partnerId || null,
         priority: priority || "medium",
         tool: tool || null,
-        executionTime: executionTime || null,
+        // 日付指定あり → "YYYY-MM-DD HH:MM"で1回のみ通知 / なし → "HH:MM"で毎日通知
+        executionTime: executionTime
+          ? (executionDate ? `${executionDate} ${executionTime}` : executionTime)
+          : null,
         notifyEnabled: notifyMinutesBefore !== 0,
         notifyMinutesBefore: notifyMinutesBefore === 0 ? 0 : notifyMinutesBefore,
         issueId: issueId || null,
@@ -249,24 +253,28 @@ export function TaskCreateDialog({
             <Label className="text-xs">期限</Label>
             <Input type="date" className="h-8 text-sm" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            <div className="grid grid-cols-1 gap-1">
-              <Label className="text-xs">実行時刻（LINE通知）</Label>
+          <div className="grid grid-cols-1 gap-1">
+            <Label className="text-xs">実行時刻（LINE通知）</Label>
+            <div className="grid grid-cols-3 gap-1.5">
+              <Input
+                type="date"
+                className="h-7 text-xs"
+                value={executionDate}
+                onChange={(e) => setExecutionDate(e.target.value)}
+                placeholder="日付（任意）"
+              />
               <Input
                 type="time"
                 className="h-7 text-xs"
                 value={executionTime}
                 onChange={(e) => setExecutionTime(e.target.value)}
               />
-            </div>
-            <div className="grid grid-cols-1 gap-1">
-              <Label className="text-xs">事前通知</Label>
               <select
                 className="h-7 text-xs border rounded-md px-1.5 bg-background"
                 value={notifyMinutesBefore}
                 onChange={(e) => setNotifyMinutesBefore(Number(e.target.value))}
               >
-                <option value={0}>なし</option>
+                <option value={0}>事前通知なし</option>
                 <option value={5}>5分前</option>
                 <option value={10}>10分前</option>
                 <option value={15}>15分前</option>
@@ -274,6 +282,9 @@ export function TaskCreateDialog({
                 <option value={60}>1時間前</option>
               </select>
             </div>
+            <p className="text-[10px] text-muted-foreground">
+              日付なし＝毎日その時刻に通知 / 日付あり＝指定日時に1回のみ通知
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <div className="grid grid-cols-1 gap-1">

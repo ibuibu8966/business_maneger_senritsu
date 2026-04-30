@@ -39,7 +39,8 @@ type EditForm = {
   priority: Priority
   assigneeIds: string[]
   deadline: string
-  executionTime: string
+  executionTime: string  // "HH:MM"
+  executionDate: string  // "YYYY-MM-DD" or "" （日付指定で1回のみ通知用）
   notifyEnabled: boolean
   notifyMinutesBefore: number
   contactId: string
@@ -62,7 +63,17 @@ function buildForm(task: TaskItem): EditForm {
         ? [task.assigneeId]
         : [],
     deadline: task.deadline ?? "",
-    executionTime: task.executionTime ?? "",
+    // executionTime は "HH:MM" or "YYYY-MM-DD HH:MM"。後者は分割して保持
+    executionTime: (() => {
+      const v = task.executionTime ?? ""
+      const m = v.match(/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2})$/)
+      return m ? m[1] : v
+    })(),
+    executionDate: (() => {
+      const v = task.executionTime ?? ""
+      const m = v.match(/^(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}$/)
+      return m ? m[1] : ""
+    })(),
     notifyEnabled: task.notifyEnabled,
     notifyMinutesBefore: task.notifyMinutesBefore ?? 10,
     contactId: task.contactId ?? "",
@@ -391,15 +402,36 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
 
           <div>
             <Label className="text-xs text-muted-foreground">実行時刻</Label>
-            <Input
-              type="time"
-              className="mt-1"
-              value={form.executionTime}
-              onChange={(e) => {
-                setForm({ ...form, executionTime: e.target.value })
-                saveField({ executionTime: e.target.value || null })
-              }}
-            />
+            <div className="grid grid-cols-2 gap-1.5 mt-1">
+              <Input
+                type="date"
+                value={form.executionDate}
+                onChange={(e) => {
+                  const newDate = e.target.value
+                  setForm({ ...form, executionDate: newDate })
+                  // executionTime と組み合わせて保存
+                  const combined = form.executionTime
+                    ? (newDate ? `${newDate} ${form.executionTime}` : form.executionTime)
+                    : null
+                  saveField({ executionTime: combined })
+                }}
+              />
+              <Input
+                type="time"
+                value={form.executionTime}
+                onChange={(e) => {
+                  const newTime = e.target.value
+                  setForm({ ...form, executionTime: newTime })
+                  const combined = newTime
+                    ? (form.executionDate ? `${form.executionDate} ${newTime}` : newTime)
+                    : null
+                  saveField({ executionTime: combined })
+                }}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              日付なし＝毎日 / 日付あり＝指定日時に1回のみ
+            </p>
           </div>
 
           <div>

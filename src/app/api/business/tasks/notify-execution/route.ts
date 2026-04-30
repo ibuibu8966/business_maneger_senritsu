@@ -39,28 +39,47 @@ async function run(req: NextRequest) {
     const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
     const dateStr = `${jstNow.getUTCFullYear()}-${pad2(jstNow.getUTCMonth() + 1)}-${pad2(jstNow.getUTCDate())}`
     const nowHHMM = `${pad2(jstNow.getUTCHours())}:${pad2(jstNow.getUTCMinutes())}`
+    const nowDateTime = `${dateStr} ${nowHHMM}` // 日時指定形式 "YYYY-MM-DD HH:MM"
 
-    // N分後の HH:MM マップ（N -> "HH:MM"）
-    const plusMap = new Map<number, string>()
+    // N分後の HH:MM / 日時 マップ（N -> { hhmm, dateTime }）
+    const plusMap = new Map<number, { hhmm: string; dateTime: string }>()
     for (const n of NOTIFY_MINUTES_OPTIONS) {
       const p = new Date(jstNow.getTime() + n * 60 * 1000)
-      plusMap.set(n, `${pad2(p.getUTCHours())}:${pad2(p.getUTCMinutes())}`)
+      const pHHMM = `${pad2(p.getUTCHours())}:${pad2(p.getUTCMinutes())}`
+      const pDateStr = `${p.getUTCFullYear()}-${pad2(p.getUTCMonth() + 1)}-${pad2(p.getUTCDate())}`
+      plusMap.set(n, { hhmm: pHHMM, dateTime: `${pDateStr} ${pHHMM}` })
     }
 
-    // 対象タスクを取得：現在時刻と一致（開始時刻通知）、または N分後と一致かつ notifyMinutesBefore===N かつ notifyEnabled
-    const candidateHHMMs = Array.from(new Set<string>([nowHHMM, ...plusMap.values()]))
+    // 候補値（HH:MM形式 と YYYY-MM-DD HH:MM形式 の両方）
+    const candidateHHMMs = Array.from(new Set<string>([nowHHMM, ...Array.from(plusMap.values()).map(v => v.hhmm)]))
+    const candidateDateTimes = Array.from(new Set<string>([nowDateTime, ...Array.from(plusMap.values()).map(v => v.dateTime)]))
     // JST今日のDate（@db.Date 比較用、UTC midnight として扱う）
     const todayDateAtUTC = new Date(`${dateStr}T00:00:00.000Z`)
     const rawTasks = await prisma.businessTask.findMany({
       where: {
         status: { not: "DONE" },
         recurring: false, // 繰り返し設定本体（親）は通知対象外。子タスクのみ
-        deadline: todayDateAtUTC, // 期限が今日（JST）のタスクだけ。1回限り通知の実現
-        executionTime: { in: candidateHHMMs },
         assignees: { some: {} },
-        OR: [
-          { project: { status: "ACTIVE" } },
-          { business: { status: "ACTIVE" } },
+        AND: [
+          {
+            OR: [
+              // パターンA: HH:MM形式 + deadline=今日（既存・繰り返しタスク向け）
+              {
+                executionTime: { in: candidateHHMMs },
+                deadline: todayDateAtUTC,
+              },
+              // パターンB: YYYY-MM-DD HH:MM形式（新・単発タスク向け、deadline不要）
+              {
+                executionTime: { in: candidateDateTimes },
+              },
+            ],
+          },
+          {
+            OR: [
+              { project: { status: "ACTIVE" } },
+              { business: { status: "ACTIVE" } },
+            ],
+          },
         ],
       },
       select: {
@@ -82,17 +101,23 @@ async function run(req: NextRequest) {
 
     // 各タスクについて「今このminute送るべき kind」を決める
     // kind: "now" | "preNN"（NN=分数）
+    // executionTime は HH:MM 形式 or YYYY-MM-DD HH:MM 形式
     type Decided = (typeof rawTasks)[number] & { kind: string; minutesBefore: number }
     const tasks: Decided[] = []
     for (const t of rawTasks) {
-      if (t.executionTime === nowHHMM) {
+      const et = t.executionTime
+      if (!et) continue
+      // 開始時刻通知：HH:MM 形式 == 現在HH:MM、 または 日時形式 == 現在日時
+      if (et === nowHHMM || et === nowDateTime) {
         tasks.push({ ...t, kind: "now", minutesBefore: 0 })
         continue
       }
+      // 事前通知（notifyEnabled かつ notifyMinutesBefore==N に一致）
       if (t.notifyEnabled) {
         const n = t.notifyMinutesBefore
         if (NOTIFY_MINUTES_OPTIONS.includes(n as (typeof NOTIFY_MINUTES_OPTIONS)[number])) {
-          if (t.executionTime === plusMap.get(n)) {
+          const plus = plusMap.get(n)
+          if (plus && (et === plus.hhmm || et === plus.dateTime)) {
             tasks.push({ ...t, kind: `pre${n}`, minutesBefore: n })
           }
         }
@@ -116,7 +141,11 @@ async function run(req: NextRequest) {
       }
 
       const kind = t.kind
-      const tag = `${dateStr} ${t.executionTime} ${kind}`
+      // executionTime が日時形式（YYYY-MM-DD HH:MM）なら dateStr 不要
+      const isDateTime = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(t.executionTime ?? "")
+      const tag = isDateTime
+        ? `${t.executionTime} ${kind}`
+        : `${dateStr} ${t.executionTime} ${kind}`
 
       // 重複チェック（タスク単位）
       if (t.notifiedExecAt === tag) {
