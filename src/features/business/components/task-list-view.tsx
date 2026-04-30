@@ -845,28 +845,47 @@ function TaskDetailPanel({
         </div>
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">実行時刻（LINE通知）</p>
-          {task.executionTime ? (
-            <div className="flex items-center gap-1">
-              <Input
-                type="time"
-                className="h-7 text-xs w-[120px]"
-                value={task.executionTime}
-                onChange={(e) => {
-                  updateTaskMutation.mutate({ id: task.id, data: { executionTime: e.target.value || null } })
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })
-                }}
-                className="h-7 w-7 rounded border text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center"
-                title="実行時刻をクリア"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
+          {task.executionTime ? (() => {
+            // executionTime は "HH:MM" or "YYYY-MM-DD HH:MM"
+            const m = task.executionTime.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/)
+            const currentDate = m ? m[1] : ""
+            const currentTime = m ? m[2] : task.executionTime
+            const buildValue = (date: string, time: string) =>
+              time ? (date ? `${date} ${time}` : time) : null
+            return (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="date"
+                    className="h-7 text-xs w-[140px]"
+                    value={currentDate}
+                    onChange={(e) => {
+                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildValue(e.target.value, currentTime) } })
+                    }}
+                  />
+                  <Input
+                    type="time"
+                    className="h-7 text-xs w-[110px]"
+                    value={currentTime}
+                    onChange={(e) => {
+                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildValue(currentDate, e.target.value) } })
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })
+                    }}
+                    className="h-7 w-7 rounded border text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center"
+                    title="実行時刻をクリア"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">日付なし＝毎日 / 日付あり＝指定日時に1回のみ</p>
+              </div>
+            )
+          })() : (
             <button
               type="button"
               onClick={() => {
