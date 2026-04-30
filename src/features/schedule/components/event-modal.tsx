@@ -84,7 +84,11 @@ export function EventModal({ open, onClose, event, defaultDate, employees }: Pro
       }
       if (event.allDay) {
         setStartAt(toDateOnly(event.startAt))
-        setEndAt(toDateOnly(event.endAt))
+        // GCal終日仕様で endAt は翌日（exclusive）が保存されているため、表示時は1日引く
+        const endDate = new Date(event.endAt.slice(0, 10))
+        endDate.setDate(endDate.getDate() - 1)
+        const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}`
+        setEndAt(endDateStr)
       } else {
         setStartAt(toDatetimeLocal(event.startAt))
         setEndAt(toDatetimeLocal(event.endAt))
