@@ -1140,7 +1140,12 @@ export function TaskListView() {
       if (t.status === "done") return false // 「すべて」でも完了は除外
     } else if (t.status !== filterStatus) return false
     if (showTodayOnly && !t.todayFlag) return false
-    if (showRecurringOnly && !t.recurring) return false
+    // 繰り返し設定本体（recurring=true）はデフォルト非表示。「繰り返しのみ」フィルタON時のみ表示
+    if (showRecurringOnly) {
+      if (!t.recurring) return false
+    } else {
+      if (t.recurring) return false
+    }
     if (searchKeyword.trim()) {
       const kw = searchKeyword.trim().toLowerCase()
       const hit = t.title.toLowerCase().includes(kw) || (t.detail ?? "").toLowerCase().includes(kw)
