@@ -768,26 +768,16 @@ function TaskDetailPanel({
           placeholder="詳細を入力..."
           defaultValue={task.detail ?? ""}
           key={`detail-${task.id}`}
-        />
-        <div className="flex gap-2 mt-2">
-          <Button
-            size="sm"
-            className="text-xs cursor-pointer"
-            disabled={updateTaskMutation.isPending}
-            onClick={() => {
-              const val = detailRef.current?.value ?? ""
+          onBlur={(e) => {
+            const newVal = e.target.value
+            if (newVal !== (task.detail ?? "")) {
               updateTaskMutation.mutate(
-                { id: task.id, data: { detail: val } },
-                {
-                  onSuccess: () => toast.success("詳細を保存しました"),
-                  onError: () => toast.error("詳細の保存に失敗しました"),
-                }
+                { id: task.id, data: { detail: newVal } },
+                { onError: () => toast.error("詳細の保存に失敗しました") }
               )
-            }}
-          >
-            {updateTaskMutation.isPending ? "保存中..." : "詳細保存"}
-          </Button>
-        </div>
+            }
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -1045,25 +1035,17 @@ function TaskDetailPanel({
           placeholder="作業メモを入力..."
           defaultValue={task.memo}
           key={`memo-${task.id}`}
+          onBlur={(e) => {
+            const newVal = e.target.value
+            if (newVal !== (task.memo ?? "")) {
+              updateTaskMutation.mutate(
+                { id: task.id, data: { memo: newVal } },
+                { onError: () => toast.error("メモの保存に失敗しました") }
+              )
+            }
+          }}
         />
         <div className="flex gap-2 mt-2">
-          <Button
-            size="sm"
-            className="text-xs cursor-pointer"
-            disabled={updateTaskMutation.isPending}
-            onClick={() => {
-              const val = memoRef.current?.value ?? ""
-              updateTaskMutation.mutate(
-                { id: task.id, data: { memo: val } },
-                {
-                  onSuccess: () => toast.success("メモを保存しました"),
-                  onError: () => toast.error("メモの保存に失敗しました"),
-                }
-              )
-            }}
-          >
-            {updateTaskMutation.isPending ? "保存中..." : "メモ保存"}
-          </Button>
           <Button
             size="sm"
             variant="destructive"
