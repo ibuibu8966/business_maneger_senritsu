@@ -30,5 +30,12 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "prisma/seed.ts"]
+  "exclude": [
+    "node_modules",
+    "prisma/seed.ts",
+    "prisma/scripts/backfill-balance-after.ts",
+    "prisma/scripts/migrate-transfer-ids.ts",
+    "prisma/scripts/seed-initial-balances.ts",
+    "scripts/clear-lending-data.ts"
+  ]
 }

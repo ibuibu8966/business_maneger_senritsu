@@ -3,13 +3,16 @@ import { AuditLogRepository } from "@/server/repositories/audit-log.repository"
 import type { AccountDetailDTO } from "@/types/dto"
 import type { OwnerType, AccountType } from "@/generated/prisma/client"
 
+/**
+ * 口座作成（複式簿記版）
+ * - balance フィールドは廃止。初期残高は INITIAL 取引で別途登録（UpsertInitialBalance）
+ */
 export class CreateAccount {
   static async execute(data: {
     name: string
     ownerType: "internal" | "external"
     accountType: "bank" | "securities"
     businessId?: string | null
-    balance?: number
     purpose?: string
     investmentPolicy?: string
     tags?: string[]
@@ -19,7 +22,6 @@ export class CreateAccount {
       ownerType: data.ownerType.toUpperCase() as OwnerType,
       accountType: data.accountType.toUpperCase() as AccountType,
       businessId: data.businessId,
-      balance: data.balance,
       purpose: data.purpose,
       investmentPolicy: data.investmentPolicy,
       tags: data.tags,
@@ -32,7 +34,7 @@ export class CreateAccount {
       accountType: r.accountType.toLowerCase() as "bank" | "securities",
       businessId: r.business?.id ?? null,
       businessName: r.business?.name ?? null,
-      balance: r.balance,
+      balance: 0,                       // 新規口座は残高 0 から開始
       purpose: r.purpose,
       investmentPolicy: r.investmentPolicy,
       tags: r.tags,
