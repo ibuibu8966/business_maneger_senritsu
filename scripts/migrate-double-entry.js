@@ -119,84 +119,79 @@ async function main() {
     }
     console.log('');
 
-    // === Phase 4: type別 from/to 設定 + type値マッピング ===
-    console.log('=== Phase 4: from/to 設定 + type値マッピング ===');
+    // === Phase 4: type別 from/to 設定（type値は維持・migrationでマッピング） ===
+    console.log('=== Phase 4: from/to 設定（type値は維持） ===');
+    // 注意: 旧 enum に新値（DEPOSIT_WITHDRAWAL/LENDING/REPAYMENT）を直接UPDATEできないため、
+    //       type値はここでは旧値のまま残し、migration の AlterEnum 内で USING で変換する
     const phase4 = [
-      { type: 'INITIAL', newType: 'INITIAL', from: 'EXT', to: 'ACC',
+      { type: 'INITIAL', from: 'EXT', to: 'ACC',
         sql: `UPDATE account_transactions SET "fromAccountId" = $1, "toAccountId" = "accountId" WHERE type = 'INITIAL'` },
-      { type: 'DEPOSIT', newType: 'DEPOSIT_WITHDRAWAL', from: 'EXT', to: 'ACC',
-        sql: `UPDATE account_transactions SET type = 'DEPOSIT_WITHDRAWAL', "fromAccountId" = $1, "toAccountId" = "accountId" WHERE type = 'DEPOSIT'` },
-      { type: 'WITHDRAWAL', newType: 'DEPOSIT_WITHDRAWAL', from: 'ACC', to: 'EXT',
-        sql: `UPDATE account_transactions SET type = 'DEPOSIT_WITHDRAWAL', "fromAccountId" = "accountId", "toAccountId" = $1 WHERE type = 'WITHDRAWAL'` },
-      { type: 'GAIN', newType: 'GAIN', from: 'EXT', to: 'ACC',
+      { type: 'DEPOSIT', from: 'EXT', to: 'ACC',
+        sql: `UPDATE account_transactions SET "fromAccountId" = $1, "toAccountId" = "accountId" WHERE type = 'DEPOSIT'` },
+      { type: 'WITHDRAWAL', from: 'ACC', to: 'EXT',
+        sql: `UPDATE account_transactions SET "fromAccountId" = "accountId", "toAccountId" = $1 WHERE type = 'WITHDRAWAL'` },
+      { type: 'GAIN', from: 'EXT', to: 'ACC',
         sql: `UPDATE account_transactions SET "fromAccountId" = $1, "toAccountId" = "accountId" WHERE type = 'GAIN'` },
-      { type: 'LOSS', newType: 'LOSS', from: 'ACC', to: 'EXT',
+      { type: 'LOSS', from: 'ACC', to: 'EXT',
         sql: `UPDATE account_transactions SET "fromAccountId" = "accountId", "toAccountId" = $1 WHERE type = 'LOSS'` },
-      { type: 'MISC_INCOME', newType: 'MISC_INCOME', from: 'EXT', to: 'ACC',
+      { type: 'MISC_INCOME', from: 'EXT', to: 'ACC',
         sql: `UPDATE account_transactions SET "fromAccountId" = $1, "toAccountId" = "accountId" WHERE type = 'MISC_INCOME'` },
-      { type: 'MISC_EXPENSE', newType: 'MISC_EXPENSE', from: 'ACC', to: 'EXT',
+      { type: 'MISC_EXPENSE', from: 'ACC', to: 'EXT',
         sql: `UPDATE account_transactions SET "fromAccountId" = "accountId", "toAccountId" = $1 WHERE type = 'MISC_EXPENSE'` },
     ];
 
     for (const p of phase4) {
       const c = await count(client, `SELECT COUNT(*) FROM account_transactions WHERE type = $1`, [p.type]);
-      console.log(`${p.type} → ${p.newType} : ${c} 件 (from=${p.from === 'EXT' ? '外部' : 'accountId'}, to=${p.to === 'EXT' ? '外部' : 'accountId'})`);
+      console.log(`${p.type} : ${c} 件 (from=${p.from === 'EXT' ? '外部' : 'accountId'}, to=${p.to === 'EXT' ? '外部' : 'accountId'})`);
       if (EXECUTE && c > 0) await client.query(p.sql, [externalId]);
     }
 
-    // LEND → LENDING (from=accountId, to=Lending.counterpartyAccountId)
+    // LEND: from=accountId, to=Lending.counterpartyAccountId（typeは維持・migrationでLENDING変換）
     const lendCount = await count(client, `SELECT COUNT(*) FROM account_transactions WHERE type = 'LEND'`);
-    console.log(`LEND → LENDING : ${lendCount} 件 (from=accountId, to=Lending.counterpartyAccountId)`);
+    console.log(`LEND : ${lendCount} 件 (from=accountId, to=Lending.counterpartyAccountId)`);
     if (EXECUTE && lendCount > 0) {
       await client.query(`
         UPDATE account_transactions t
-        SET type = 'LENDING',
-            "fromAccountId" = t."accountId",
+        SET "fromAccountId" = t."accountId",
             "toAccountId" = COALESCE(l."counterpartyAccountId", $1)
         FROM lendings l
         WHERE t.type = 'LEND' AND t."lendingId" = l.id
       `, [externalId]);
     }
 
-    // REPAYMENT_RECEIVE → REPAYMENT (lendingId付きならcounterpartyAccountId、なければ外部)
+    // REPAYMENT_RECEIVE: from=counterpartyAccountId, to=accountId（typeは維持）
     const rrCount = await count(client, `SELECT COUNT(*) FROM account_transactions WHERE type = 'REPAYMENT_RECEIVE'`);
-    console.log(`REPAYMENT_RECEIVE → REPAYMENT : ${rrCount} 件 (from=counterpartyAccountId or 外部, to=accountId)`);
+    console.log(`REPAYMENT_RECEIVE : ${rrCount} 件 (from=counterpartyAccountId or 外部, to=accountId)`);
     if (EXECUTE && rrCount > 0) {
-      // lendingId付き: counterpartyAccountIdベース
       await client.query(`
         UPDATE account_transactions t
-        SET type = 'REPAYMENT',
-            "fromAccountId" = COALESCE(l."counterpartyAccountId", $1),
+        SET "fromAccountId" = COALESCE(l."counterpartyAccountId", $1),
             "toAccountId" = t."accountId"
         FROM lendings l
         WHERE t.type = 'REPAYMENT_RECEIVE' AND t."lendingId" = l.id
       `, [externalId]);
-      // lendingId NULL: 外部口座経由
       await client.query(`
         UPDATE account_transactions
-        SET type = 'REPAYMENT',
-            "fromAccountId" = $1,
+        SET "fromAccountId" = $1,
             "toAccountId" = "accountId"
         WHERE type = 'REPAYMENT_RECEIVE' AND "lendingId" IS NULL
       `, [externalId]);
     }
 
-    // REPAYMENT_PAY → REPAYMENT (lendingId付きならcounterpartyAccountId、なければ外部)
+    // REPAYMENT_PAY: from=accountId, to=counterpartyAccountId（typeは維持）
     const rpCount = await count(client, `SELECT COUNT(*) FROM account_transactions WHERE type = 'REPAYMENT_PAY'`);
-    console.log(`REPAYMENT_PAY → REPAYMENT : ${rpCount} 件 (from=accountId, to=counterpartyAccountId or 外部)`);
+    console.log(`REPAYMENT_PAY : ${rpCount} 件 (from=accountId, to=counterpartyAccountId or 外部)`);
     if (EXECUTE && rpCount > 0) {
       await client.query(`
         UPDATE account_transactions t
-        SET type = 'REPAYMENT',
-            "fromAccountId" = t."accountId",
+        SET "fromAccountId" = t."accountId",
             "toAccountId" = COALESCE(l."counterpartyAccountId", $1)
         FROM lendings l
         WHERE t.type = 'REPAYMENT_PAY' AND t."lendingId" = l.id
       `, [externalId]);
       await client.query(`
         UPDATE account_transactions
-        SET type = 'REPAYMENT',
-            "fromAccountId" = "accountId",
+        SET "fromAccountId" = "accountId",
             "toAccountId" = $1
         WHERE type = 'REPAYMENT_PAY' AND "lendingId" IS NULL
       `, [externalId]);
@@ -223,13 +218,16 @@ async function main() {
       const newId = generateCuidLike();
       const fromId = lp.lending_type === 'LEND' ? lp.counterpartyAccountId : lp.accountId;
       const toId = lp.lending_type === 'LEND' ? lp.accountId : lp.counterpartyAccountId;
-      console.log(`  LP[${lp.id}] → AT lendingType=${lp.lending_type} amount=${lp.amount} from=${fromId || '(NULL)'} to=${toId || '(NULL)'}`);
+      // 旧 enum に新値（REPAYMENT）が無いので、 LEND側=REPAYMENT_RECEIVE / BORROW側=REPAYMENT_PAY で挿入。
+      // migration の AlterEnum で REPAYMENT に統合される。
+      const repaymentType = lp.lending_type === 'LEND' ? 'REPAYMENT_RECEIVE' : 'REPAYMENT_PAY';
+      console.log(`  LP[${lp.id}] → AT type=${repaymentType} lendingType=${lp.lending_type} amount=${lp.amount} from=${fromId || '(NULL)'} to=${toId || '(NULL)'}`);
       if (EXECUTE) {
         await client.query(`
           INSERT INTO account_transactions
             (id, type, amount, date, "fromAccountId", "toAccountId", "accountId", counterparty, "lendingId", memo, "editedBy", tags, "isArchived", "balanceAfter", "createdAt", "updatedAt")
-          VALUES ($1, 'REPAYMENT', $2, $3, $4, $5, $4, '', $6, $7, '', ARRAY[]::text[], false, 0, $8, $8)
-        `, [newId, lp.amount, lp.date, fromId, toId, lp.lendingId, lp.memo || '', lp.createdAt]);
+          VALUES ($1, $9, $2, $3, $4, $5, $4, '', $6, $7, '', ARRAY[]::text[], false, 0, $8, $8)
+        `, [newId, lp.amount, lp.date, fromId, toId, lp.lendingId, lp.memo || '', lp.createdAt, repaymentType]);
       }
     }
     console.log('');

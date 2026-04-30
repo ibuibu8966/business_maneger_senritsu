@@ -109,17 +109,20 @@ export class GetAccountDetails {
     }
   }
 
-  // 純資産サマリー: 社内口座のみで計算（複式簿記版）
+  // 純資産サマリー: 社内銀行口座のみで計算（複式簿記版）
+  // 「総残高（社内）」= 社内銀行 active のみ。証券口座・アーカイブ口座は除外
   static async getSummary() {
     const [internalAccounts, lendings] = await Promise.all([
-      AccountRepository.findAll({ ownerType: "INTERNAL", isActive: true }),
+      AccountRepository.findAll({ ownerType: "INTERNAL", isActive: true, isArchived: false }),
       LendingRepository.findMany({ isArchived: false }),
     ])
 
-    const balances = await Promise.all(internalAccounts.map((a) => calcBalance(a.id)))
+    // 銀行口座のみで集計
+    const internalBankAccounts = internalAccounts.filter((a) => a.accountType === "BANK")
+    const balances = await Promise.all(internalBankAccounts.map((a) => calcBalance(a.id)))
     const totalBalance = balances.reduce((s, b) => s + b, 0)
 
-    const internalIds = new Set(internalAccounts.map((a) => a.id))
+    const internalIds = new Set(internalBankAccounts.map((a) => a.id))
 
     // 貸借: 社内口座に紐づくもののみ。ペアは1件にカウント
     let totalLent = 0

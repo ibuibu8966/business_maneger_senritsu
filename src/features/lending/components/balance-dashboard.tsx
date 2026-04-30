@@ -305,32 +305,34 @@ export function BalanceDashboard() {
   }
 
   // タグ連動サマリー（タグ選択時はクライアントサイドで再計算）
+  // 集計対象は「銀行口座 active のみ」（証券口座・アーカイブ口座は除外）
   const filteredSummary = useMemo(() => {
     if (selectedTags.length === 0) {
-      // 全タグ時：summary（社内のみ）+ 社外含む全体残高
+      // 全タグ時：summary（社内銀行のみ）+ 社外含む全体銀行残高
       const totalAllBalance = accounts
-        .filter(a => !a.isArchived)
+        .filter(a => !a.isArchived && a.accountType === "bank")
         .reduce((s, a) => s + a.balance, 0)
       return { ...(summary ?? { totalBalance: 0, totalLent: 0, totalBorrowed: 0, netAssets: 0 }), totalAllBalance }
     }
-    const taggedAccountIds = new Set(
-      accounts.filter(a => !a.isArchived && a.ownerType === "internal" && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
+    // タグ付き社内銀行口座
+    const taggedInternalBankIds = new Set(
+      accounts.filter(a => !a.isArchived && a.ownerType === "internal" && a.accountType === "bank" && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
     )
-    // 社外含む全体残高用：タグ付きの全口座（社外含む）
-    const taggedAllAccountIds = new Set(
-      accounts.filter(a => !a.isArchived && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
+    // タグ付き全銀行口座（社外含む）
+    const taggedAllBankIds = new Set(
+      accounts.filter(a => !a.isArchived && a.accountType === "bank" && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
     )
     let totalBalance = 0
     let totalAllBalance = 0
     for (const a of accounts) {
-      if (taggedAccountIds.has(a.id)) totalBalance += a.balance
-      if (taggedAllAccountIds.has(a.id)) totalAllBalance += a.balance
+      if (taggedInternalBankIds.has(a.id)) totalBalance += a.balance
+      if (taggedAllBankIds.has(a.id)) totalAllBalance += a.balance
     }
     let totalLent = 0, totalBorrowed = 0
     const countedPairs = new Set<string>()
     for (const l of lendings) {
       if (l.status === "completed") continue
-      if (!taggedAccountIds.has(l.accountId)) continue
+      if (!taggedInternalBankIds.has(l.accountId)) continue
       if (l.linkedLendingId) {
         const pairKey = [l.id, l.linkedLendingId].sort().join("-")
         if (countedPairs.has(pairKey)) continue
