@@ -748,8 +748,7 @@ export function AccountDetailView({ accountId }: Props) {
                     </TableCell>
                     <TableCell className="text-sm text-right tabular-nums">{formatCurrency(t.amount ?? 0)}</TableCell>
                     <TableCell className="text-sm text-right tabular-nums text-muted-foreground">
-                      {/* 時点残高表示は廃止（複式簿記版・スナップショット集計予定） */}
-                      -
+                      {t.balanceAfter !== undefined ? formatCurrency(t.balanceAfter) : "-"}
                     </TableCell>
                     <TableCell className="text-sm max-w-[200px]">
                       <div>
@@ -874,7 +873,7 @@ export function AccountDetailView({ accountId }: Props) {
                       {isPositive ? "+" : "-"}{formatCurrency(t.amount ?? 0)}
                     </TableCell>
                     <TableCell className="text-sm text-right tabular-nums text-muted-foreground">
-                      -
+                      {t.balanceAfter !== undefined ? formatCurrency(t.balanceAfter) : "-"}
                     </TableCell>
                     <TableCell className="text-sm max-w-[200px]">
                       <div>

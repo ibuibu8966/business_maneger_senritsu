@@ -78,8 +78,8 @@ export interface AccountTransactionDTO {
   tags: string[]
   isArchived: boolean
   createdAt: string
-  // 旧フィールドは廃止: accountId, accountName, linkedTransactionId, linkedTransferId,
-  //                   lendingPaymentId, direction, balanceAfter
+  // accountId 指定で取得した場合のみ含まれる、取引時点の口座残高
+  balanceAfter?: number
 }
 
 export interface LendingDTO {
