@@ -127,7 +127,10 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
     if (!task) return
     updateTaskMutation.mutate(
       { id: task.id, data },
-      { onError: () => toast.error("保存に失敗しました") }
+      {
+        onSuccess: () => toast.success("保存しました"),
+        onError: () => toast.error("保存に失敗しました"),
+      }
     )
   }
 

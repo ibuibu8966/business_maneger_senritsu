@@ -773,7 +773,10 @@ function TaskDetailPanel({
             if (newVal !== (task.detail ?? "")) {
               updateTaskMutation.mutate(
                 { id: task.id, data: { detail: newVal } },
-                { onError: () => toast.error("詳細の保存に失敗しました") }
+                {
+                  onSuccess: () => toast.success("詳細を保存しました"),
+                  onError: () => toast.error("詳細の保存に失敗しました"),
+                }
               )
             }
           }}
@@ -1040,7 +1043,10 @@ function TaskDetailPanel({
             if (newVal !== (task.memo ?? "")) {
               updateTaskMutation.mutate(
                 { id: task.id, data: { memo: newVal } },
-                { onError: () => toast.error("メモの保存に失敗しました") }
+                {
+                  onSuccess: () => toast.success("メモを保存しました"),
+                  onError: () => toast.error("メモの保存に失敗しました"),
+                }
               )
             }
           }}
