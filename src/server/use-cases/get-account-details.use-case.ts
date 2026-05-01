@@ -4,23 +4,36 @@ import { LendingRepository } from "@/server/repositories/lending.repository"
 import type { AccountDetailDTO } from "@/types/dto"
 
 /**
- * 残高計算（複式簿記版）
- * 直近スナップショット.balance + Σ(toAccount=対象 ＆ date>スナップ日) − Σ(fromAccount=対象 ＆ date>スナップ日)
+ * 残高計算（複式簿記版・統一版）
+ *
+ * dayEnd 未指定: 現在残高（全 active 取引で計算）
+ * dayEnd 指定 : その日終了時点の残高（snapshot 日次バッチ等で利用）
+ *
+ * ロジック:
+ *  上限日（dayEnd or 無上限）以前の最新スナップショットを起点 +
+ *  Σ(toAccount=対象 ＆ snap日<date≦上限) − Σ(fromAccount=対象 ＆ snap日<date≦上限)
  */
-async function calcBalance(accountId: string): Promise<number> {
+async function calcBalance(accountId: string, dayEnd?: Date): Promise<number> {
   const snap = await prisma.accountBalanceSnapshot.findFirst({
-    where: { accountId },
+    where: {
+      accountId,
+      ...(dayEnd && { date: { lte: dayEnd } }),
+    },
     orderBy: { date: "desc" },
   })
   const baseDate = snap?.date ?? new Date(0)
   const baseBalance = snap?.balance ?? 0
+
+  const dateFilter = dayEnd
+    ? { gt: baseDate, lte: dayEnd }
+    : { gt: baseDate }
 
   const [inflow, outflow] = await Promise.all([
     prisma.accountTransaction.aggregate({
       _sum: { amount: true },
       where: {
         toAccountId: accountId,
-        date: { gt: baseDate },
+        date: dateFilter,
         isArchived: false,
       },
     }),
@@ -28,7 +41,7 @@ async function calcBalance(accountId: string): Promise<number> {
       _sum: { amount: true },
       where: {
         fromAccountId: accountId,
-        date: { gt: baseDate },
+        date: dateFilter,
         isArchived: false,
       },
     }),
@@ -40,17 +53,24 @@ async function calcBalance(accountId: string): Promise<number> {
 /**
  * Lending の未返済額計算（principal − SUM(REPAYMENT)）
  * LEND側: 返済受取（toAccountId=自分） / BORROW側: 返済支払（fromAccountId=自分）
+ *
+ * 社内貸借ペアでは Lending が main / pair の2件あるが REPAYMENT は片方にしか紐付かない設計。
+ * よって lendingId は [自分, linkedLendingId] のセットで検索する。
  */
 async function calcOutstanding(lending: {
   id: string
   principal: number
   accountId: string
   type: "LEND" | "BORROW"
+  linkedLendingId?: string | null
 }): Promise<number> {
+  const lendingIds = lending.linkedLendingId
+    ? [lending.id, lending.linkedLendingId]
+    : [lending.id]
   const sum = await prisma.accountTransaction.aggregate({
     _sum: { amount: true },
     where: {
-      lendingId: lending.id,
+      lendingId: { in: lendingIds },
       type: "REPAYMENT",
       isArchived: false,
       ...(lending.type === "LEND"
@@ -125,8 +145,8 @@ export class GetAccountDetails {
     const internalIds = new Set(internalBankAccounts.map((a) => a.id))
 
     // 貸借: 社内口座に紐づくもののみ。ペアは1件にカウント
-    let totalLent = 0
-    let totalBorrowed = 0
+    // 対象 lending を絞り込んでから REPAYMENT を1クエリで一括取得（N+1 解消）
+    const targetLendings: typeof lendings = []
     const countedPairs = new Set<string>()
     for (const l of lendings) {
       if (!internalIds.has(l.accountId)) continue
@@ -135,12 +155,37 @@ export class GetAccountDetails {
         if (countedPairs.has(pairKey)) continue
         countedPairs.add(pairKey)
       }
-      const outstanding = await calcOutstanding({
-        id: l.id,
-        principal: l.principal,
-        accountId: l.accountId,
-        type: l.type,
-      })
+      targetLendings.push(l)
+    }
+
+    const allLendingIds = new Set<string>()
+    for (const l of targetLendings) {
+      allLendingIds.add(l.id)
+      if (l.linkedLendingId) allLendingIds.add(l.linkedLendingId)
+    }
+
+    const allRepayments = allLendingIds.size === 0
+      ? []
+      : await prisma.accountTransaction.findMany({
+          where: {
+            lendingId: { in: [...allLendingIds] },
+            type: "REPAYMENT",
+            isArchived: false,
+          },
+          select: { lendingId: true, fromAccountId: true, toAccountId: true, amount: true },
+        })
+
+    let totalLent = 0
+    let totalBorrowed = 0
+    for (const l of targetLendings) {
+      const ids = l.linkedLendingId ? [l.id, l.linkedLendingId] : [l.id]
+      let repaid = 0
+      for (const r of allRepayments) {
+        if (!r.lendingId || !ids.includes(r.lendingId)) continue
+        if (l.type === "LEND" && r.toAccountId === l.accountId) repaid += r.amount
+        else if (l.type === "BORROW" && r.fromAccountId === l.accountId) repaid += r.amount
+      }
+      const outstanding = l.principal - repaid
       if (outstanding === 0) continue
       if (l.type === "LEND") totalLent += outstanding
       if (l.type === "BORROW") totalBorrowed += outstanding

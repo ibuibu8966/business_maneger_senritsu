@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma"
 import { LendingRepository } from "@/server/repositories/lending.repository"
-import { calcOutstanding } from "@/server/use-cases/get-account-details.use-case"
 import type { LendingDTO, LendingPaymentDTO } from "@/types/dto"
 import type { LendingType } from "@/generated/prisma/client"
 
@@ -22,7 +21,8 @@ export class GetLendings {
     isArchived?: boolean
   } = {}): Promise<LendingDTO[]> {
     const rows = await LendingRepository.findMany(params)
-    const lendingIds = rows.map((r) => r.id)
+    // 自分の id と linkedLendingId（社内貸借ペアの相手）を全て検索対象にする
+    const lendingIds = rows.flatMap((r) => r.linkedLendingId ? [r.id, r.linkedLendingId] : [r.id])
 
     // 各Lendingに紐づくLENDING取引（実行日の取得用）
     const linkedTxs = lendingIds.length === 0
@@ -61,18 +61,22 @@ export class GetLendings {
       paymentsByLendingId.set(r.lendingId, arr)
     }
 
-    return await Promise.all(
-      rows.map(async (r) => {
-        const outstanding = await calcOutstanding({
-          id: r.id,
-          principal: r.principal,
-          accountId: r.accountId,
-          type: r.type,
-        })
-        const status = computeStatus({ outstanding, dueDate: r.dueDate })
-        const lendingPayments = paymentsByLendingId.get(r.id) ?? []
+    return rows.map((r) => {
+      // ペアの場合、自分か pair に紐づく支払い・実行日を統合して取得
+      const ids = r.linkedLendingId ? [r.id, r.linkedLendingId] : [r.id]
+      const lendingPayments = ids.flatMap((lid) => paymentsByLendingId.get(lid) ?? [])
+      const lendingDate = ids.map((lid) => dateByLendingId.get(lid)).find((d) => d !== undefined) ?? null
+      // outstanding は既存 repayments クエリから JS 側で集計（N+1 解消）
+      // LEND側: 返済受取 (toAccountId=自分) / BORROW側: 返済支払 (fromAccountId=自分)
+      let repaid = 0
+      for (const p of lendingPayments) {
+        if (r.type === "LEND" && p.toAccountId === r.accountId) repaid += p.amount
+        else if (r.type === "BORROW" && p.fromAccountId === r.accountId) repaid += p.amount
+      }
+      const outstanding = r.principal - repaid
+      const status = computeStatus({ outstanding, dueDate: r.dueDate })
 
-        return {
+      return {
           id: r.id,
           accountId: r.account.id,
           accountName: r.account.name,
@@ -90,9 +94,7 @@ export class GetLendings {
           tags: r.tags ?? [],
           isArchived: r.isArchived,
           createdAt: r.createdAt.toISOString(),
-          date: dateByLendingId.has(r.id)
-            ? dateByLendingId.get(r.id)!.toISOString().split("T")[0]
-            : null,
+          date: lendingDate ? lendingDate.toISOString().split("T")[0] : null,
           payments: lendingPayments.map((p): LendingPaymentDTO => ({
             id: p.id,
             lendingId: p.lendingId!,
@@ -103,6 +105,5 @@ export class GetLendings {
           })),
         }
       })
-    )
   }
 }

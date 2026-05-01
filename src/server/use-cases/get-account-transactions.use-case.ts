@@ -51,24 +51,29 @@ export class GetAccountTransactions {
     // accountId 指定なし → balanceAfter は計算しない
     if (!params.accountId) return base
 
-    // 時点残高を計算: 直近スナップショットの残高を起点に、active 取引を時系列昇順で累積
+    // 時点残高: 全 active 取引を date昇順+serialNumber昇順 で累積
+    // スナップショットは「最古 active 取引日より前」の最新分のみを累積の起点に使う
+    // → スナップショット日以降の active 取引にも balanceAfter が必ず付く
     const accountId = params.accountId
-    const snap = await prisma.accountBalanceSnapshot.findFirst({
-      where: { accountId },
-      orderBy: { date: "desc" },
-    })
-    const baseDate = snap?.date ?? new Date(0)
-    const baseBalance = snap?.balance ?? 0
 
-    // 累積計算用に「スナップショット日より後の active 取引」を昇順で取得
-    const activeAsc = [...base]
-      .filter((t) => !t.isArchived && new Date(t.date) > baseDate)
+    const activeAsc = base
+      .filter((t) => !t.isArchived)
       .sort((a, b) => {
         const ad = new Date(a.date).getTime()
         const bd = new Date(b.date).getTime()
         if (ad !== bd) return ad - bd
         return a.serialNumber - b.serialNumber
       })
+
+    let baseBalance = 0
+    if (activeAsc.length > 0) {
+      const oldestActiveDate = new Date(activeAsc[0].date)
+      const snap = await prisma.accountBalanceSnapshot.findFirst({
+        where: { accountId, date: { lt: oldestActiveDate } },
+        orderBy: { date: "desc" },
+      })
+      baseBalance = snap?.balance ?? 0
+    }
 
     const balanceById = new Map<string, number>()
     let running = baseBalance
@@ -78,6 +83,7 @@ export class GetAccountTransactions {
       balanceById.set(t.id, running)
     }
 
+    // isArchived の取引は balanceAfter 未設定（UI 側で「-」表示）
     return base.map((t) => ({
       ...t,
       balanceAfter: balanceById.get(t.id),

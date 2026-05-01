@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { calcBalance } from "@/server/use-cases/get-account-details.use-case"
 
 /**
  * AccountBalanceSnapshot 日次バッチ（複式簿記版）
@@ -8,47 +9,15 @@ import { prisma } from "@/lib/prisma"
  *  2. Account.recalcRequiredFromDate がセットされている口座は、その日付以降の
  *     スナップショットを再生成 → フラグクリア
  *
- * 残高 = 直近スナップショット.balance + Σ(toAccount=対象, date>スナップ日) − Σ(fromAccount=対象, date>スナップ日)
- * バッチ生成時は「前日末まで」を集計するため、 date <= 前日 の取引で集計する。
+ * 残高計算は get-account-details.use-case.ts の calcBalance(accountId, dayEnd) に統一。
+ * バッチ生成時は dayEnd 指定で「その日終了時点」の残高を取得する。
  */
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
-/** その日の終了時点（その日も含む）の残高を計算 */
-async function calcBalanceAtEndOfDay(accountId: string, dayEnd: Date): Promise<number> {
-  // 直近の同日以前のスナップショットがあれば再利用
-  const snap = await prisma.accountBalanceSnapshot.findFirst({
-    where: { accountId, date: { lte: dayEnd } },
-    orderBy: { date: "desc" },
-  })
-  const baseDate = snap?.date ?? new Date(0)
-  const baseBalance = snap?.balance ?? 0
-
-  const [inflow, outflow] = await Promise.all([
-    prisma.accountTransaction.aggregate({
-      _sum: { amount: true },
-      where: {
-        toAccountId: accountId,
-        date: { gt: baseDate, lte: dayEnd },
-        isArchived: false,
-      },
-    }),
-    prisma.accountTransaction.aggregate({
-      _sum: { amount: true },
-      where: {
-        fromAccountId: accountId,
-        date: { gt: baseDate, lte: dayEnd },
-        isArchived: false,
-      },
-    }),
-  ])
-
-  return baseBalance + (inflow._sum.amount ?? 0) - (outflow._sum.amount ?? 0)
-}
-
 /** 指定日のスナップショットを upsert */
 async function upsertSnapshot(accountId: string, date: Date): Promise<void> {
-  const balance = await calcBalanceAtEndOfDay(accountId, date)
+  const balance = await calcBalance(accountId, date)
   await prisma.accountBalanceSnapshot.upsert({
     where: { accountId_date: { accountId, date } },
     update: { balance },
