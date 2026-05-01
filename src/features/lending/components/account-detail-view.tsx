@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, ArrowLeftRight, Plus, ChevronDown, ChevronRight, Pencil, Check, X, Archive } from "lucide-react"
+import { ArrowLeft, ArrowLeftRight, Plus, ChevronDown, ChevronLeft, ChevronRight, Pencil, Check, X, Archive } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -282,13 +282,21 @@ export function AccountDetailView({ accountId }: Props) {
     return { balance, totalLent, totalBorrowed, netAssets: balance + totalLent - totalBorrowed }
   }, [account, lendings, accountId])
 
-  // 当月の売上・支出・利益（複式簿記版：interestはfrom/toで方向判定）
+  // 売上・支出・利益（◀ ▶ で表示月を切替可能）
   const INCOME_TYPES = new Set(["revenue", "misc_income", "gain"])
   const EXPENSE_TYPES = new Set(["misc_expense", "loss"])
+  const [viewMonth, setViewMonth] = useState(() => {
+    const d = new Date()
+    d.setDate(1)
+    d.setHours(0, 0, 0, 0)
+    return d
+  })
+  const goPrevMonth = () => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
+  const goNextMonth = () => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
+  const monthLabel = `${viewMonth.getFullYear()}年${viewMonth.getMonth() + 1}月`
   const monthlyPL = useMemo(() => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth()
+    const year = viewMonth.getFullYear()
+    const month = viewMonth.getMonth()
     const monthTxs = transactions.filter(t => {
       if (t.isArchived) return false
       const d = new Date(t.date)
@@ -297,7 +305,7 @@ export function AccountDetailView({ accountId }: Props) {
     const income = monthTxs.filter(t => INCOME_TYPES.has(t.type)).reduce((s, t) => s + t.amount, 0)
     const expense = monthTxs.filter(t => EXPENSE_TYPES.has(t.type)).reduce((s, t) => s + t.amount, 0)
     return { income, expense, profit: income - expense }
-  }, [transactions])
+  }, [transactions, viewMonth])
 
   // ペアの相手側レコードを除外（この口座のaccountId側だけ残す）
   const displayLendings = useMemo(() => {
@@ -412,6 +420,15 @@ export function AccountDetailView({ accountId }: Props) {
               </p>
             </CardContent>
           </Card>
+        </div>
+        <div className="flex items-center justify-center gap-3 pb-1">
+          <Button size="sm" variant="ghost" onClick={goPrevMonth} className="h-7 w-7 p-0" aria-label="先月">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium tabular-nums">{monthLabel}</span>
+          <Button size="sm" variant="ghost" onClick={goNextMonth} className="h-7 w-7 p-0" aria-label="翌月">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Card>

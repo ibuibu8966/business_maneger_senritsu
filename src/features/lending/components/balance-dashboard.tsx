@@ -16,7 +16,7 @@ import {
 // Native <select> used instead of Radix Select
 // Tabs removed — using nav buttons matching accounting layout
 import { Badge } from "@/components/ui/badge"
-import { Plus, ChevronDown, ChevronRight, Archive, ArrowLeftRight, X } from "lucide-react"
+import { Plus, ChevronDown, ChevronLeft, ChevronRight, Archive, ArrowLeftRight, X } from "lucide-react"
 import { DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import type { DragEndEvent } from "@dnd-kit/core"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -347,13 +347,21 @@ export function BalanceDashboard() {
     return new Set(accounts.filter(a => selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id))
   }, [selectedTags, accounts])
 
-  // 当月の売上・支出・利益（複式簿記版：interest は from/to で方向判定）
+  // 売上・支出・利益（◀ ▶ で表示月を切替可能）
   const INCOME_TYPES = new Set(["revenue", "misc_income", "gain"])
   const EXPENSE_TYPES = new Set(["misc_expense", "loss"])
+  const [viewMonth, setViewMonth] = useState(() => {
+    const d = new Date()
+    d.setDate(1)
+    d.setHours(0, 0, 0, 0)
+    return d
+  })
+  const goPrevMonth = () => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
+  const goNextMonth = () => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
+  const monthLabel = `${viewMonth.getFullYear()}年${viewMonth.getMonth() + 1}月`
   const monthlyPL = useMemo(() => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth()
+    const year = viewMonth.getFullYear()
+    const month = viewMonth.getMonth()
     const monthTxs = transactions.filter(t => {
       if (t.isArchived) return false
       // タグフィルタ：from または to が対象口座セットに含まれていれば通過
@@ -367,8 +375,8 @@ export function BalanceDashboard() {
     })
     const income = monthTxs.filter(t => INCOME_TYPES.has(t.type)).reduce((s, t) => s + t.amount, 0)
     const expense = monthTxs.filter(t => EXPENSE_TYPES.has(t.type)).reduce((s, t) => s + t.amount, 0)
-    return { income, expense, profit: income - expense, month: now.getMonth() + 1 }
-  }, [transactions, taggedAccountIdSet])
+    return { income, expense, profit: income - expense, month: month + 1 }
+  }, [transactions, taggedAccountIdSet, viewMonth])
 
   // アーカイブフィルタ + タグフィルタ（複数タグAND）
   const visibleAccounts = useMemo(() => {
@@ -587,6 +595,15 @@ export function BalanceDashboard() {
                     </p>
                   </CardContent>
                 </Card>
+              </div>
+              <div className="flex items-center justify-center gap-3 pb-1">
+                <Button size="sm" variant="ghost" onClick={goPrevMonth} className="h-7 w-7 p-0" aria-label="先月">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium tabular-nums">{monthLabel}</span>
+                <Button size="sm" variant="ghost" onClick={goNextMonth} className="h-7 w-7 p-0" aria-label="翌月">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Card>
