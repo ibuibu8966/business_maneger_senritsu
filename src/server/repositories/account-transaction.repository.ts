@@ -32,7 +32,9 @@ export class AccountTransactionRepository {
         fromAccount: { select: { id: true, name: true } },
         toAccount: { select: { id: true, name: true } },
       },
-      orderBy: { date: "desc" },
+      // 表示は時系列降順（新→古）。同日内は serialNumber 降順で安定させる
+      // → balanceAfter（昇順累積）と表示順が完全に逆順で整合
+      orderBy: [{ date: "desc" }, { serialNumber: "desc" }],
     })
   }
 
