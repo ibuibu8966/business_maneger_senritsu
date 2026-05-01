@@ -56,13 +56,14 @@ export class GetAccountTransactions {
     // → スナップショット日以降の active 取引にも balanceAfter が必ず付く
     const accountId = params.accountId
 
+    // 同日内は createdAt 昇順で安定（serialNumber は移行データで時系列と逆転がある）
     const activeAsc = base
       .filter((t) => !t.isArchived)
       .sort((a, b) => {
         const ad = new Date(a.date).getTime()
         const bd = new Date(b.date).getTime()
         if (ad !== bd) return ad - bd
-        return a.serialNumber - b.serialNumber
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       })
 
     let baseBalance = 0
