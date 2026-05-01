@@ -252,7 +252,6 @@ export function BalanceDashboard() {
     setLendEditField(field)
     switch (field) {
       case "counterparty": setLendEditValue(l.counterpartyAccountId ?? ""); break
-      case "outstanding": setLendEditValue(String(l.outstanding ?? 0)); break
       case "dueDate": setLendEditValue(l.dueDate ?? ""); break
       case "status": setLendEditValue(l.status); break
       case "memo": setLendEditValue(l.memo); break
@@ -265,14 +264,12 @@ export function BalanceDashboard() {
     const l = lendings.find((x) => x.id === lendEditId)
     if (!l) { cancelLendEdit(); return }
     let oldVal: string
-    if (lendEditField === "outstanding") oldVal = String(l.outstanding ?? 0)
-    else if (lendEditField === "dueDate") oldVal = l.dueDate ?? ""
+    if (lendEditField === "dueDate") oldVal = l.dueDate ?? ""
     else if (lendEditField === "counterparty") oldVal = l.counterparty ?? ""
     else oldVal = l[lendEditField]
     if (lendEditValue === oldVal) { cancelLendEdit(); return }
     const patch: Record<string, unknown> = { editedBy: userName }
-    if (lendEditField === "outstanding") patch.outstanding = Number(lendEditValue)
-    else if (lendEditField === "dueDate") patch.dueDate = lendEditValue || null
+    if (lendEditField === "dueDate") patch.dueDate = lendEditValue || null
     else patch[lendEditField] = lendEditValue
     updateLendingMutation.mutate({ id: lendEditId, data: patch })
     cancelLendEdit()
@@ -724,12 +721,8 @@ export function BalanceDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-right tabular-nums">{formatCurrency(l.principal ?? 0)}</TableCell>
-                          <TableCell className={cn("text-sm text-right font-medium tabular-nums", (l.outstanding ?? 0) > 0 ? "text-red-600" : "text-emerald-600")} onDoubleClick={() => startLendEdit(l, "outstanding")}>
-                            {isLendEditing(l.id, "outstanding") ? (
-                              <Input type="number" autoFocus value={lendEditValue} onChange={(e) => setLendEditValue(e.target.value)} onKeyDown={handleLendKeyDown} onBlur={saveLendEdit} className="h-7 text-sm text-right w-28" />
-                            ) : (
-                              <span className="cursor-text">{formatCurrency(l.outstanding ?? 0)}</span>
-                            )}
+                          <TableCell className={cn("text-sm text-right font-medium tabular-nums", (l.outstanding ?? 0) > 0 ? "text-red-600" : "text-emerald-600")}>
+                            {formatCurrency(l.outstanding ?? 0)}
                           </TableCell>
                           <TableCell className="text-sm" onDoubleClick={() => startLendEdit(l, "dueDate")}>
                             {isLendEditing(l.id, "dueDate") ? (
@@ -1297,12 +1290,8 @@ export function BalanceDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-right tabular-nums">{formatCurrency(l.principal ?? 0)}</TableCell>
-                          <TableCell className={cn("text-sm text-right font-medium tabular-nums", (l.outstanding ?? 0) > 0 ? "text-red-600" : "text-emerald-600")} onDoubleClick={() => startLendEdit(l, "outstanding")}>
-                            {isLendEditing(l.id, "outstanding") ? (
-                              <Input type="number" autoFocus value={lendEditValue} onChange={(e) => setLendEditValue(e.target.value)} onKeyDown={handleLendKeyDown} onBlur={saveLendEdit} className="h-7 text-sm text-right w-28" />
-                            ) : (
-                              <span className="cursor-text">{formatCurrency(l.outstanding ?? 0)}</span>
-                            )}
+                          <TableCell className={cn("text-sm text-right font-medium tabular-nums", (l.outstanding ?? 0) > 0 ? "text-red-600" : "text-emerald-600")}>
+                            {formatCurrency(l.outstanding ?? 0)}
                           </TableCell>
                           <TableCell className="text-sm" onDoubleClick={() => startLendEdit(l, "dueDate")}>
                             {isLendEditing(l.id, "dueDate") ? (
