@@ -76,6 +76,7 @@ const EDITABLE_TX_TYPES = [
   { value: "gain", label: "運用益" },
   { value: "loss", label: "運用損" },
   { value: "revenue", label: "売上" },
+  { value: "expense", label: "支出" },
   { value: "misc_expense", label: "雑費" },
   { value: "misc_income", label: "雑収入" },
 ]
@@ -284,7 +285,7 @@ export function AccountDetailView({ accountId }: Props) {
 
   // 売上・支出・利益（◀ ▶ で表示月を切替可能）
   const INCOME_TYPES = new Set(["revenue", "misc_income", "gain"])
-  const EXPENSE_TYPES = new Set(["misc_expense", "loss"])
+  const EXPENSE_TYPES = new Set(["expense", "misc_expense", "loss"])
   const [viewMonth, setViewMonth] = useState(() => {
     const d = new Date()
     d.setDate(1)

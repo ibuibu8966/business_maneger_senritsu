@@ -13,6 +13,7 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   gain: "運用益",
   loss: "運用損",
   revenue: "売上",
+  expense: "支出",
   misc_expense: "雑費",
   misc_income: "その他売上",
 }

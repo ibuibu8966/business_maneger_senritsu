@@ -16,6 +16,7 @@ const accountTransactionTypes = [
   "gain",
   "loss",
   "revenue",
+  "expense",
   "misc_expense",
   "misc_income",
 ] as const

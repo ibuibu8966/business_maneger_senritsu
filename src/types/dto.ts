@@ -40,6 +40,7 @@ export type AccountTransactionTypeDTO =
   | "gain"
   | "loss"
   | "revenue"
+  | "expense"
   | "misc_expense"
   | "misc_income"
 

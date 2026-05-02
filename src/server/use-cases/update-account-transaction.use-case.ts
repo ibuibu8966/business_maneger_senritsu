@@ -20,6 +20,7 @@ const TYPE_LABELS: Record<AccountTransactionType, string> = {
   GAIN: "運用益",
   LOSS: "運用損",
   REVENUE: "売上",
+  EXPENSE: "支出",
   MISC_EXPENSE: "雑費",
   MISC_INCOME: "雑収入",
 }

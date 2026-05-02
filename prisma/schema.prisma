@@ -372,6 +372,7 @@ enum AccountTransactionType {
   GAIN // 運用益
   LOSS // 運用損
   REVENUE // 売上
+  EXPENSE // 支出（売上の対。雑費とは区別）
   MISC_EXPENSE // 雑費
   MISC_INCOME // 雑収入
 }
