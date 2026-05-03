@@ -11,7 +11,6 @@ import { GetLendings } from "@/server/use-cases/get-lendings.use-case"
 import { CreateLending } from "@/server/use-cases/create-lending.use-case"
 import { UpdateLending } from "@/server/use-cases/update-lending.use-case"
 import { CreateLendingPayment } from "@/server/use-cases/create-lending-payment.use-case"
-import { UpsertInitialBalance } from "@/server/use-cases/upsert-initial-balance.use-case"
 import { AccountTagUseCase } from "@/server/use-cases/account-tag.use-case"
 import {
   createAccountSchema,
@@ -180,31 +179,6 @@ export class LendingController {
       return NextResponse.json(result)
     } catch (e) {
       return handleApiError(e, { resource: "口座取引", action: "更新" })
-    }
-  }
-
-  static async upsertInitialBalance(req: NextRequest, accountId: string) {
-    try {
-      const { session, error } = await requireRole("master_admin", "admin")
-      if (error) return error
-      const body = await req.json()
-      const data = z
-        .object({
-          amount: z.number().int(),
-          date: z.string().optional(),
-          memo: z.string().optional(),
-        })
-        .parse(body)
-      const result = await UpsertInitialBalance.execute({
-        accountId,
-        amount: data.amount,
-        date: data.date,
-        memo: data.memo,
-        editedBy: session?.user?.name ?? "",
-      })
-      return NextResponse.json(result, { status: 200 })
-    } catch (e) {
-      return handleApiError(e, { resource: "初期残高", action: "登録" })
     }
   }
 

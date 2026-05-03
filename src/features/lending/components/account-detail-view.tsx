@@ -184,43 +184,6 @@ export function AccountDetailView({ accountId }: Props) {
   const [paymentLendingId, setPaymentLendingId] = useState<string | null>(null)
   const [expandedLendings, setExpandedLendings] = useState<Set<string>>(new Set())
 
-  // 初期残高モーダル
-  const [initialBalanceModalOpen, setInitialBalanceModalOpen] = useState(false)
-  const [initialBalanceAmount, setInitialBalanceAmount] = useState("")
-  const [initialBalanceDate, setInitialBalanceDate] = useState("")
-  const [savingInitialBalance, setSavingInitialBalance] = useState(false)
-  const existingInitial = transactions.find((t: { type: string }) => t.type === "initial")
-  useEffect(() => {
-    if (initialBalanceModalOpen) {
-      setInitialBalanceAmount(existingInitial ? String(existingInitial.amount) : "")
-      setInitialBalanceDate(existingInitial?.date ?? account?.createdAt?.split("T")[0] ?? "")
-    }
-  }, [initialBalanceModalOpen, existingInitial, account])
-
-  const handleSaveInitialBalance = async () => {
-    if (!initialBalanceAmount) return
-    setSavingInitialBalance(true)
-    try {
-      const res = await fetch(`/api/lending/accounts/${accountId}/initial-balance`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: Number(initialBalanceAmount),
-          date: initialBalanceDate || undefined,
-        }),
-      })
-      if (!res.ok) throw new Error("登録に失敗しました")
-      toast.success("初期残高を保存しました")
-      setInitialBalanceModalOpen(false)
-      // データ再取得
-      window.location.reload()
-    } catch {
-      toast.error("初期残高の保存に失敗しました")
-    } finally {
-      setSavingInitialBalance(false)
-    }
-  }
-
   // インライン編集
   const [editing, setEditing] = useState(false)
   const [editPurpose, setEditPurpose] = useState("")
@@ -818,9 +781,6 @@ export function AccountDetailView({ accountId }: Props) {
         <CardHeader className="px-3 py-2 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-medium">取引履歴</CardTitle>
           <div className="flex items-center gap-3">
-            <Button size="sm" variant="outline" onClick={() => setInitialBalanceModalOpen(true)} className="h-7 text-xs gap-1">
-              <Plus className="h-3.5 w-3.5" />初期残高
-            </Button>
             <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
               <input type="checkbox" checked={showArchivedTx} onChange={(e) => setShowArchivedTx(e.target.checked)} className="rounded" />
               アーカイブのみ表示
@@ -847,7 +807,6 @@ export function AccountDetailView({ accountId }: Props) {
                 const isEditing = editingTxId === t.id
                 // 自動計上type（手動編集を許可しない）
                 const isAutoType = ["initial", "transfer", "lending", "repayment", "interest"].includes(t.type)
-                const isInitial = t.type === "initial"
 
                 if (isEditing) {
                   return (
@@ -903,11 +862,6 @@ export function AccountDetailView({ accountId }: Props) {
                       <div className="flex gap-0.5">
                         {!isAutoType && (
                           <Button size="sm" variant="ghost" onClick={() => startEditingTx(t)} className="h-6 w-6 p-0">
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        )}
-                        {isInitial && (
-                          <Button size="sm" variant="ghost" onClick={() => setInitialBalanceModalOpen(true)} className="h-6 w-6 p-0" title="初期残高を編集">
                             <Pencil className="h-3 w-3" />
                           </Button>
                         )}
@@ -967,46 +921,6 @@ export function AccountDetailView({ accountId }: Props) {
         onSave={(data) => { createPaymentMutation.mutate(data, { onSuccess: () => toast.success("返済を記録しました"), onError: () => toast.error("返済の記録に失敗しました") }); setPaymentModalOpen(false) }}
       />
 
-      {/* 初期残高モーダル */}
-      {initialBalanceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setInitialBalanceModalOpen(false)}>
-          <div className="bg-background rounded-lg shadow-xl p-5 w-[400px] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-3">
-              {existingInitial ? "初期残高を更新" : "初期残高を登録"}
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">金額（円）</label>
-                <Input
-                  type="number"
-                  value={initialBalanceAmount}
-                  onChange={(e) => setInitialBalanceAmount(e.target.value)}
-                  placeholder="例: 100000"
-                  className="text-sm"
-                />
-                <p className="text-[11px] text-muted-foreground mt-1">マイナスも入力可能（クレカ等の負債口座）</p>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">日付</label>
-                <Input
-                  type="date"
-                  value={initialBalanceDate}
-                  onChange={(e) => setInitialBalanceDate(e.target.value)}
-                  className="text-sm"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="ghost" size="sm" onClick={() => setInitialBalanceModalOpen(false)} disabled={savingInitialBalance}>
-                取消
-              </Button>
-              <Button size="sm" onClick={handleSaveInitialBalance} disabled={savingInitialBalance || !initialBalanceAmount}>
-                {savingInitialBalance ? "保存中..." : "保存"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
