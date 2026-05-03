@@ -19,6 +19,7 @@ export class CreateLendingPayment {
     amount: number
     date: string
     memo?: string
+    editedBy?: string
   }): Promise<LendingPaymentDTO> {
     const externalId = await AccountRepository.findExternalAccountId()
 
@@ -44,7 +45,7 @@ export class CreateLendingPayment {
           counterparty: lending.counterparty,
           lendingId: data.lendingId,
           memo: data.memo ?? "",
-          editedBy: "system",
+          editedBy: data.editedBy ?? "system",
         },
       })
 

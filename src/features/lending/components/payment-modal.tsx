@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSession } from "next-auth/react"
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,8 @@ interface Props {
 }
 
 export function PaymentModal({ open, onOpenChange, lendingId, onSave }: Props) {
+  const { data: session } = useSession()
+  const userName = session?.user?.name ?? ""
   const [amount, setAmount] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [memo, setMemo] = useState("")
@@ -30,6 +33,7 @@ export function PaymentModal({ open, onOpenChange, lendingId, onSave }: Props) {
       amount: Number(amount),
       date,
       memo,
+      editedBy: userName,
     })
     setAmount("")
     setMemo("")

@@ -130,7 +130,7 @@ export class CreateLending {
             counterparty: data.counterparty,
             lendingId: main.id,
             memo: `貸借自動計上: ${data.memo ?? ""}`.trim(),
-            editedBy: "system",
+            editedBy: data.editedBy ?? "system",
           },
         })
 

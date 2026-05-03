@@ -106,4 +106,5 @@ export const createPaymentSchema = z.object({
   amount: z.number().int().positive(),
   date: z.string(),
   memo: z.string().optional(),
+  editedBy: z.string().optional(),
 })
