@@ -26,6 +26,7 @@ export class UpdateLending {
     data: {
       counterparty?: string
       counterpartyAccountId?: string | null
+      date?: string
       dueDate?: string | null
       memo?: string
       editedBy?: string
@@ -82,6 +83,15 @@ export class UpdateLending {
         })
       }
 
+      // date が指定された場合、紐づく LENDING 取引の実行日を更新
+      if (data.date !== undefined) {
+        const lendingIds = [id, current.linkedLendingId].filter(Boolean) as string[]
+        await tx.accountTransaction.updateMany({
+          where: { lendingId: { in: lendingIds }, type: "LENDING" },
+          data: { date: new Date(data.date) },
+        })
+      }
+
       // 紐づくLENDING取引の実行日
       const linkedTx = await tx.accountTransaction.findFirst({
         where: { lendingId: id, type: "LENDING" },
@@ -100,6 +110,7 @@ export class UpdateLending {
         principal: r.principal,
         accountId: r.accountId,
         type: r.type,
+        linkedLendingId: r.linkedLendingId,
       })
       const status = computeStatus({ outstanding, dueDate: r.dueDate })
 

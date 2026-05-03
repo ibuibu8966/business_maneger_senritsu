@@ -80,8 +80,10 @@ export const createLendingSchema = z.object({
   counterpartyAccountId: z.string().nullable().optional(),
   type: z.enum(["lend", "borrow"]),
   principal: z.number().int().positive(),
+  date: z.string().optional(),
   dueDate: z.string().nullable().optional(),
   memo: z.string().optional(),
+  editedBy: z.string().optional(),
 })
 
 export const updateLendingSchema = z.object({
@@ -89,6 +91,7 @@ export const updateLendingSchema = z.object({
   counterpartyAccountId: z.string().nullable().optional(),
   // outstanding は廃止（principal − SUM(REPAYMENT) で都度計算）
   // status は廃止（自動判定）
+  date: z.string().optional(),
   dueDate: z.string().nullable().optional(),
   memo: z.string().optional(),
   editedBy: z.string().optional(),
