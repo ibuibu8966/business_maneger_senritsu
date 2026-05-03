@@ -4,36 +4,25 @@ import { LendingRepository } from "@/server/repositories/lending.repository"
 import type { AccountDetailDTO } from "@/types/dto"
 
 /**
- * 残高計算（複式簿記版・統一版）
+ * 残高計算（複式簿記版・全件累積方式）
  *
  * dayEnd 未指定: 現在残高（全 active 取引で計算）
  * dayEnd 指定 : その日終了時点の残高（snapshot 日次バッチ等で利用）
  *
- * ロジック:
- *  上限日（dayEnd or 無上限）以前の最新スナップショットを起点 +
- *  Σ(toAccount=対象 ＆ snap日<date≦上限) − Σ(fromAccount=対象 ＆ snap日<date≦上限)
+ * 設計方針:
+ *  スナップショット起点を使わず、常に 0 起点で全 active 取引を累積する。
+ *  これにより recalcRequiredFromDate のセット漏れによる残高ズレが構造的に発生しない。
+ *  AccountBalanceSnapshot は過去日付の時点残高参照用キャッシュとしてのみ使用される。
  */
 async function calcBalance(accountId: string, dayEnd?: Date): Promise<number> {
-  const snap = await prisma.accountBalanceSnapshot.findFirst({
-    where: {
-      accountId,
-      ...(dayEnd && { date: { lte: dayEnd } }),
-    },
-    orderBy: { date: "desc" },
-  })
-  const baseDate = snap?.date ?? new Date(0)
-  const baseBalance = snap?.balance ?? 0
-
-  const dateFilter = dayEnd
-    ? { gt: baseDate, lte: dayEnd }
-    : { gt: baseDate }
+  const dateFilter = dayEnd ? { lte: dayEnd } : undefined
 
   const [inflow, outflow] = await Promise.all([
     prisma.accountTransaction.aggregate({
       _sum: { amount: true },
       where: {
         toAccountId: accountId,
-        date: dateFilter,
+        ...(dateFilter && { date: dateFilter }),
         isArchived: false,
       },
     }),
@@ -41,13 +30,13 @@ async function calcBalance(accountId: string, dayEnd?: Date): Promise<number> {
       _sum: { amount: true },
       where: {
         fromAccountId: accountId,
-        date: dateFilter,
+        ...(dateFilter && { date: dateFilter }),
         isArchived: false,
       },
     }),
   ])
 
-  return baseBalance + (inflow._sum.amount ?? 0) - (outflow._sum.amount ?? 0)
+  return (inflow._sum.amount ?? 0) - (outflow._sum.amount ?? 0)
 }
 
 /**
