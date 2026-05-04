@@ -77,6 +77,8 @@ import { ProjectTreeNode } from "./task-list/project-tree-node"
 import { ProjectSidePanel } from "./task-list/project-side-panel"
 import { TaskDetailPanel } from "./task-list/task-detail-panel"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
+import { useRealtimeSync } from "@/hooks/use-realtime-sync"
+import { queryKeys } from "@/lib/query-keys"
 
 
 
@@ -276,6 +278,27 @@ export function TaskListView() {
   // 選択中タスクの詳細
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const selectedTask = allTasks.find((t) => t.id === selectedTaskId) ?? null
+
+  // Supabase Realtime 同期：他ユーザーの変更を即時反映
+  useRealtimeSync({
+    channel: "business-tasks-page",
+    tables: [
+      "BusinessTask",
+      "TaskAssignee",
+      "TaskUserSortOrder",
+      "TaskChecklistItem",
+      "Project",
+      "BusinessIssue",
+      "ScheduleEvent",
+    ],
+    queryKeys: [
+      queryKeys.businessTasks.all,
+      queryKeys.projects.all,
+      queryKeys.businessIssues.all,
+      queryKeys.businessDetails.all,
+      queryKeys.scheduleEvents.all,
+    ],
+  })
 
   if (isLoading) {
     return (
