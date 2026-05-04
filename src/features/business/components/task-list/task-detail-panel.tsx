@@ -118,6 +118,179 @@ export function TaskDetailPanel({
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg cursor-pointer shrink-0">&times;</button>
       </div>
 
+      {/* ⑤ 繰り返し設定（折りたたみ） */}
+      <details className="border-b" open={showRecurring}>
+        <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer text-xs font-semibold hover:bg-muted/30 list-none">
+          <Repeat className="w-3.5 h-3.5 text-blue-500" />
+          🔁 繰り返し設定
+          {task.recurring && <span className="text-[10px] text-blue-600 ml-1">({recurringLabel})</span>}
+          {task.recurring && (
+            <button
+              type="button"
+              className="text-[10px] text-red-500 hover:text-red-700 cursor-pointer ml-2"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                updateTaskMutation.mutate({
+                  id: task.id,
+                  data: { recurring: false, recurringPattern: null, recurringDay: null, recurringWeek: null, recurringEndDate: null }
+                })
+              }}
+            >
+              停止
+            </button>
+          )}
+          <span className="text-muted-foreground ml-auto text-[10px]">▼</span>
+        </summary>
+        <div className="px-4 pb-3 space-y-2">
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <Label className="text-[10px]">パターン</Label>
+              <select
+                className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+                value={task.recurringPattern ?? ""}
+                onChange={(e) => {
+                  const pattern = e.target.value || null
+                  updateTaskMutation.mutate({
+                    id: task.id,
+                    data: { recurring: !!pattern, recurringPattern: pattern, recurringDay: null, recurringWeek: null }
+                  })
+                }}
+              >
+                <option value="">なし</option>
+                <option value="daily">毎日</option>
+                <option value="weekly">毎週</option>
+                <option value="monthly_date">毎月（日付指定）</option>
+                <option value="monthly_weekday">毎月（曜日指定）</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-[10px]">終了日（任意）</Label>
+              <Input
+                type="date"
+                className="mt-0.5 h-7 text-xs"
+                value={task.recurringEndDate ?? ""}
+                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringEndDate: e.target.value || null } })}
+              />
+            </div>
+          </div>
+          {task.recurringPattern === "weekly" && (
+            <div>
+              <div className="flex gap-1 mb-1.5">
+                <button
+                  type="button"
+                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [1, 2, 3, 4, 5], recurringDay: null } })}
+                >
+                  平日のみ
+                </button>
+                <button
+                  type="button"
+                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [0, 6], recurringDay: null } })}
+                >
+                  週末のみ
+                </button>
+                <button
+                  type="button"
+                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [0, 1, 2, 3, 4, 5, 6], recurringDay: null } })}
+                >
+                  毎日
+                </button>
+                <button
+                  type="button"
+                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [], recurringDay: null } })}
+                >
+                  クリア
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { v: 1, l: "月" }, { v: 2, l: "火" }, { v: 3, l: "水" },
+                  { v: 4, l: "木" }, { v: 5, l: "金" }, { v: 6, l: "土" }, { v: 0, l: "日" },
+                ].map(({ v, l }) => {
+                  const currentDays: number[] = (task.recurringDays && task.recurringDays.length > 0)
+                    ? task.recurringDays
+                    : (task.recurringDay != null ? [task.recurringDay] : [])
+                  const checked = currentDays.includes(v)
+                  return (
+                    <label
+                      key={v}
+                      className={`text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...currentDays, v].sort()
+                            : currentDays.filter((d) => d !== v)
+                          updateTaskMutation.mutate({ id: task.id, data: { recurringDays: next, recurringDay: null } })
+                        }}
+                      />
+                      {l}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {task.recurringPattern === "monthly_date" && (
+            <div>
+              <Label className="text-[10px]">日付</Label>
+              <select
+                className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+                value={task.recurringDay != null ? String(task.recurringDay) : ""}
+                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })}
+              >
+                <option value="">選択してください</option>
+                {Array.from({ length: 31 }, (_, i) => (
+                  <option key={i + 1} value={String(i + 1)}>{i + 1}日</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {task.recurringPattern === "monthly_weekday" && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px]">第何週</Label>
+                <select
+                  className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+                  value={task.recurringWeek != null ? String(task.recurringWeek) : ""}
+                  onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringWeek: e.target.value ? Number(e.target.value) : null } })}
+                >
+                  <option value="">選択</option>
+                  <option value="1">第1週</option>
+                  <option value="2">第2週</option>
+                  <option value="3">第3週</option>
+                  <option value="4">第4週</option>
+                  <option value="5">第5週</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-[10px]">曜日</Label>
+                <select
+                  className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+                  value={task.recurringDay != null ? String(task.recurringDay) : ""}
+                  onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })}
+                >
+                  <option value="">選択</option>
+                  <option value="1">月曜日</option>
+                  <option value="2">火曜日</option>
+                  <option value="3">水曜日</option>
+                  <option value="4">木曜日</option>
+                  <option value="5">金曜日</option>
+                  <option value="6">土曜日</option>
+                  <option value="0">日曜日</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+      </details>
       {/* 📅 カレンダー連携（最上部） */}
       <details className="border-b">
         <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer text-xs font-semibold hover:bg-muted/30 list-none">
@@ -445,179 +618,6 @@ export function TaskDetailPanel({
         </div>
       </div>
 
-      {/* ⑤ 繰り返し設定（折りたたみ） */}
-      <details className="border-b" open={showRecurring}>
-        <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer text-xs font-semibold hover:bg-muted/30 list-none">
-          <Repeat className="w-3.5 h-3.5 text-blue-500" />
-          🔁 繰り返し設定
-          {task.recurring && <span className="text-[10px] text-blue-600 ml-1">({recurringLabel})</span>}
-          {task.recurring && (
-            <button
-              type="button"
-              className="text-[10px] text-red-500 hover:text-red-700 cursor-pointer ml-2"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                updateTaskMutation.mutate({
-                  id: task.id,
-                  data: { recurring: false, recurringPattern: null, recurringDay: null, recurringWeek: null, recurringEndDate: null }
-                })
-              }}
-            >
-              停止
-            </button>
-          )}
-          <span className="text-muted-foreground ml-auto text-[10px]">▼</span>
-        </summary>
-        <div className="px-4 pb-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <div>
-              <Label className="text-[10px]">パターン</Label>
-              <select
-                className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
-                value={task.recurringPattern ?? ""}
-                onChange={(e) => {
-                  const pattern = e.target.value || null
-                  updateTaskMutation.mutate({
-                    id: task.id,
-                    data: { recurring: !!pattern, recurringPattern: pattern, recurringDay: null, recurringWeek: null }
-                  })
-                }}
-              >
-                <option value="">なし</option>
-                <option value="daily">毎日</option>
-                <option value="weekly">毎週</option>
-                <option value="monthly_date">毎月（日付指定）</option>
-                <option value="monthly_weekday">毎月（曜日指定）</option>
-              </select>
-            </div>
-            <div>
-              <Label className="text-[10px]">終了日（任意）</Label>
-              <Input
-                type="date"
-                className="mt-0.5 h-7 text-xs"
-                value={task.recurringEndDate ?? ""}
-                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringEndDate: e.target.value || null } })}
-              />
-            </div>
-          </div>
-          {task.recurringPattern === "weekly" && (
-            <div>
-              <div className="flex gap-1 mb-1.5">
-                <button
-                  type="button"
-                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
-                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [1, 2, 3, 4, 5], recurringDay: null } })}
-                >
-                  平日のみ
-                </button>
-                <button
-                  type="button"
-                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
-                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [0, 6], recurringDay: null } })}
-                >
-                  週末のみ
-                </button>
-                <button
-                  type="button"
-                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
-                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [0, 1, 2, 3, 4, 5, 6], recurringDay: null } })}
-                >
-                  毎日
-                </button>
-                <button
-                  type="button"
-                  className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
-                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { recurringDays: [], recurringDay: null } })}
-                >
-                  クリア
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { v: 1, l: "月" }, { v: 2, l: "火" }, { v: 3, l: "水" },
-                  { v: 4, l: "木" }, { v: 5, l: "金" }, { v: 6, l: "土" }, { v: 0, l: "日" },
-                ].map(({ v, l }) => {
-                  const currentDays: number[] = (task.recurringDays && task.recurringDays.length > 0)
-                    ? task.recurringDays
-                    : (task.recurringDay != null ? [task.recurringDay] : [])
-                  const checked = currentDays.includes(v)
-                  return (
-                    <label
-                      key={v}
-                      className={`text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="hidden"
-                        checked={checked}
-                        onChange={(e) => {
-                          const next = e.target.checked
-                            ? [...currentDays, v].sort()
-                            : currentDays.filter((d) => d !== v)
-                          updateTaskMutation.mutate({ id: task.id, data: { recurringDays: next, recurringDay: null } })
-                        }}
-                      />
-                      {l}
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          {task.recurringPattern === "monthly_date" && (
-            <div>
-              <Label className="text-[10px]">日付</Label>
-              <select
-                className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
-                value={task.recurringDay != null ? String(task.recurringDay) : ""}
-                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })}
-              >
-                <option value="">選択してください</option>
-                {Array.from({ length: 31 }, (_, i) => (
-                  <option key={i + 1} value={String(i + 1)}>{i + 1}日</option>
-                ))}
-              </select>
-            </div>
-          )}
-          {task.recurringPattern === "monthly_weekday" && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px]">第何週</Label>
-                <select
-                  className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
-                  value={task.recurringWeek != null ? String(task.recurringWeek) : ""}
-                  onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringWeek: e.target.value ? Number(e.target.value) : null } })}
-                >
-                  <option value="">選択</option>
-                  <option value="1">第1週</option>
-                  <option value="2">第2週</option>
-                  <option value="3">第3週</option>
-                  <option value="4">第4週</option>
-                  <option value="5">第5週</option>
-                </select>
-              </div>
-              <div>
-                <Label className="text-[10px]">曜日</Label>
-                <select
-                  className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
-                  value={task.recurringDay != null ? String(task.recurringDay) : ""}
-                  onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })}
-                >
-                  <option value="">選択</option>
-                  <option value="1">月曜日</option>
-                  <option value="2">火曜日</option>
-                  <option value="3">水曜日</option>
-                  <option value="4">木曜日</option>
-                  <option value="5">金曜日</option>
-                  <option value="6">土曜日</option>
-                  <option value="0">日曜日</option>
-                </select>
-              </div>
-            </div>
-          )}
-        </div>
-      </details>
 
       {/* フッター */}
       <div className="px-4 py-3 flex justify-between items-center bg-muted/20">
