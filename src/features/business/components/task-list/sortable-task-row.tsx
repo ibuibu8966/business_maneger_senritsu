@@ -18,11 +18,13 @@ export function SortableTaskRow({
   index,
   onClickTask,
   onToggleTodayFlag,
+  isSelected = false,
 }: {
   task: TaskItem
   index: number
   onClickTask: (t: TaskItem) => void
   onToggleTodayFlag: (t: TaskItem) => void
+  isSelected?: boolean
 }) {
   const {
     attributes,
@@ -97,7 +99,9 @@ export function SortableTaskRow({
       onClick={() => onClickTask(task)}
       className={`flex items-center gap-2 p-2.5 rounded-md border text-[clamp(12px,0.85vw,14px)] bg-background hover:bg-muted/50 cursor-grab active:cursor-grabbing touch-none ${
         task.status === "done" ? "opacity-50" : ""
-      } ${task.todayFlag ? "ring-1 ring-yellow-400/60 dark:ring-yellow-500/60 bg-yellow-50/40 dark:bg-yellow-900/20" : ""}`}
+      } ${task.todayFlag ? "ring-1 ring-yellow-400/60 dark:ring-yellow-500/60 bg-yellow-50/40 dark:bg-yellow-900/20" : ""} ${
+        isSelected ? "border-l-[3px] border-l-blue-500 bg-blue-50/60 dark:bg-blue-900/20" : ""
+      }`}
     >
       <button
         type="button"

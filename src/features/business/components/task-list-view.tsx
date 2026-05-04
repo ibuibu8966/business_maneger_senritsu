@@ -71,6 +71,7 @@ import { getAncestorIds } from "./task-list/utils"
 import type { BizInfo, IssueInfo } from "./task-list/types"
 import { TaskCreateDialog } from "./task-list/task-create-dialog"
 import { SortableTaskRow } from "./task-list/sortable-task-row"
+import { TaskRowExpanded } from "./task-list/task-row-expanded"
 import { TaskChecklistSection } from "./task-list/task-checklist-section"
 import { ProjectTreeNode } from "./task-list/project-tree-node"
 import { ProjectSidePanel } from "./task-list/project-side-panel"
@@ -415,13 +416,16 @@ export function TaskListView() {
               <SortableContext items={orderedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-1">
                   {orderedTasks.map((t, i) => (
-                    <SortableTaskRow
-                      key={t.id}
-                      task={t}
-                      index={i}
-                      onClickTask={(task) => setSelectedTaskId(task.id)}
-                      onToggleTodayFlag={handleToggleTodayFlag}
-                    />
+                    <div key={t.id}>
+                      <SortableTaskRow
+                        task={t}
+                        index={i}
+                        onClickTask={(task) => setSelectedTaskId(task.id)}
+                        onToggleTodayFlag={handleToggleTodayFlag}
+                        isSelected={selectedTaskId === t.id}
+                      />
+                      {selectedTaskId === t.id && <TaskRowExpanded task={t} />}
+                    </div>
                   ))}
                 </div>
               </SortableContext>
