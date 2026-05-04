@@ -113,25 +113,9 @@ export function TaskDetailPanel({
 
   return (
     <div className="border-l overflow-y-auto h-full bg-card">
-      {/* ヘッダー: 繰り返しバッジ + × */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b">
-        {task.recurring ? (
-          <Badge
-            variant="outline"
-            className="text-xs text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/40"
-            onClick={() => setShowRecurring(!showRecurring)}
-          >
-            <Repeat className="w-3 h-3 mr-1" />{recurringLabel}
-          </Badge>
-        ) : (
-          <button
-            className="text-xs text-muted-foreground hover:text-blue-600 cursor-pointer flex items-center gap-1"
-            onClick={() => setShowRecurring(!showRecurring)}
-          >
-            <Plus className="w-3 h-3" />繰り返し設定
-          </button>
-        )}
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg cursor-pointer shrink-0 ml-auto">&times;</button>
+      {/* ヘッダー: × のみ */}
+      <div className="flex items-center justify-end px-4 py-2 border-b">
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg cursor-pointer shrink-0">&times;</button>
       </div>
 
       {/* 📅 カレンダー連携（最上部） */}
@@ -299,7 +283,8 @@ export function TaskDetailPanel({
       {/* ② スケジュール */}
       <div className="px-4 py-3 border-b">
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">② スケジュール</p>
-        <div className="grid grid-cols-3 gap-2">
+        {/* 1段目：締切 + 事前通知 */}
+        <div className="grid grid-cols-2 gap-2 mb-2">
           <div>
             <Label className="text-[10px] text-muted-foreground">締切</Label>
             <Input
@@ -308,35 +293,6 @@ export function TaskDetailPanel({
               value={task.deadline ?? ""}
               onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { deadline: e.target.value || null } })}
             />
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground flex items-center justify-between">
-              <span>実行日時</span>
-              {task.executionTime && (
-                <button
-                  type="button"
-                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })}
-                  className="text-red-500 hover:text-red-700 text-[9px]"
-                  title="実行時刻をクリア"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              )}
-            </Label>
-            <div className="grid grid-cols-2 gap-1 mt-0.5">
-              <Input
-                type="date"
-                className="h-7 text-[10px] px-1"
-                value={execDate}
-                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildExecValue(e.target.value, execTime) } })}
-              />
-              <Input
-                type="time"
-                className="h-7 text-[10px] px-1"
-                value={execTime}
-                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildExecValue(execDate, e.target.value) } })}
-              />
-            </div>
           </div>
           <div>
             <Label className="text-[10px] text-muted-foreground">事前通知</Label>
@@ -360,56 +316,86 @@ export function TaskDetailPanel({
             </select>
           </div>
         </div>
-        <p className="text-[9px] text-muted-foreground italic mt-1">日付なし＝毎日 / 日付あり＝1回のみ</p>
+        {/* 2段目：実行日時（date + time） */}
+        <div>
+          <Label className="text-[10px] text-muted-foreground flex items-center justify-between">
+            <span>実行日時（LINE通知）</span>
+            {task.executionTime && (
+              <button
+                type="button"
+                onClick={() => updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })}
+                className="text-red-500 hover:text-red-700 text-[9px] flex items-center gap-0.5"
+                title="実行時刻をクリア"
+              >
+                <X className="w-2.5 h-2.5" />クリア
+              </button>
+            )}
+          </Label>
+          <div className="grid grid-cols-2 gap-2 mt-0.5">
+            <Input
+              type="date"
+              className="h-7 text-xs"
+              value={execDate}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildExecValue(e.target.value, execTime) } })}
+            />
+            <Input
+              type="time"
+              className="h-7 text-xs"
+              value={execTime}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildExecValue(execDate, e.target.value) } })}
+            />
+          </div>
+          <p className="text-[9px] text-muted-foreground italic mt-1">日付なし＝毎日 / 日付あり＝1回のみ</p>
+        </div>
       </div>
 
       {/* ③ 分類 */}
       <div className="px-4 py-3 border-b">
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">③ 分類</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-[10px] text-muted-foreground">事業 / プロジェクト</Label>
-            <select
-              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
-              value={task.projectId ? `proj:${task.projectId}` : (task.businessId ? `biz:${task.businessId}` : "")}
-              onChange={(e) => {
-                const v = e.target.value
-                if (!v) return
-                const [kind, id] = v.split(":")
-                if (kind === "proj") {
-                  updateTaskMutation.mutate({ id: task.id, data: { projectId: id, businessId: null } })
-                } else {
-                  updateTaskMutation.mutate({ id: task.id, data: { projectId: null, businessId: id } })
-                }
-              }}
-            >
-              <option value="">選択してください</option>
-              {businesses.map((biz) => {
-                const projs = projects.filter((p) => p.businessId === biz.id)
-                return (
-                  <optgroup key={biz.id} label={biz.name}>
-                    <option value={`biz:${biz.id}`}>（事業直下）{biz.name}</option>
-                    {projs.map((p) => (
-                      <option key={p.id} value={`proj:${p.id}`}>{p.name}</option>
-                    ))}
-                  </optgroup>
-                )
-              })}
-            </select>
-          </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground">紐づく課題</Label>
-            <select
-              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
-              value={task.issueId ?? ""}
-              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { issueId: e.target.value || null } })}
-            >
-              <option value="">課題なし</option>
-              {issues.filter((i) => i.projectId === task.projectId).map((i) => (
-                <option key={i.id} value={i.id}>{i.title}</option>
-              ))}
-            </select>
-          </div>
+        {/* 1段目：事業/プロジェクト */}
+        <div className="mb-2">
+          <Label className="text-[10px] text-muted-foreground">事業 / プロジェクト</Label>
+          <select
+            className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+            value={task.projectId ? `proj:${task.projectId}` : (task.businessId ? `biz:${task.businessId}` : "")}
+            onChange={(e) => {
+              const v = e.target.value
+              if (!v) return
+              const [kind, id] = v.split(":")
+              if (kind === "proj") {
+                updateTaskMutation.mutate({ id: task.id, data: { projectId: id, businessId: null } })
+              } else {
+                updateTaskMutation.mutate({ id: task.id, data: { projectId: null, businessId: id } })
+              }
+            }}
+          >
+            <option value="">選択してください</option>
+            {businesses.map((biz) => {
+              const projs = projects.filter((p) => p.businessId === biz.id)
+              return (
+                <optgroup key={biz.id} label={biz.name}>
+                  <option value={`biz:${biz.id}`}>（事業直下）{biz.name}</option>
+                  {projs.map((p) => (
+                    <option key={p.id} value={`proj:${p.id}`}>{p.name}</option>
+                  ))}
+                </optgroup>
+              )
+            })}
+          </select>
+        </div>
+        {/* 2段目：紐づく課題 */}
+        <div>
+          <Label className="text-[10px] text-muted-foreground">紐づく課題</Label>
+          <select
+            className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+            value={task.issueId ?? ""}
+            onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { issueId: e.target.value || null } })}
+          >
+            <option value="">課題なし</option>
+            {issues.filter((i) => i.projectId === task.projectId).map((i) => (
+              <option key={i.id} value={i.id}>{i.title}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -460,25 +446,30 @@ export function TaskDetailPanel({
       </div>
 
       {/* ⑤ 繰り返し設定（折りたたみ） */}
-      {showRecurring && (
-        <div className="px-4 py-3 border-b bg-blue-50/30 dark:bg-blue-950/10">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">⑤ 繰り返し設定</p>
-            {task.recurring && (
-              <button
-                className="text-[10px] text-red-500 hover:text-red-700 cursor-pointer"
-                onClick={() => {
-                  updateTaskMutation.mutate({
-                    id: task.id,
-                    data: { recurring: false, recurringPattern: null, recurringDay: null, recurringWeek: null, recurringEndDate: null }
-                  })
-                  setShowRecurring(false)
-                }}
-              >
-                繰り返しを停止
-              </button>
-            )}
-          </div>
+      <details className="border-b" open={showRecurring}>
+        <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer text-xs font-semibold hover:bg-muted/30 list-none">
+          <Repeat className="w-3.5 h-3.5 text-blue-500" />
+          🔁 繰り返し設定
+          {task.recurring && <span className="text-[10px] text-blue-600 ml-1">({recurringLabel})</span>}
+          {task.recurring && (
+            <button
+              type="button"
+              className="text-[10px] text-red-500 hover:text-red-700 cursor-pointer ml-2"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                updateTaskMutation.mutate({
+                  id: task.id,
+                  data: { recurring: false, recurringPattern: null, recurringDay: null, recurringWeek: null, recurringEndDate: null }
+                })
+              }}
+            >
+              停止
+            </button>
+          )}
+          <span className="text-muted-foreground ml-auto text-[10px]">▼</span>
+        </summary>
+        <div className="px-4 pb-3 space-y-2">
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div>
               <Label className="text-[10px]">パターン</Label>
@@ -626,7 +617,7 @@ export function TaskDetailPanel({
             </div>
           )}
         </div>
-      )}
+      </details>
 
       {/* フッター */}
       <div className="px-4 py-3 flex justify-between items-center bg-muted/20">
