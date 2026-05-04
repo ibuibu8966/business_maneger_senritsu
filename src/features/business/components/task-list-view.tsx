@@ -286,87 +286,74 @@ export function TaskListView() {
 
   const leftColumn = (
     <div className="h-full overflow-y-auto">
-        {/* ヘッダー: フィルタ + 登録ボタン */}
-        <div className="p-3 border-b flex items-center gap-2 flex-wrap">
+        {/* 1段目: 担当者 + ステータスフィルタ + 今日やる + 繰り返しのみ */}
+        <div className="px-3 pt-2 pb-1.5 border-b flex items-center gap-2 flex-wrap text-[11px]">
           {isAdmin && (
-            <>
-              <Label className="text-xs shrink-0">担当者:</Label>
-              <select
-                className="text-xs border rounded-md p-1 bg-background"
-                value={filterStaffId}
-                onChange={(e) => setFilterStaffId(e.target.value)}
-              >
-                <option value="all">全員</option>
-                {allEmployees.map((s) => {
-                  const count = allTasks.filter((t) => {
-                    const ids = (t.assigneeIds && t.assigneeIds.length > 0) ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : [])
-                    return ids.includes(s.id) && t.status !== "done"
-                  }).length
-                  return <option key={s.id} value={s.id}>{s.name}（{count}件）</option>
-                })}
-              </select>
-
-              <Separator orientation="vertical" className="h-5 mx-1" />
-            </>
+            <select
+              className="text-[11px] border rounded-md px-1.5 py-1 bg-background h-7"
+              value={filterStaffId}
+              onChange={(e) => setFilterStaffId(e.target.value)}
+            >
+              <option value="all">担当者: 全員</option>
+              {allEmployees.map((s) => (
+                <option key={s.id} value={s.id}>担当者: {s.name}</option>
+              ))}
+            </select>
           )}
 
-          {(["all", "todo", "in-progress", "waiting", "done"] as (TaskStatus | "all")[]).map((s) => {
-            const label = s === "all" ? "すべて" : TASK_STATUS_CONFIG[s as TaskStatus].label
-            return (
-              <Button
-                key={s}
-                variant={filterStatus === s ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 text-xs cursor-pointer"
-                onClick={() => setFilterStatus(s)}
-              >
-                {label}
-              </Button>
-            )
-          })}
+          <div className="flex items-center gap-0.5">
+            {(["all", "todo", "in-progress", "waiting", "done"] as (TaskStatus | "all")[]).map((s) => {
+              const label = s === "all" ? "すべて" : TASK_STATUS_CONFIG[s as TaskStatus].label
+              const isActive = filterStatus === s
+              return (
+                <span
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={`px-2 py-1 cursor-pointer text-[11px] ${isActive ? "rounded bg-muted text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {label}
+                </span>
+              )
+            })}
+          </div>
 
-          <Separator orientation="vertical" className="h-5 mx-1" />
-
-          <Button
-            variant={showTodayOnly ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 text-xs cursor-pointer"
+          <span
             onClick={() => setShowTodayOnly((v) => !v)}
             title="今日やるフラグのついたタスクのみ表示"
+            className={`px-2 py-1 cursor-pointer text-[11px] flex items-center gap-1 ${showTodayOnly ? "rounded bg-muted text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <Star className={`w-3 h-3 mr-1 ${showTodayOnly ? "fill-yellow-400 text-yellow-500" : ""}`} />
+            <Star className={`w-3 h-3 ${showTodayOnly ? "fill-yellow-400 text-yellow-500" : ""}`} />
             今日やる
-          </Button>
+          </span>
 
-          <Button
-            variant={showRecurringOnly ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 text-xs cursor-pointer"
+          <span
             onClick={() => setShowRecurringOnly((v) => !v)}
             title="繰り返し設定がONの親タスクのみ表示"
+            className={`px-2 py-1 cursor-pointer text-[11px] flex items-center gap-1 ${showRecurringOnly ? "rounded bg-muted text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <Repeat className={`w-3 h-3 mr-1 ${showRecurringOnly ? "text-blue-600 dark:text-blue-400" : ""}`} />
+            <Repeat className={`w-3 h-3 ${showRecurringOnly ? "text-blue-600 dark:text-blue-400" : ""}`} />
             繰り返しのみ
-          </Button>
+          </span>
+        </div>
 
-          <div className="flex-1" />
-
-          <Button size="sm" className="h-7 text-xs cursor-pointer" onClick={() => setCreateDialogOpen(true)}>
+        {/* 2段目: ＋タスク登録 */}
+        <div className="px-3 py-1.5 border-b">
+          <Button size="sm" className="h-7 text-[11px] cursor-pointer" onClick={() => setCreateDialogOpen(true)}>
             <Plus className="w-3 h-3 mr-1" />タスク登録
           </Button>
         </div>
 
-        {/* 第2ヘッダー: 検索＋絞り込み＋並び順 */}
-        <div className="px-3 py-2 border-b flex items-center gap-2 flex-wrap bg-muted/20">
+        {/* 3段目: 検索＋絞り込み＋並び順 */}
+        <div className="px-3 py-1.5 border-b flex items-center gap-1 flex-wrap bg-muted/20">
           <Input
             type="text"
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             placeholder="タイトル・詳細を検索"
-            className="h-7 text-xs w-44"
+            className="h-7 text-[11px] flex-1 min-w-[120px]"
           />
           <select
-            className="text-xs border rounded-md p-1 bg-background"
+            className="text-[11px] border rounded-md px-1.5 py-1 bg-background h-7"
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value as typeof filterPriority)}
           >
@@ -377,7 +364,7 @@ export function TaskListView() {
             <option value="low">低</option>
           </select>
           <select
-            className="text-xs border rounded-md p-1 bg-background"
+            className="text-[11px] border rounded-md px-1.5 py-1 bg-background h-7"
             value={filterDeadline}
             onChange={(e) => setFilterDeadline(e.target.value as typeof filterDeadline)}
           >
@@ -389,7 +376,7 @@ export function TaskListView() {
             <option value="none">期限なし</option>
           </select>
           <select
-            className="text-xs border rounded-md p-1 bg-background"
+            className="text-[11px] border rounded-md px-1.5 py-1 bg-background h-7"
             value={filterCreatedBy}
             onChange={(e) => setFilterCreatedBy(e.target.value)}
           >
@@ -398,17 +385,15 @@ export function TaskListView() {
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          <Separator orientation="vertical" className="h-5 mx-1" />
-          <Label className="text-xs shrink-0">並び順:</Label>
           <select
-            className="text-xs border rounded-md p-1 bg-background"
+            className="text-[11px] border rounded-md px-1.5 py-1 bg-background h-7"
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
           >
-            <option value="manual">手動順</option>
-            <option value="priority">優先度高い順</option>
-            <option value="deadline">期限近い順</option>
-            <option value="created">作成日新しい順</option>
+            <option value="manual">並び順: 手動順</option>
+            <option value="priority">並び順: 優先度高い順</option>
+            <option value="deadline">並び順: 期限近い順</option>
+            <option value="created">並び順: 作成日新しい順</option>
           </select>
         </div>
 
