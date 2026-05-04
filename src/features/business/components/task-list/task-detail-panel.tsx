@@ -1,20 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Plus, Repeat, X, CalendarDays, AlertCircle, Pencil } from "lucide-react"
+import { useState } from "react"
+import { Plus, Repeat, X, CalendarDays } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
-import { toast } from "sonner"
 import {
   TASK_STATUS_CONFIG,
   PRIORITY_CONFIG,
   TOOL_CONFIG,
   type TaskItem,
   type TaskStatus,
+  type Priority,
   type ProjectNode,
   type TicketTool,
 } from "../mock-data"
@@ -23,15 +21,12 @@ import {
   useDeleteBusinessTask,
 } from "@/hooks/use-business"
 import { useEmployees, useCreateScheduleEvent } from "@/hooks/use-schedule"
-import { TaskChecklistSection } from "./task-checklist-section"
 
 export function TaskDetailPanel({
   task,
   onClose,
   updateTaskMutation,
   deleteTaskMutation,
-  memoRef,
-  detailRef,
   contacts,
   partners,
   issues,
@@ -42,8 +37,8 @@ export function TaskDetailPanel({
   onClose: () => void
   updateTaskMutation: ReturnType<typeof useUpdateBusinessTask>
   deleteTaskMutation: ReturnType<typeof useDeleteBusinessTask>
-  memoRef: React.RefObject<HTMLTextAreaElement | null>
-  detailRef: React.RefObject<HTMLTextAreaElement | null>
+  memoRef?: React.RefObject<HTMLTextAreaElement | null>
+  detailRef?: React.RefObject<HTMLTextAreaElement | null>
   contacts: { id: string; name: string }[]
   partners: { id: string; name: string }[]
   issues: { id: string; title: string; projectId: string }[]
@@ -52,6 +47,7 @@ export function TaskDetailPanel({
 }) {
   const [showRecurring, setShowRecurring] = useState(false)
   const [showScheduleForm, setShowScheduleForm] = useState(false)
+  const [showAssigneeMenu, setShowAssigneeMenu] = useState(false)
   const [schedDate, setSchedDate] = useState(task.deadline ?? new Date().toISOString().split("T")[0])
   const [schedStartTime, setSchedStartTime] = useState(task.executionTime ?? "09:00")
   const [schedEndTime, setSchedEndTime] = useState(() => {
@@ -62,37 +58,6 @@ export function TaskDetailPanel({
   const [schedTitle, setSchedTitle] = useState(task.title)
   const createScheduleMutation = useCreateScheduleEvent()
   const { data: employees = [] } = useEmployees()
-
-  // タイトル編集用 state
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [draftTitle, setDraftTitle] = useState(task.title)
-  useEffect(() => {
-    setDraftTitle(task.title)
-    setIsEditingTitle(false)
-  }, [task.id, task.title])
-  const commitTitleEdit = () => {
-    const trimmed = draftTitle.trim()
-    if (!trimmed || trimmed === task.title) {
-      setDraftTitle(task.title)
-      setIsEditingTitle(false)
-      return
-    }
-    updateTaskMutation.mutate(
-      { id: task.id, data: { title: trimmed } },
-      {
-        onSuccess: () => toast.success("タスク名を更新しました"),
-        onError: () => {
-          toast.error("更新に失敗しました")
-          setDraftTitle(task.title)
-        },
-      }
-    )
-    setIsEditingTitle(false)
-  }
-  const cancelTitleEdit = () => {
-    setDraftTitle(task.title)
-    setIsEditingTitle(false)
-  }
 
   const WEEKDAY_LABELS: Record<number, string> = { 0: "日曜日", 1: "月曜日", 2: "火曜日", 3: "水曜日", 4: "木曜日", 5: "金曜日", 6: "土曜日" }
   const PATTERN_LABELS: Record<string, string> = { daily: "毎日", weekly: "毎週", monthly_date: "毎月（日付）", monthly_weekday: "毎月（曜日）" }
@@ -105,7 +70,6 @@ export function TaskDetailPanel({
             ? task.recurringDays
             : (task.recurringDay != null ? [task.recurringDay] : [])
           if (days.length === 0) return p
-          // 平日／週末のプリセット表示
           const sorted = [...days].sort()
           const sortedStr = sorted.join(",")
           if (sortedStr === "1,2,3,4,5") return `${p} 平日`
@@ -120,50 +84,37 @@ export function TaskDetailPanel({
       })()
     : "繰り返し"
 
-  return (
-    <div className="border-l overflow-y-auto p-4 space-y-4 h-full">
-      <div className="flex items-center justify-between gap-2">
-        {isEditingTitle ? (
-          <input
-            type="text"
-            value={draftTitle}
-            onChange={(e) => setDraftTitle(e.target.value)}
-            onBlur={commitTitleEdit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                commitTitleEdit()
-              } else if (e.key === "Escape") {
-                e.preventDefault()
-                cancelTitleEdit()
-              }
-            }}
-            className="text-base font-bold flex-1 min-w-0 bg-background border border-primary/50 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
-            autoFocus
-            disabled={updateTaskMutation.isPending}
-          />
-        ) : (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <h3 className="text-base font-bold truncate">{task.title}</h3>
-            <button
-              onClick={() => {
-                setDraftTitle(task.title)
-                setIsEditingTitle(true)
-              }}
-              className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="タスク名を編集"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg cursor-pointer shrink-0">&times;</button>
-      </div>
+  const currentAssigneeIds: string[] = (task.assigneeIds && task.assigneeIds.length > 0)
+    ? task.assigneeIds
+    : (task.assigneeId ? [task.assigneeId] : [])
 
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className={`font-semibold ${TASK_STATUS_CONFIG[task.status].className}`}>
-          {TASK_STATUS_CONFIG[task.status].label}
-        </Badge>
+  const toggleAssignee = (empId: string) => {
+    const next = currentAssigneeIds.includes(empId)
+      ? currentAssigneeIds.filter((id) => id !== empId)
+      : [...currentAssigneeIds, empId]
+    const names = employees.filter((em) => next.includes(em.id)).map((em) => em.name)
+    updateTaskMutation.mutate({
+      id: task.id,
+      data: {
+        assigneeIds: next,
+        assigneeId: next[0] ?? null,
+        assigneeName: names[0] ?? null,
+        assigneeNames: names,
+      },
+    })
+  }
+
+  // executionTime 分解
+  const execMatch = task.executionTime?.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/) ?? null
+  const execDate = execMatch ? execMatch[1] : ""
+  const execTime = execMatch ? execMatch[2] : (task.executionTime ?? "")
+  const buildExecValue = (date: string, time: string) =>
+    time ? (date ? `${date} ${time}` : time) : null
+
+  return (
+    <div className="border-l overflow-y-auto h-full bg-card">
+      {/* ヘッダー: 繰り返しバッジ + × */}
+      <div className="flex items-center gap-2 px-4 py-3 border-b">
         {task.recurring ? (
           <Badge
             variant="outline"
@@ -180,158 +131,342 @@ export function TaskDetailPanel({
             <Plus className="w-3 h-3" />繰り返し設定
           </button>
         )}
-        <span className="text-[10px] text-muted-foreground ml-auto">
-          {task.seqNumber && <span className="font-mono font-bold mr-1">#{task.seqNumber}</span>}
-          {task.projectName ? `${task.businessName} > ${task.projectName}` : `${task.businessName}（事業直下）`}
-        </span>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg cursor-pointer shrink-0 ml-auto">&times;</button>
       </div>
 
-      {/* 紐づけ先（事業/プロジェクト） */}
-      <div>
-        <p className="text-xs font-medium text-muted-foreground mb-1">紐づけ先（事業/プロジェクト）</p>
-        <select
-          className="w-full text-sm border rounded-md p-1.5 bg-background cursor-pointer"
-          value={task.projectId ? `proj:${task.projectId}` : (task.businessId ? `biz:${task.businessId}` : "")}
-          onChange={(e) => {
-            const v = e.target.value
-            if (!v) return
-            const [kind, id] = v.split(":")
-            if (kind === "proj") {
-              updateTaskMutation.mutate({ id: task.id, data: { projectId: id, businessId: null } })
-            } else {
-              updateTaskMutation.mutate({ id: task.id, data: { projectId: null, businessId: id } })
-            }
-          }}
-        >
-          <option value="">選択してください</option>
-          {businesses.map((biz) => {
-            const projs = projects.filter((p) => p.businessId === biz.id)
-            return (
-              <optgroup key={biz.id} label={biz.name}>
-                <option value={`biz:${biz.id}`}>（事業直下）{biz.name}</option>
-                {projs.map((p) => (
-                  <option key={p.id} value={`proj:${p.id}`}>{p.name}</option>
-                ))}
-              </optgroup>
-            )
-          })}
-        </select>
-      </div>
-
-      {/* 紐づく課題 */}
-      <div className="flex items-center gap-2">
-        <AlertCircle className="w-3 h-3 text-orange-500 shrink-0" />
-        <select
-          className="text-xs border rounded px-1.5 py-0.5 bg-background cursor-pointer flex-1"
-          value={task.issueId ?? ""}
-          onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { issueId: e.target.value || null } })}
-        >
-          <option value="">課題なし</option>
-          {issues.filter((i) => i.projectId === task.projectId).map((i) => (
-            <option key={i.id} value={i.id}>{i.title}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* スケジュール */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-            <CalendarDays className="w-3 h-3" />スケジュール
-          </div>
-          <button
-            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 cursor-pointer"
-            onClick={() => setShowScheduleForm(!showScheduleForm)}
-          >
-            {showScheduleForm ? "閉じる" : "+ 登録"}
-          </button>
+      {/* 📅 カレンダー連携（最上部） */}
+      <details className="border-b">
+        <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer text-xs font-semibold hover:bg-muted/30 list-none">
+          <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
+          📅 カレンダー登録
+          {task.scheduleEvents && task.scheduleEvents.length > 0 && (
+            <span className="text-[10px] text-blue-600 ml-1">({task.scheduleEvents.length}件)</span>
+          )}
+          <span className="text-muted-foreground ml-auto text-[10px]">▼</span>
+        </summary>
+        <div className="px-4 pb-3 space-y-2">
+          {/* 登録済み一覧 */}
+          {task.scheduleEvents && task.scheduleEvents.length > 0 && (
+            <div className="space-y-1">
+              {task.scheduleEvents.map((se: any) => (
+                <div key={se.id} className="text-[10px] p-1.5 rounded bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-400 flex items-center gap-2">
+                  <CalendarDays className="w-3 h-3 text-blue-500 shrink-0" />
+                  <span className="truncate flex-1">{se.title}</span>
+                  <span className="text-muted-foreground shrink-0">
+                    {se.allDay
+                      ? new Date(se.startAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })
+                      : `${new Date(se.startAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })} ${new Date(se.startAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* 新規登録ボタンとフォーム */}
+          {!showScheduleForm ? (
+            <button
+              className="text-xs text-blue-600 hover:underline w-full text-left py-1"
+              onClick={() => setShowScheduleForm(true)}
+            >
+              + 新規登録
+            </button>
+          ) : (
+            <div className="space-y-2 border rounded-md p-3 bg-blue-50/50 dark:bg-blue-900/10">
+              <div>
+                <Label className="text-xs">タイトル</Label>
+                <Input className="mt-1 h-7 text-xs" value={schedTitle} onChange={(e) => setSchedTitle(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs">日付</Label>
+                  <Input type="date" className="mt-1 h-7 text-xs" value={schedDate} onChange={(e) => setSchedDate(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs">開始</Label>
+                  <Input type="time" className="mt-1 h-7 text-xs" value={schedStartTime} onChange={(e) => setSchedStartTime(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs">終了</Label>
+                  <Input type="time" className="mt-1 h-7 text-xs" value={schedEndTime} onChange={(e) => setSchedEndTime(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex gap-1 justify-end">
+                <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setShowScheduleForm(false)}>
+                  キャンセル
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-6 text-[10px]"
+                  disabled={!schedTitle.trim() || !schedDate || createScheduleMutation.isPending}
+                  onClick={() => {
+                    const startAt = `${schedDate}T${schedStartTime}:00`
+                    const endAt = `${schedDate}T${schedEndTime}:00`
+                    const allAssigneeIds: string[] = (task.assigneeIds && task.assigneeIds.length > 0)
+                      ? task.assigneeIds
+                      : (task.assigneeId ? [task.assigneeId] : [])
+                    const mainEmployeeId = allAssigneeIds[0] ?? employees[0]?.id ?? ""
+                    const participantIds = allAssigneeIds.slice(1)
+                    createScheduleMutation.mutate({
+                      title: schedTitle.trim(),
+                      startAt: new Date(startAt).toISOString(),
+                      endAt: new Date(endAt).toISOString(),
+                      employeeId: mainEmployeeId,
+                      participantIds,
+                      eventType: "work",
+                      taskId: task.id,
+                    }, {
+                      onSuccess: () => setShowScheduleForm(false),
+                    })
+                  }}
+                >
+                  {createScheduleMutation.isPending ? "登録中..." : "カレンダーに登録"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
+      </details>
 
-        {/* 登録済みスケジュール一覧 */}
-        {task.scheduleEvents && task.scheduleEvents.length > 0 && (
-          <div className="space-y-1">
-            {task.scheduleEvents.map((se: any) => (
-              <div key={se.id} className="text-[10px] p-1.5 rounded bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-400 flex items-center gap-2">
-                <CalendarDays className="w-3 h-3 text-blue-500 shrink-0" />
-                <span className="truncate flex-1">{se.title}</span>
-                <span className="text-muted-foreground shrink-0">
-                  {se.allDay
-                    ? new Date(se.startAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })
-                    : `${new Date(se.startAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })} ${new Date(se.startAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`}
-                </span>
-              </div>
-            ))}
+      {/* ① 進捗（ステータス・優先度・担当者） */}
+      <div className="px-4 py-3 border-b">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">① 進捗</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground">ステータス</Label>
+            <select
+              className={`w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 font-semibold ${TASK_STATUS_CONFIG[task.status].className}`}
+              value={task.status}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { status: e.target.value as TaskStatus } })}
+            >
+              {(Object.keys(TASK_STATUS_CONFIG) as TaskStatus[]).map((s) => (
+                <option key={s} value={s}>{TASK_STATUS_CONFIG[s].label}</option>
+              ))}
+            </select>
           </div>
-        )}
-
-        {/* スケジュール登録フォーム */}
-        {showScheduleForm && (
-          <div className="space-y-2 border rounded-md p-3 bg-blue-50/50 dark:bg-blue-900/10">
-            <div>
-              <Label className="text-xs">タイトル</Label>
-              <Input className="mt-1 h-7 text-xs" value={schedTitle} onChange={(e) => setSchedTitle(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label className="text-xs">日付</Label>
-                <Input type="date" className="mt-1 h-7 text-xs" value={schedDate} onChange={(e) => setSchedDate(e.target.value)} />
-              </div>
-              <div>
-                <Label className="text-xs">開始</Label>
-                <Input type="time" className="mt-1 h-7 text-xs" value={schedStartTime} onChange={(e) => setSchedStartTime(e.target.value)} />
-              </div>
-              <div>
-                <Label className="text-xs">終了</Label>
-                <Input type="time" className="mt-1 h-7 text-xs" value={schedEndTime} onChange={(e) => setSchedEndTime(e.target.value)} />
-              </div>
-            </div>
-            <div className="flex gap-1 justify-end">
-              <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setShowScheduleForm(false)}>
-                キャンセル
-              </Button>
-              <Button
-                size="sm"
-                className="h-6 text-[10px]"
-                disabled={!schedTitle.trim() || !schedDate || createScheduleMutation.isPending}
-                onClick={() => {
-                  const startAt = `${schedDate}T${schedStartTime}:00`
-                  const endAt = `${schedDate}T${schedEndTime}:00`
-                  // 複数担当者対応: 先頭をメイン、残りをparticipantIdsに
-                  const allAssigneeIds: string[] = (task.assigneeIds && task.assigneeIds.length > 0)
-                    ? task.assigneeIds
-                    : (task.assigneeId ? [task.assigneeId] : [])
-                  const mainEmployeeId = allAssigneeIds[0] ?? employees[0]?.id ?? ""
-                  const participantIds = allAssigneeIds.slice(1)
-                  createScheduleMutation.mutate({
-                    title: schedTitle.trim(),
-                    startAt: new Date(startAt).toISOString(),
-                    endAt: new Date(endAt).toISOString(),
-                    employeeId: mainEmployeeId,
-                    participantIds,
-                    eventType: "work",
-                    taskId: task.id,
-                  }, {
-                    onSuccess: () => {
-                      setShowScheduleForm(false)
-                    },
-                  })
-                }}
-              >
-                {createScheduleMutation.isPending ? "登録中..." : "スケジュール登録"}
-              </Button>
-            </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">優先度</Label>
+            <select
+              className={`w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 font-semibold ${PRIORITY_CONFIG[task.priority].bgClassName}`}
+              value={task.priority}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { priority: e.target.value as Priority } })}
+            >
+              {(["highest", "high", "medium", "low"] as const).map((p) => (
+                <option key={p} value={p}>{PRIORITY_CONFIG[p].label}</option>
+              ))}
+            </select>
           </div>
-        )}
+          <div className="relative">
+            <Label className="text-[10px] text-muted-foreground">担当者</Label>
+            <button
+              type="button"
+              onClick={() => setShowAssigneeMenu(!showAssigneeMenu)}
+              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background flex items-center gap-1 overflow-hidden"
+            >
+              <span className="truncate flex-1 text-left">
+                {currentAssigneeIds.length === 0
+                  ? <span className="text-muted-foreground">未設定</span>
+                  : employees.filter((e) => currentAssigneeIds.includes(e.id)).map((e) => e.name).join("、")}
+              </span>
+              <span className="text-muted-foreground text-[9px] shrink-0">▼</span>
+            </button>
+            {showAssigneeMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowAssigneeMenu(false)} />
+                <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-md shadow-lg z-20 p-1 max-h-60 overflow-y-auto">
+                  {employees.map((emp) => {
+                    const checked = currentAssigneeIds.includes(emp.id)
+                    return (
+                      <label
+                        key={emp.id}
+                        className={`flex items-center gap-2 px-2 py-1 text-xs hover:bg-muted/50 rounded cursor-pointer ${checked ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleAssignee(emp.id)}
+                          className="cursor-pointer"
+                        />
+                        {emp.name}
+                      </label>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* 繰り返し設定セクション */}
+      {/* ② スケジュール */}
+      <div className="px-4 py-3 border-b">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">② スケジュール</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground">締切</Label>
+            <Input
+              type="date"
+              className="mt-0.5 h-7 text-xs"
+              value={task.deadline ?? ""}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { deadline: e.target.value || null } })}
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground flex items-center justify-between">
+              <span>実行日時</span>
+              {task.executionTime && (
+                <button
+                  type="button"
+                  onClick={() => updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })}
+                  className="text-red-500 hover:text-red-700 text-[9px]"
+                  title="実行時刻をクリア"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </Label>
+            <div className="grid grid-cols-2 gap-1 mt-0.5">
+              <Input
+                type="date"
+                className="h-7 text-[10px] px-1"
+                value={execDate}
+                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildExecValue(e.target.value, execTime) } })}
+              />
+              <Input
+                type="time"
+                className="h-7 text-[10px] px-1"
+                value={execTime}
+                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildExecValue(execDate, e.target.value) } })}
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">事前通知</Label>
+            <select
+              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+              value={task.notifyEnabled === false ? 0 : (task.notifyMinutesBefore ?? 10)}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                updateTaskMutation.mutate({
+                  id: task.id,
+                  data: { notifyEnabled: v !== 0, notifyMinutesBefore: v === 0 ? 0 : v },
+                })
+              }}
+            >
+              <option value={0}>なし</option>
+              <option value={5}>5分前</option>
+              <option value={10}>10分前</option>
+              <option value={15}>15分前</option>
+              <option value={30}>30分前</option>
+              <option value={60}>1時間前</option>
+            </select>
+          </div>
+        </div>
+        <p className="text-[9px] text-muted-foreground italic mt-1">日付なし＝毎日 / 日付あり＝1回のみ</p>
+      </div>
+
+      {/* ③ 分類 */}
+      <div className="px-4 py-3 border-b">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">③ 分類</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground">事業 / プロジェクト</Label>
+            <select
+              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+              value={task.projectId ? `proj:${task.projectId}` : (task.businessId ? `biz:${task.businessId}` : "")}
+              onChange={(e) => {
+                const v = e.target.value
+                if (!v) return
+                const [kind, id] = v.split(":")
+                if (kind === "proj") {
+                  updateTaskMutation.mutate({ id: task.id, data: { projectId: id, businessId: null } })
+                } else {
+                  updateTaskMutation.mutate({ id: task.id, data: { projectId: null, businessId: id } })
+                }
+              }}
+            >
+              <option value="">選択してください</option>
+              {businesses.map((biz) => {
+                const projs = projects.filter((p) => p.businessId === biz.id)
+                return (
+                  <optgroup key={biz.id} label={biz.name}>
+                    <option value={`biz:${biz.id}`}>（事業直下）{biz.name}</option>
+                    {projs.map((p) => (
+                      <option key={p.id} value={`proj:${p.id}`}>{p.name}</option>
+                    ))}
+                  </optgroup>
+                )
+              })}
+            </select>
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">紐づく課題</Label>
+            <select
+              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+              value={task.issueId ?? ""}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { issueId: e.target.value || null } })}
+            >
+              <option value="">課題なし</option>
+              {issues.filter((i) => i.projectId === task.projectId).map((i) => (
+                <option key={i.id} value={i.id}>{i.title}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ④ 連絡 */}
+      <div className="px-4 py-3 border-b">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">④ 連絡</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground">連絡先</Label>
+            <select
+              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+              value={task.contactId ?? ""}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { contactId: e.target.value || null } })}
+            >
+              <option value="">なし</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">取引先</Label>
+            <select
+              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+              value={task.partnerId ?? ""}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { partnerId: e.target.value || null } })}
+            >
+              <option value="">なし</option>
+              {partners.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">ツール</Label>
+            <select
+              className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+              value={task.tool ?? ""}
+              onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { tool: (e.target.value || null) as TicketTool | null } })}
+            >
+              <option value="">なし</option>
+              {(Object.keys(TOOL_CONFIG) as TicketTool[]).map((t) => (
+                <option key={t} value={t}>{TOOL_CONFIG[t].emoji} {TOOL_CONFIG[t].label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ⑤ 繰り返し設定（折りたたみ） */}
       {showRecurring && (
-        <div className="space-y-2 border rounded-md p-3 bg-blue-50/50 dark:bg-blue-950/20">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-blue-700 dark:text-blue-300">繰り返し設定</p>
+        <div className="px-4 py-3 border-b bg-blue-50/30 dark:bg-blue-950/10">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">⑤ 繰り返し設定</p>
             {task.recurring && (
               <button
-                className="text-xs text-red-500 hover:text-red-700 cursor-pointer"
+                className="text-[10px] text-red-500 hover:text-red-700 cursor-pointer"
                 onClick={() => {
                   updateTaskMutation.mutate({
                     id: task.id,
@@ -344,30 +479,40 @@ export function TaskDetailPanel({
               </button>
             )}
           </div>
-          <div>
-            <Label className="text-xs">パターン</Label>
-            <select
-              className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer"
-              value={task.recurringPattern ?? ""}
-              onChange={(e) => {
-                const pattern = e.target.value || null
-                updateTaskMutation.mutate({
-                  id: task.id,
-                  data: { recurring: !!pattern, recurringPattern: pattern, recurringDay: null, recurringWeek: null }
-                })
-              }}
-            >
-              <option value="">なし</option>
-              <option value="daily">毎日</option>
-              <option value="weekly">毎週</option>
-              <option value="monthly_date">毎月（日付指定）</option>
-              <option value="monthly_weekday">毎月（曜日指定）</option>
-            </select>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <Label className="text-[10px]">パターン</Label>
+              <select
+                className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
+                value={task.recurringPattern ?? ""}
+                onChange={(e) => {
+                  const pattern = e.target.value || null
+                  updateTaskMutation.mutate({
+                    id: task.id,
+                    data: { recurring: !!pattern, recurringPattern: pattern, recurringDay: null, recurringWeek: null }
+                  })
+                }}
+              >
+                <option value="">なし</option>
+                <option value="daily">毎日</option>
+                <option value="weekly">毎週</option>
+                <option value="monthly_date">毎月（日付指定）</option>
+                <option value="monthly_weekday">毎月（曜日指定）</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-[10px]">終了日（任意）</Label>
+              <Input
+                type="date"
+                className="mt-0.5 h-7 text-xs"
+                value={task.recurringEndDate ?? ""}
+                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringEndDate: e.target.value || null } })}
+              />
+            </div>
           </div>
           {task.recurringPattern === "weekly" && (
             <div>
-              <Label className="text-xs">曜日（複数選択可）</Label>
-              <div className="flex gap-1 mt-1">
+              <div className="flex gap-1 mb-1.5">
                 <button
                   type="button"
                   className="text-[10px] px-1.5 py-0.5 border rounded hover:bg-muted"
@@ -397,15 +542,10 @@ export function TaskDetailPanel({
                   クリア
                 </button>
               </div>
-              <div className="flex flex-wrap gap-1 mt-1.5">
+              <div className="flex flex-wrap gap-1">
                 {[
-                  { v: 1, l: "月" },
-                  { v: 2, l: "火" },
-                  { v: 3, l: "水" },
-                  { v: 4, l: "木" },
-                  { v: 5, l: "金" },
-                  { v: 6, l: "土" },
-                  { v: 0, l: "日" },
+                  { v: 1, l: "月" }, { v: 2, l: "火" }, { v: 3, l: "水" },
+                  { v: 4, l: "木" }, { v: 5, l: "金" }, { v: 6, l: "土" }, { v: 0, l: "日" },
                 ].map(({ v, l }) => {
                   const currentDays: number[] = (task.recurringDays && task.recurringDays.length > 0)
                     ? task.recurringDays
@@ -414,7 +554,7 @@ export function TaskDetailPanel({
                   return (
                     <label
                       key={v}
-                      className={`text-xs px-2 py-1 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
+                      className={`text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
                     >
                       <input
                         type="checkbox"
@@ -436,13 +576,11 @@ export function TaskDetailPanel({
           )}
           {task.recurringPattern === "monthly_date" && (
             <div>
-              <Label className="text-xs">日付</Label>
+              <Label className="text-[10px]">日付</Label>
               <select
-                className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer"
+                className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
                 value={task.recurringDay != null ? String(task.recurringDay) : ""}
-                onChange={(e) => {
-                  updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })
-                }}
+                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })}
               >
                 <option value="">選択してください</option>
                 {Array.from({ length: 31 }, (_, i) => (
@@ -454,13 +592,11 @@ export function TaskDetailPanel({
           {task.recurringPattern === "monthly_weekday" && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">第何週</Label>
+                <Label className="text-[10px]">第何週</Label>
                 <select
-                  className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer"
+                  className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
                   value={task.recurringWeek != null ? String(task.recurringWeek) : ""}
-                  onChange={(e) => {
-                    updateTaskMutation.mutate({ id: task.id, data: { recurringWeek: e.target.value ? Number(e.target.value) : null } })
-                  }}
+                  onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringWeek: e.target.value ? Number(e.target.value) : null } })}
                 >
                   <option value="">選択</option>
                   <option value="1">第1週</option>
@@ -471,13 +607,11 @@ export function TaskDetailPanel({
                 </select>
               </div>
               <div>
-                <Label className="text-xs">曜日</Label>
+                <Label className="text-[10px]">曜日</Label>
                 <select
-                  className="w-full mt-1 text-sm border rounded-md p-1.5 bg-background cursor-pointer"
+                  className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
                   value={task.recurringDay != null ? String(task.recurringDay) : ""}
-                  onChange={(e) => {
-                    updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })
-                  }}
+                  onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringDay: e.target.value ? Number(e.target.value) : null } })}
                 >
                   <option value="">選択</option>
                   <option value="1">月曜日</option>
@@ -491,327 +625,26 @@ export function TaskDetailPanel({
               </div>
             </div>
           )}
-          {task.recurringPattern && (
-            <div>
-              <Label className="text-xs">終了日（任意）</Label>
-              <Input
-                type="date"
-                className="mt-1 h-8 text-sm"
-                value={task.recurringEndDate ?? ""}
-                onChange={(e) => {
-                  updateTaskMutation.mutate({ id: task.id, data: { recurringEndDate: e.target.value || null } })
-                }}
-              />
-            </div>
-          )}
         </div>
       )}
 
-      <div>
-        <p className="text-xs font-medium text-muted-foreground mb-1">詳細</p>
-        <Textarea
-          ref={detailRef}
-          className="text-sm min-h-[80px]"
-          placeholder="詳細を入力..."
-          defaultValue={task.detail ?? ""}
-          key={`detail-${task.id}`}
-          onBlur={(e) => {
-            const newVal = e.target.value
-            if (newVal !== (task.detail ?? "")) {
-              updateTaskMutation.mutate(
-                { id: task.id, data: { detail: newVal } },
-                {
-                  onSuccess: () => toast.success("詳細を保存しました"),
-                  onError: () => toast.error("詳細の保存に失敗しました"),
-                }
-              )
-            }
+      {/* フッター */}
+      <div className="px-4 py-3 flex justify-between items-center bg-muted/20">
+        <div className="text-[10px] text-muted-foreground">
+          作成: {task.createdBy || "不明"}{task.createdAt && ` / ${task.createdAt.split("T")[0]}`}
+          {task.seqNumber && <span className="ml-1 font-mono">#{task.seqNumber}</span>}
+        </div>
+        <button
+          type="button"
+          className="text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 px-2 py-1 rounded cursor-pointer"
+          onClick={() => {
+            if (!confirm(`「${task.title}」を削除してよろしいですか？`)) return
+            deleteTaskMutation.mutate(task.id)
+            onClose()
           }}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">担当者（複数選択可）</p>
-          <div className="flex flex-wrap gap-1">
-            {employees.map((emp) => {
-              const currentIds: string[] = (task.assigneeIds && task.assigneeIds.length > 0)
-                ? task.assigneeIds
-                : (task.assigneeId ? [task.assigneeId] : [])
-              const checked = currentIds.includes(emp.id)
-              return (
-                <label
-                  key={emp.id}
-                  className={`flex items-center gap-1 text-xs px-2 py-0.5 border rounded cursor-pointer ${checked ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100" : "bg-background"}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...currentIds, emp.id]
-                        : currentIds.filter((id) => id !== emp.id)
-                      const names = employees.filter((em) => next.includes(em.id)).map((em) => em.name)
-                      updateTaskMutation.mutate({
-                        id: task.id,
-                        data: {
-                          assigneeIds: next,
-                          assigneeId: next[0] ?? null,
-                          assigneeName: names[0] ?? null,
-                          assigneeNames: names,
-                        },
-                      })
-                    }}
-                  />
-                  {emp.name}
-                </label>
-              )
-            })}
-          </div>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">作成者</p>
-          <p className="text-sm">{task.createdBy || "不明"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">作成日</p>
-          <p className="text-sm">{task.createdAt ? task.createdAt.split("T")[0] : "不明"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">締切</p>
-          <p className={`text-sm ${task.deadline && new Date(task.deadline) < new Date() && task.status !== "done" ? "text-red-600 font-medium" : ""}`}>
-            {task.deadline ?? "なし"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">実行時刻（LINE通知）</p>
-          {task.executionTime ? (() => {
-            // executionTime は "HH:MM" or "YYYY-MM-DD HH:MM"
-            const m = task.executionTime.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/)
-            const currentDate = m ? m[1] : ""
-            const currentTime = m ? m[2] : task.executionTime
-            const buildValue = (date: string, time: string) =>
-              time ? (date ? `${date} ${time}` : time) : null
-            return (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="date"
-                    className="h-7 text-xs w-[140px]"
-                    value={currentDate}
-                    onChange={(e) => {
-                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildValue(e.target.value, currentTime) } })
-                    }}
-                  />
-                  <Input
-                    type="time"
-                    className="h-7 text-xs w-[110px]"
-                    value={currentTime}
-                    onChange={(e) => {
-                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildValue(currentDate, e.target.value) } })
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })
-                    }}
-                    className="h-7 w-7 rounded border text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center"
-                    title="実行時刻をクリア"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <p className="text-[10px] text-muted-foreground">日付なし＝毎日 / 日付あり＝指定日時に1回のみ</p>
-              </div>
-            )
-          })() : (
-            <button
-              type="button"
-              onClick={() => {
-                updateTaskMutation.mutate({ id: task.id, data: { executionTime: "09:00" } })
-              }}
-              className="h-7 px-3 text-xs border border-dashed border-primary/50 text-primary rounded-md hover:bg-primary/5 flex items-center gap-1"
-            >
-              <Plus className="w-3 h-3" />実行時刻を設定
-            </button>
-          )}
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">事前通知</p>
-          <select
-            className="h-7 text-xs border rounded-md px-2 bg-background"
-            value={task.notifyEnabled === false ? 0 : (task.notifyMinutesBefore ?? 10)}
-            onChange={(e) => {
-              const v = Number(e.target.value)
-              updateTaskMutation.mutate({
-                id: task.id,
-                data: {
-                  notifyEnabled: v !== 0,
-                  notifyMinutesBefore: v === 0 ? 0 : v,
-                },
-              })
-            }}
-          >
-            <option value={0}>なし</option>
-            <option value={5}>5分前</option>
-            <option value={10}>10分前</option>
-            <option value={15}>15分前</option>
-            <option value={30}>30分前</option>
-            <option value={60}>1時間前</option>
-          </select>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* ステータス変更 */}
-      <div>
-        <p className="text-xs font-medium text-muted-foreground mb-2">ステータス</p>
-        <div className="flex gap-2">
-          {(Object.keys(TASK_STATUS_CONFIG) as TaskStatus[]).map((s) => (
-            <Button
-              key={s}
-              size="sm"
-              variant="outline"
-              className={`text-xs flex-1 cursor-pointer ${task.status === s ? TASK_STATUS_CONFIG[s].className + " font-bold border-2" : ""}`}
-              onClick={() => {
-                updateTaskMutation.mutate({ id: task.id, data: { status: s } })
-              }}
-            >
-              {TASK_STATUS_CONFIG[s].label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* 優先度 */}
-      <div>
-        <p className="text-xs font-medium text-muted-foreground mb-2">優先度</p>
-        <div className="flex gap-2">
-          {(["highest", "high", "medium", "low"] as const).map((p) => (
-            <Button
-              key={p}
-              size="sm"
-              variant="outline"
-              className={`text-xs flex-1 cursor-pointer ${task.priority === p ? PRIORITY_CONFIG[p].bgClassName + " font-bold border-2" : ""}`}
-              onClick={() => {
-                updateTaskMutation.mutate({ id: task.id, data: { priority: p } })
-              }}
-            >
-              {PRIORITY_CONFIG[p].label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* 連絡先・取引先・ツール */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">連絡先</p>
-          <select
-            className="w-full text-sm border rounded-md p-1.5 bg-background cursor-pointer"
-            value={task.contactId ?? ""}
-            onChange={(e) => {
-              updateTaskMutation.mutate({ id: task.id, data: { contactId: e.target.value || null } })
-            }}
-          >
-            <option value="">なし</option>
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">取引先</p>
-          <select
-            className="w-full text-sm border rounded-md p-1.5 bg-background cursor-pointer"
-            value={task.partnerId ?? ""}
-            onChange={(e) => {
-              updateTaskMutation.mutate({ id: task.id, data: { partnerId: e.target.value || null } })
-            }}
-          >
-            <option value="">なし</option>
-            {partners.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-span-2">
-          <p className="text-xs font-medium text-muted-foreground mb-1">連絡ツール</p>
-          <div className="flex gap-1.5 flex-wrap">
-            <Button
-              size="sm"
-              variant="outline"
-              className={`text-xs cursor-pointer ${!task.tool ? "font-bold border-2" : ""}`}
-              onClick={() => {
-                updateTaskMutation.mutate({ id: task.id, data: { tool: null } })
-              }}
-            >
-              なし
-            </Button>
-            {(Object.keys(TOOL_CONFIG) as TicketTool[]).map((t) => (
-              <Button
-                key={t}
-                size="sm"
-                variant="outline"
-                className={`text-xs cursor-pointer ${task.tool === t ? "font-bold border-2 bg-blue-50 dark:bg-blue-950/40" : ""}`}
-                onClick={() => {
-                  updateTaskMutation.mutate({ id: task.id, data: { tool: t } })
-                }}
-              >
-                {TOOL_CONFIG[t].emoji} {TOOL_CONFIG[t].label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* チェックリスト */}
-      <TaskChecklistSection task={task} />
-
-      <Separator />
-
-      {/* メモ */}
-      <div>
-        <p className="text-xs font-medium text-muted-foreground mb-1">メモ</p>
-        <Textarea
-          ref={memoRef}
-          className="text-sm min-h-[80px]"
-          placeholder="作業メモを入力..."
-          defaultValue={task.memo}
-          key={`memo-${task.id}`}
-          onBlur={(e) => {
-            const newVal = e.target.value
-            if (newVal !== (task.memo ?? "")) {
-              updateTaskMutation.mutate(
-                { id: task.id, data: { memo: newVal } },
-                {
-                  onSuccess: () => toast.success("メモを保存しました"),
-                  onError: () => toast.error("メモの保存に失敗しました"),
-                }
-              )
-            }
-          }}
-        />
-        <div className="flex gap-2 mt-2">
-          <Button
-            size="sm"
-            variant="destructive"
-            className="text-xs cursor-pointer ml-auto"
-            onClick={() => {
-              if (!confirm(`「${task.title}」を削除してよろしいですか？`)) return
-              deleteTaskMutation.mutate(task.id)
-              onClose()
-            }}
-          >
-            タスクを削除
-          </Button>
-        </div>
+        >
+          🗑 削除
+        </button>
       </div>
     </div>
   )
