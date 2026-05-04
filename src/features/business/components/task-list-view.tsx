@@ -283,13 +283,13 @@ export function TaskListView() {
   useRealtimeSync({
     channel: "business-tasks-page",
     tables: [
-      "BusinessTask",
-      "TaskAssignee",
-      "TaskUserSortOrder",
-      "TaskChecklistItem",
-      "Project",
-      "BusinessIssue",
-      "ScheduleEvent",
+      "business_tasks",
+      "task_assignees",
+      "task_user_sort_orders",
+      "task_checklist_items",
+      "projects",
+      "business_issues",
+      "schedule_events",
     ],
     queryKeys: [
       queryKeys.businessTasks.all,
