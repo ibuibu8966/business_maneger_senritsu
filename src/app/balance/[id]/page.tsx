@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation"
 import {
   dehydrate,
   HydrationBoundary,
@@ -15,6 +16,11 @@ export default async function AccountDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+
+  // 仮想口座（複式簿記の集約口座）は詳細ページで参照させない
+  const account = await GetAccountDetails.executeOne(id)
+  if (!account || account.isVirtual) notFound()
+
   const queryClient = new QueryClient()
 
   await Promise.all([

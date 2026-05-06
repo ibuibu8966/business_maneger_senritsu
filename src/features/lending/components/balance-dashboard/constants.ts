@@ -33,6 +33,23 @@ export function getTxTypeColor(args: { type: string; isInflow: boolean }): strin
     : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800"
 }
 
+/**
+ * 取引のfrom/to表示用ラベル。
+ * 仮想口座（複式簿記の集約口座など、UI非表示）の側は API レスポンスで null になるため、
+ * カテゴリラベルに置き換えて表示する（純入出金は方向で「純入金/純出金」を出し分け）。
+ */
+export function formatTxFromName(t: { fromAccountName: string | null; toAccountName: string | null; type: string; categoryName: string }): string {
+  if (t.fromAccountName) return t.fromAccountName
+  if (t.type === "deposit_withdrawal") return "（純入金）"
+  return `（${t.categoryName}）`
+}
+
+export function formatTxToName(t: { fromAccountName: string | null; toAccountName: string | null; type: string; categoryName: string }): string {
+  if (t.toAccountName) return t.toAccountName
+  if (t.type === "deposit_withdrawal") return "（純出金）"
+  return `（${t.categoryName}）`
+}
+
 export const LENDING_STATUS_LABELS: Record<string, string> = {
   active: "返済中",
   completed: "完済",

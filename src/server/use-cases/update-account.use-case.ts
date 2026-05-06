@@ -23,6 +23,12 @@ export class UpdateAccount {
       isActive?: boolean
     }
   ): Promise<AccountDetailDTO> {
+    // 仮想口座（複式簿記の集約口座）は編集・アーカイブ・削除を一切受け付けない
+    const existing = await AccountRepository.findById(id)
+    if (existing?.isVirtual) {
+      throw new Error("仮想口座は編集できません。")
+    }
+
     const updateData: Record<string, unknown> = {}
 
     if (data.name !== undefined) updateData.name = data.name
@@ -50,6 +56,7 @@ export class UpdateAccount {
       tags: r.tags,
       isArchived: r.isArchived,
       isActive: r.isActive,
+      isVirtual: r.isVirtual,
       createdAt: r.createdAt.toISOString(),
     }
 

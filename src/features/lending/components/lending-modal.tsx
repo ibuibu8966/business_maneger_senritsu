@@ -50,11 +50,13 @@ export function LendingModal({ open, onOpenChange, accounts, onSave, initialValu
   const [dueDate, setDueDate] = useState("")
   const [memo, setMemo] = useState("")
 
-  // 相手区分に応じてフィルタ
+  // 相手区分に応じてフィルタ（仮想口座は常に除外）
   const counterpartyAccounts = accounts.filter((a) =>
-    counterpartyMode === "internal"
-      ? a.ownerType === "internal" && a.id !== accountId
-      : a.ownerType === "external"
+    !a.isVirtual && (
+      counterpartyMode === "internal"
+        ? a.ownerType === "internal" && a.id !== accountId
+        : a.ownerType === "external"
+    )
   )
   const selectedCounterparty = accounts.find((a) => a.id === counterpartyAccountId)
 

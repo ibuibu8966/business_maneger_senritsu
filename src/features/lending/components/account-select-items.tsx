@@ -22,6 +22,7 @@ export function AccountSelectItems({
 }) {
   const grouped = new Map<string, AccountDetailDTO[]>()
   for (const a of accounts) {
+    if (a.isVirtual) continue
     const key = `${a.ownerType}-${a.accountType}`
     if (!grouped.has(key)) grouped.set(key, [])
     grouped.get(key)!.push(a)

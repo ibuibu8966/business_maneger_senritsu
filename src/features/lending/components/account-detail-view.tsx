@@ -101,10 +101,10 @@ export function AccountDetailView({ accountId }: Props) {
   // 複式簿記版：振替は1レコード（重複なし）、from/to のいずれかが対象口座のレコードを表示
   const transferTxs = transferTxsRaw
     .filter((t: { type: string }) => t.type === "transfer")
-    .filter((t: { fromAccountId: string; toAccountId: string }) => t.fromAccountId === accountId || t.toAccountId === accountId)
+    .filter((t: { fromAccountId: string | null; toAccountId: string | null }) => t.fromAccountId === accountId || t.toAccountId === accountId)
   // 取引履歴：from/to で対象口座が関わるレコードを全表示
   const nonTransferTxs = transactions
-    .filter((t: { fromAccountId: string; toAccountId: string }) => t.fromAccountId === accountId || t.toAccountId === accountId)
+    .filter((t: { fromAccountId: string | null; toAccountId: string | null }) => t.fromAccountId === accountId || t.toAccountId === accountId)
     .slice()
     .sort((a: { date: string; type: string; createdAt: string }, b: { date: string; type: string; createdAt: string }) => {
       if (a.date !== b.date) return b.date.localeCompare(a.date)
@@ -134,7 +134,7 @@ export function AccountDetailView({ accountId }: Props) {
   const [editTxCounterparty, setEditTxCounterparty] = useState("")
   const [editTxMemo, setEditTxMemo] = useState("")
 
-  const startEditingTx = useCallback((t: { id: string; date: string; type: string; amount: number; counterparty: string; memo: string; fromAccountId: string; toAccountId: string }) => {
+  const startEditingTx = useCallback((t: { id: string; date: string; type: string; amount: number; counterparty: string; memo: string; fromAccountId: string | null; toAccountId: string | null }) => {
     setEditingTxId(t.id)
     setEditTxDate(t.date)
     setEditTxType(t.type)

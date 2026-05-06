@@ -93,6 +93,7 @@ export class GetAccountDetails {
         tags: r.tags,
         isArchived: r.isArchived,
         isActive: r.isActive,
+        isVirtual: r.isVirtual,
         createdAt: r.createdAt.toISOString(),
       }))
     )
@@ -114,6 +115,7 @@ export class GetAccountDetails {
       tags: r.tags,
       isArchived: r.isArchived,
       isActive: r.isActive,
+      isVirtual: r.isVirtual,
       createdAt: r.createdAt.toISOString(),
     }
   }

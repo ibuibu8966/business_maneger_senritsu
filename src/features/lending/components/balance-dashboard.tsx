@@ -50,7 +50,7 @@ import { AccountSelectItems } from "./account-select-items"
 import type { AccountTransactionDTO, LendingDTO } from "@/types/dto"
 import { TagSelect } from "./tag-select"
 
-import { TRANSACTION_TYPE_LABELS, getTxTypeColor, LENDING_STATUS_LABELS } from "./balance-dashboard/constants"
+import { TRANSACTION_TYPE_LABELS, getTxTypeColor, LENDING_STATUS_LABELS, formatTxFromName, formatTxToName } from "./balance-dashboard/constants"
 import type { TxEditField, LendingEditField } from "./balance-dashboard/types"
 
 // ── ドラッグ＆ドロップ対応口座カード ──
@@ -305,9 +305,9 @@ export function BalanceDashboard() {
   // 集計対象は「銀行口座 active のみ」（証券口座・アーカイブ口座は除外）
   const filteredSummary = useMemo(() => {
     if (selectedTags.length === 0) {
-      // 全タグ時：summary（社内銀行のみ）+ 社外含む全体銀行残高
+      // 全タグ時：summary（社内銀行のみ）+ 社外含む全体銀行残高（仮想口座は除外）
       const totalAllBalance = accounts
-        .filter(a => !a.isArchived && a.accountType === "bank")
+        .filter(a => !a.isArchived && !a.isVirtual && a.accountType === "bank")
         .reduce((s, a) => s + a.balance, 0)
       return { ...(summary ?? { totalBalance: 0, totalLent: 0, totalBorrowed: 0, netAssets: 0 }), totalAllBalance }
     }
@@ -315,9 +315,9 @@ export function BalanceDashboard() {
     const taggedInternalBankIds = new Set(
       accounts.filter(a => !a.isArchived && a.ownerType === "internal" && a.accountType === "bank" && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
     )
-    // タグ付き全銀行口座（社外含む）
+    // タグ付き全銀行口座（社外含む、仮想口座は除外）
     const taggedAllBankIds = new Set(
-      accounts.filter(a => !a.isArchived && a.accountType === "bank" && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
+      accounts.filter(a => !a.isArchived && !a.isVirtual && a.accountType === "bank" && selectedTags.every(t => (a.tags ?? []).includes(t))).map(a => a.id)
     )
     let totalBalance = 0
     let totalAllBalance = 0
@@ -378,9 +378,10 @@ export function BalanceDashboard() {
     return { income, expense, profit: income - expense, month: month + 1 }
   }, [transactions, taggedAccountIdSet, viewMonth])
 
-  // アーカイブフィルタ + タグフィルタ（複数タグAND）
+  // アーカイブフィルタ + タグフィルタ（複数タグAND）+ 仮想口座除外
   const visibleAccounts = useMemo(() => {
     return accounts.filter((a) => {
+      if (a.isVirtual) return false
       if (showArchived ? !a.isArchived : a.isArchived) return false
       if (!matchesAllTags(a.tags)) return false
       return true
@@ -407,7 +408,7 @@ export function BalanceDashboard() {
       if (txTypeFilter !== "all" && t.type !== txTypeFilter) return false
       if (txAccountFilter !== "all" && t.fromAccountId !== txAccountFilter && t.toAccountId !== txAccountFilter) return false
       if (taggedAccountIdSet) {
-        const involves = taggedAccountIdSet.has(t.fromAccountId) || taggedAccountIdSet.has(t.toAccountId)
+        const involves = taggedAccountIdSet.has(t.fromAccountId ?? "") || taggedAccountIdSet.has(t.toAccountId ?? "")
         if (!involves) return false
       }
       return true
@@ -421,7 +422,7 @@ export function BalanceDashboard() {
       if (showArchivedTx ? !t.isArchived : t.isArchived) return false
       if (txAccountFilter !== "all" && t.fromAccountId !== txAccountFilter && t.toAccountId !== txAccountFilter) return false
       if (taggedAccountIdSet) {
-        const involves = taggedAccountIdSet.has(t.fromAccountId) || taggedAccountIdSet.has(t.toAccountId)
+        const involves = taggedAccountIdSet.has(t.fromAccountId ?? "") || taggedAccountIdSet.has(t.toAccountId ?? "")
         if (!involves) return false
       }
       return true
@@ -844,7 +845,7 @@ export function BalanceDashboard() {
                       return (
                         <TableRow key={t.id}>
                           <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
-                          <TableCell className="text-sm">{t.fromAccountName ?? "-"} → {t.toAccountName ?? "-"}</TableCell>
+                          <TableCell className="text-sm">{formatTxFromName(t)} → {formatTxToName(t)}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-xs border bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                               振替
@@ -912,13 +913,13 @@ export function BalanceDashboard() {
                       .filter((t) => !t.isArchived && t.type !== "transfer")
                       .filter((t) => {
                         if (!taggedAccountIdSet) return true
-                        return taggedAccountIdSet.has(t.fromAccountId) || taggedAccountIdSet.has(t.toAccountId)
+                        return taggedAccountIdSet.has(t.fromAccountId ?? "") || taggedAccountIdSet.has(t.toAccountId ?? "")
                       })
                       .slice(0, 10).map((t) => {
                       // 複式簿記版：from→toで方向。「対象口座」を明示できないので、内部口座(toがINTERNAL)に到達=入金として暫定判定
                       // ※精緻な判定は account-detail-view 側で行う。ここは概況用
                       const internalIds = new Set(accounts.filter(a => a.ownerType === "internal").map(a => a.id))
-                      const isPositive = internalIds.has(t.toAccountId) && !internalIds.has(t.fromAccountId)
+                      const isPositive = internalIds.has(t.toAccountId ?? "") && !internalIds.has(t.fromAccountId ?? "")
                       return (
                         <TableRow key={t.id} className="">
                           <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>
@@ -965,7 +966,7 @@ export function BalanceDashboard() {
                       .filter((t) => !t.isArchived && t.type !== "transfer")
                       .filter((t) => {
                         if (!taggedAccountIdSet) return true
-                        return taggedAccountIdSet.has(t.fromAccountId) || taggedAccountIdSet.has(t.toAccountId)
+                        return taggedAccountIdSet.has(t.fromAccountId ?? "") || taggedAccountIdSet.has(t.toAccountId ?? "")
                       }).length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">取引データなし</TableCell>
@@ -1083,7 +1084,7 @@ export function BalanceDashboard() {
                       return (
                         <TableRow key={t.id}>
                           <TableCell className="text-xs text-muted-foreground">{formatDate(t.date)}</TableCell>
-                          <TableCell className="text-sm">{t.fromAccountName ?? "-"} → {t.toAccountName ?? "-"}</TableCell>
+                          <TableCell className="text-sm">{formatTxFromName(t)} → {formatTxToName(t)}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-xs border bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                               振替
@@ -1172,7 +1173,7 @@ export function BalanceDashboard() {
                     {filteredTransactions.slice(0, 50).map((t) => {
                       // 複式簿記版：内部口座への入金（外部→内部 or LENDING/REPAYMENTで自分宛）を「+」、出金を「-」表示
                       const internalIds = new Set(accounts.filter(a => a.ownerType === "internal").map(a => a.id))
-                      const isPositive = internalIds.has(t.toAccountId) && !internalIds.has(t.fromAccountId)
+                      const isPositive = internalIds.has(t.toAccountId ?? "") && !internalIds.has(t.fromAccountId ?? "")
                       return (
                         <TableRow key={t.id} className="">
                           <TableCell className="text-xs text-muted-foreground tabular-nums">#{t.serialNumber}</TableCell>

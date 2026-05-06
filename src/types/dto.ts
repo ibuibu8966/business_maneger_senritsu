@@ -57,6 +57,7 @@ export interface AccountDetailDTO {
   tags: string[]
   isArchived: boolean
   isActive: boolean
+  isVirtual: boolean              // 仮想口座フラグ（複式簿記の集約口座など、UI非表示）
   createdAt: string
 }
 
@@ -67,11 +68,12 @@ export interface AccountTransactionDTO {
   categoryName: string              // 表示用ラベル
   amount: number
   date: string                      // "YYYY-MM-DD"
-  // 1取引=1レコード（複式簿記版）：from/to は常に存在
-  fromAccountId: string
-  fromAccountName: string
-  toAccountId: string
-  toAccountName: string
+  // 1取引=1レコード（複式簿記版）：from/to は内部上は常に存在するが、
+  // 仮想口座（複式簿記の集約口座など、UI非表示）の場合は API レスポンスで null を返す
+  fromAccountId: string | null
+  fromAccountName: string | null
+  toAccountId: string | null
+  toAccountName: string | null
   counterparty: string
   lendingId: string | null
   memo: string

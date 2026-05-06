@@ -319,6 +319,7 @@ model Account {
   isArchived              Boolean                  @default(false) // アーカイブ済みフラグ
   tags                    String[]                 @default([]) // タグ（絞り込み用）
   isActive                Boolean                  @default(true) // 有効フラグ
+  isVirtual               Boolean                  @default(false) // 仮想口座フラグ（複式簿記の集約口座など、UI非表示）
   createdAt               DateTime                 @default(now()) // 作成日時
   updatedAt               DateTime                 @updatedAt // 更新日時
   // 口座取引（1取引=1レコード。fromAccount/toAccount で接続）

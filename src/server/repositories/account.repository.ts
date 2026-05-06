@@ -17,11 +17,14 @@ export class AccountRepository {
   }
 
   // 貸借・口座管理用: 全口座取得
+  // デフォルトで仮想口座（複式簿記の集約口座など、UI非表示）は除外。
+  // 明示的に取得したい場合のみ isVirtual: true を指定する。
   static async findAll(params: {
     ownerType?: OwnerType
     accountType?: AccountType
     isArchived?: boolean
     isActive?: boolean
+    isVirtual?: boolean
   } = {}) {
     return prisma.account.findMany({
       where: {
@@ -29,6 +32,8 @@ export class AccountRepository {
         ...(params.accountType && { accountType: params.accountType }),
         ...(params.isArchived !== undefined && { isArchived: params.isArchived }),
         ...(params.isActive !== undefined && { isActive: params.isActive }),
+        // isVirtual: 未指定なら仮想口座を除外（false 固定）。明示指定された値があればそれを優先
+        isVirtual: params.isVirtual ?? false,
       },
       include: {
         business: { select: idNameSelect },
@@ -48,14 +53,15 @@ export class AccountRepository {
 
   // 外部口座を取得（複式簿記版で全外部取引の仮想集約口座）
   // データ移行時に scripts/migrate-double-entry.js で 1件作成済み
+  // isVirtual=true で識別（リネーム耐性のため name 判定はしない）
   private static externalIdCache: string | null = null
   static async findExternalAccountId(): Promise<string> {
     if (this.externalIdCache) return this.externalIdCache
     const a = await prisma.account.findFirst({
-      where: { ownerType: "EXTERNAL", name: "外部" },
+      where: { isVirtual: true },
       select: { id: true },
     })
-    if (!a) throw new Error("EXTERNAL口座が存在しません。データ移行を確認してください。")
+    if (!a) throw new Error("仮想集約口座（isVirtual=true）が存在しません。データ移行を確認してください。")
     this.externalIdCache = a.id
     return a.id
   }

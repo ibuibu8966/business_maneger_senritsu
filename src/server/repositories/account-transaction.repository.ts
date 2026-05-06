@@ -29,8 +29,8 @@ export class AccountTransactionRepository {
         ...(params.isArchived !== undefined && { isArchived: params.isArchived }),
       },
       include: {
-        fromAccount: { select: { id: true, name: true } },
-        toAccount: { select: { id: true, name: true } },
+        fromAccount: { select: { id: true, name: true, isVirtual: true } },
+        toAccount: { select: { id: true, name: true, isVirtual: true } },
       },
       // 表示は時系列降順（新→古）。同日内は createdAt 降順で安定させる
       // serialNumber はデータ移行で時系列と逆転しているケースがあるため使わない
@@ -43,8 +43,8 @@ export class AccountTransactionRepository {
     return prisma.accountTransaction.findUnique({
       where: { id },
       include: {
-        fromAccount: { select: { id: true, name: true } },
-        toAccount: { select: { id: true, name: true } },
+        fromAccount: { select: { id: true, name: true, isVirtual: true } },
+        toAccount: { select: { id: true, name: true, isVirtual: true } },
       },
     })
   }
@@ -75,8 +75,8 @@ export class AccountTransactionRepository {
         tags: data.tags ?? [],
       },
       include: {
-        fromAccount: { select: { id: true, name: true } },
-        toAccount: { select: { id: true, name: true } },
+        fromAccount: { select: { id: true, name: true, isVirtual: true } },
+        toAccount: { select: { id: true, name: true, isVirtual: true } },
       },
     })
   }
@@ -100,8 +100,8 @@ export class AccountTransactionRepository {
       where: { id },
       data,
       include: {
-        fromAccount: { select: { id: true, name: true } },
-        toAccount: { select: { id: true, name: true } },
+        fromAccount: { select: { id: true, name: true, isVirtual: true } },
+        toAccount: { select: { id: true, name: true, isVirtual: true } },
       },
     })
   }
