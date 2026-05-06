@@ -62,10 +62,19 @@ export class GenerateRecurringTasks {
           }
           break
 
-        case "monthly_date":
+        case "monthly_date": {
           // recurringDay(1-31) が今日の日と一致
-          shouldGenerate = task.recurringDay === todayDate
+          // 31日設定で当月に31日がない場合は月末日にクランプ（例：31日設定 × 4月→30日に生成）
+          if (task.recurringDay == null) break
+          const lastDayOfMonth = new Date(Date.UTC(
+            jstNow.getUTCFullYear(),
+            jstNow.getUTCMonth() + 1,
+            0
+          )).getUTCDate()
+          const targetDate = Math.min(task.recurringDay, lastDayOfMonth)
+          shouldGenerate = targetDate === todayDate
           break
+        }
 
         case "monthly_weekday":
           // recurringWeek(1-5) と recurringDay(0-6) から「第N週のX曜日」が今日か判定
