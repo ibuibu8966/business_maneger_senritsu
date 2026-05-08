@@ -360,7 +360,7 @@ export interface BusinessTaskDTO {
   contactName: string | null
   partnerId: string | null
   partnerName: string | null
-  tool: "LINE" | "TELEGRAM" | "DISCORD" | "PHONE" | "ZOOM" | "IN_PERSON" | null
+  tool: "LINE" | "TELEGRAM" | "DISCORD" | "CHATWORK" | "PHONE" | "ZOOM" | "IN_PERSON" | null
   priority: "highest" | "high" | "medium" | "low"
   recurring: boolean
   recurringPattern: string | null

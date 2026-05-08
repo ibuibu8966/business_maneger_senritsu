@@ -117,6 +117,10 @@ export function TaskCreateDialog({
 
   const handleCreate = async () => {
     if (!title.trim() || !targetValue) return
+    if (assigneeIds.length === 0) {
+      toast.error("担当者を1人以上選択してください")
+      return
+    }
     const [kind, id] = targetValue.split(":")
     const proj = kind === "proj" ? projects.find((p) => p.id === id) : undefined
     const biz = kind === "biz" ? businesses.find((b) => b.id === id) : undefined
@@ -432,7 +436,7 @@ export function TaskCreateDialog({
                 </select>
               </div>
               <div className="relative">
-                <Label className="text-[10px] text-muted-foreground">担当者</Label>
+                <Label className="text-[10px] text-muted-foreground">担当者 <span className="text-red-500">*</span></Label>
                 <button
                   type="button"
                   onClick={() => setShowAssigneeMenu(!showAssigneeMenu)}
@@ -614,7 +618,7 @@ export function TaskCreateDialog({
 
         <DialogFooter className="shrink-0 px-5 py-3 border-t">
           <Button variant="outline" size="sm" onClick={onClose}>キャンセル</Button>
-          <Button size="sm" onClick={handleCreate} disabled={!title.trim() || !targetValue || createTaskMutation.isPending || createScheduleEventMutation.isPending}>
+          <Button size="sm" onClick={handleCreate} disabled={!title.trim() || !targetValue || assigneeIds.length === 0 || createTaskMutation.isPending || createScheduleEventMutation.isPending}>
             登録
           </Button>
         </DialogFooter>

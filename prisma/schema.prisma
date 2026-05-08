@@ -853,6 +853,7 @@ enum TicketTool {
   PHONE
   ZOOM
   IN_PERSON // 対面
+  CHATWORK
 }
 
 model Ticket {
