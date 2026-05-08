@@ -75,7 +75,7 @@ export const createTaskSchema = z.object({
   issueId: z.string().nullable().optional(),
   contactId: z.string().nullable().optional(),
   partnerId: z.string().nullable().optional(),
-  tool: z.enum(["LINE", "TELEGRAM", "DISCORD", "PHONE", "ZOOM", "IN_PERSON"]).nullable().optional(),
+  tool: z.enum(["LINE", "TELEGRAM", "DISCORD", "CHATWORK", "PHONE", "ZOOM", "IN_PERSON"]).nullable().optional(),
   priority: z.enum(["highest", "high", "medium", "low"]).optional(),
 })
 

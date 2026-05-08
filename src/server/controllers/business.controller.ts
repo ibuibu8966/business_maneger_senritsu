@@ -187,6 +187,12 @@ export class BusinessTaskController {
     try {
       const body = await req.json()
       const data = createTaskSchema.parse(body)
+      if (!data.assigneeIds || data.assigneeIds.length === 0) {
+        return NextResponse.json(
+          { error: "担当者を1人以上選択してください" },
+          { status: 400 }
+        )
+      }
       const r = await CreateBusinessTask.execute(data)
       return NextResponse.json(r, { status: 201 })
     } catch (e) {

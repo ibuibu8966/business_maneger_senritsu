@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star, AlertCircle, CalendarDays, Pencil } from "lucide-react"
 import {
   DndContext,
@@ -51,7 +51,6 @@ import {
   useBusinessTasks,
   useCreateBusinessTask,
   useUpdateBusinessTask,
-  useDeleteBusinessTask,
   useReorderBusinessTasks,
   useAddTaskChecklistItem,
   useUpdateTaskChecklistItem,
@@ -75,7 +74,6 @@ import { TaskRowExpanded } from "./task-list/task-row-expanded"
 import { TaskChecklistSection } from "./task-list/task-checklist-section"
 import { ProjectTreeNode } from "./task-list/project-tree-node"
 import { ProjectSidePanel } from "./task-list/project-side-panel"
-import { TaskDetailPanel } from "./task-list/task-detail-panel"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 import { useRealtimeSync } from "@/hooks/use-realtime-sync"
 import { queryKeys } from "@/lib/query-keys"
@@ -113,10 +111,7 @@ export function TaskListView() {
   const { data: contactsList = [] } = useContacts()
   const { data: partnersList = [] } = usePartners()
   const updateTaskMutation = useUpdateBusinessTask()
-  const deleteTaskMutation = useDeleteBusinessTask()
   const reorderMutation = useReorderBusinessTasks()
-  const memoRef = useRef<HTMLTextAreaElement>(null)
-  const detailRef = useRef<HTMLTextAreaElement>(null)
 
   const isLoading = bizLoading || projLoading || taskLoading || empLoading
 
@@ -443,11 +438,21 @@ export function TaskListView() {
                       <SortableTaskRow
                         task={t}
                         index={i}
-                        onClickTask={(task) => setSelectedTaskId(task.id)}
+                        onClickTask={(task) => setSelectedTaskId((prev) => prev === task.id ? null : task.id)}
                         onToggleTodayFlag={handleToggleTodayFlag}
                         isSelected={selectedTaskId === t.id}
                       />
-                      {selectedTaskId === t.id && <TaskRowExpanded task={t} />}
+                      {selectedTaskId === t.id && (
+                        <TaskRowExpanded
+                          task={t}
+                          contacts={contactsList as unknown as { id: string; name: string }[]}
+                          partners={partnersList as unknown as { id: string; name: string }[]}
+                          issues={issues as unknown as { id: string; title: string; projectId: string }[]}
+                          businesses={allBusinesses as unknown as { id: string; name: string }[]}
+                          projects={allProjects}
+                          onClose={() => setSelectedTaskId(null)}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -471,43 +476,15 @@ export function TaskListView() {
 
   return (
     <div className="h-full">
-      {selectedTask ? (
-        <ResizablePanelGroup direction="horizontal" autoSaveId="task-list-with-detail" className="h-full">
-          <ResizablePanel id="tasks-list" order={1} defaultSize={40} minSize={25}>
-            {leftColumn}
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel id="task-detail" order={2} defaultSize={30} minSize={20}>
-            <TaskDetailPanel
-              task={selectedTask}
-              onClose={() => setSelectedTaskId(null)}
-              updateTaskMutation={updateTaskMutation}
-              deleteTaskMutation={deleteTaskMutation}
-              memoRef={memoRef}
-              detailRef={detailRef}
-              contacts={contactsList as unknown as { id: string; name: string }[]}
-              partners={partnersList as unknown as { id: string; name: string }[]}
-              issues={(issues as unknown as { id: string; title: string; projectId: string }[])}
-              businesses={allBusinesses as unknown as { id: string; name: string }[]}
-              projects={allProjects}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel id="project-side" order={3} defaultSize={30} minSize={15}>
-            {rightColumn}
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      ) : (
-        <ResizablePanelGroup direction="horizontal" autoSaveId="task-list-no-detail" className="h-full">
-          <ResizablePanel id="tasks-list" order={1} defaultSize={70} minSize={30}>
-            {leftColumn}
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel id="project-side" order={3} defaultSize={30} minSize={15}>
-            {rightColumn}
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      )}
+      <ResizablePanelGroup direction="horizontal" autoSaveId="task-list-2col" className="h-full">
+        <ResizablePanel id="tasks-list" order={1} defaultSize={70} minSize={30}>
+          {leftColumn}
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel id="project-side" order={2} defaultSize={30} minSize={15}>
+          {rightColumn}
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       <TaskCreateDialog
         open={createDialogOpen}

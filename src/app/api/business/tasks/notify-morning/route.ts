@@ -39,6 +39,7 @@ async function run(req: NextRequest) {
         where: {
           assignees: { some: { employeeId: emp.id } },
           status: { not: "DONE" },
+          recurring: false,
           OR: [
             { project: { status: "ACTIVE" } },
             { business: { status: "ACTIVE" } },
