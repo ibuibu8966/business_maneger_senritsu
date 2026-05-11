@@ -10,7 +10,10 @@ export function useMyBadgeCounts() {
   const { data: issues = [] } = useBusinessIssues()
 
   const myTasks = myId
-    ? tasks.filter((t) => t.assigneeId === myId && t.status !== "done").length
+    ? tasks.filter((t) => {
+        const isAssigned = t.assigneeIds.includes(myId) || t.assigneeId === myId
+        return isAssigned && t.status !== "done" && !t.recurring
+      }).length
     : 0
 
   const myIssues = myId
