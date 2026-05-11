@@ -26,7 +26,7 @@ type Attachment = { id: string; name: string; url: string; type: string }
 /**
  * タスク行クリックで展開される本文系コンテンツ
  * 全セクション（詳細・進捗・スケジュール・分類・連絡・繰り返し・カレンダー・チェックリスト・添付・メモ）を
- * トグルで切り替え可能。デフォルトは「詳細」のみ open。
+ * トグルで切り替え可能。デフォルトは「詳細・①進捗・②スケジュール」が open。
  */
 export function TaskRowExpanded({
   task,
@@ -110,8 +110,7 @@ export function TaskRowExpanded({
   const execMatch = task.executionTime?.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/) ?? null
   const execDate = execMatch ? execMatch[1] : ""
   const execTime = execMatch ? execMatch[2] : (task.executionTime ?? "")
-  const buildExecValue = (date: string, time: string) =>
-    time ? (date ? `${date} ${time}` : time) : null
+  const [scheduleMode, setScheduleMode] = useState<"daily" | "once">(execDate ? "once" : "daily")
 
   const summaryClass = "flex items-center gap-2 px-3 py-2 cursor-pointer text-xs font-semibold hover:bg-muted/30 list-none"
 
@@ -150,7 +149,7 @@ export function TaskRowExpanded({
       </details>
 
       {/* ① 進捗 */}
-      <details className="border-b">
+      <details className="border-b" open>
         <summary className={summaryClass}>
           ① 進捗
           <span className="text-muted-foreground ml-auto text-[10px]">▼</span>
@@ -225,7 +224,7 @@ export function TaskRowExpanded({
       </details>
 
       {/* ② スケジュール */}
-      <details className="border-b">
+      <details className="border-b" open>
         <summary className={summaryClass}>
           ② スケジュール
           <span className="text-muted-foreground ml-auto text-[10px]">▼</span>
@@ -277,24 +276,71 @@ export function TaskRowExpanded({
                 </button>
               )}
             </Label>
-            <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1 mt-0.5 mb-1">
-              <p className="text-[10px] text-yellow-800">⚠️ 時刻を先に設定しないと日付が入力できません</p>
+            <div className="flex gap-3 mt-1 mb-1.5">
+              <label className="flex items-center gap-1 text-xs cursor-pointer">
+                <input
+                  type="radio"
+                  className="cursor-pointer"
+                  checked={scheduleMode === "daily"}
+                  onChange={() => {
+                    setScheduleMode("daily")
+                    if (execDate) {
+                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: execTime || null } })
+                    }
+                  }}
+                />
+                毎日
+              </label>
+              <label className="flex items-center gap-1 text-xs cursor-pointer">
+                <input
+                  type="radio"
+                  className="cursor-pointer"
+                  checked={scheduleMode === "once"}
+                  onChange={() => setScheduleMode("once")}
+                />
+                日付指定
+              </label>
             </div>
-            <div className="grid grid-cols-2 gap-2 mt-0.5">
-              <Input
-                type="date"
-                className="h-7 text-xs"
-                value={execDate}
-                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildExecValue(e.target.value, execTime) } })}
-              />
+            {scheduleMode === "daily" ? (
               <Input
                 type="time"
                 className="h-7 text-xs"
                 value={execTime}
-                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: buildExecValue(execDate, e.target.value) } })}
+                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: e.target.value || null } })}
               />
-            </div>
-            <p className="text-[9px] text-muted-foreground italic mt-1">日付なし＝毎日 / 日付あり＝1回のみ</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 mt-0.5">
+                <Input
+                  type="date"
+                  className="h-7 text-xs"
+                  value={execDate}
+                  onChange={(e) => {
+                    const date = e.target.value
+                    const time = execTime || "09:00"
+                    updateTaskMutation.mutate({
+                      id: task.id,
+                      data: { executionTime: date ? `${date} ${time}` : (execTime || null) },
+                    })
+                  }}
+                />
+                <Input
+                  type="time"
+                  className="h-7 text-xs"
+                  value={execTime}
+                  onChange={(e) => {
+                    const time = e.target.value
+                    if (!time) {
+                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })
+                      return
+                    }
+                    updateTaskMutation.mutate({
+                      id: task.id,
+                      data: { executionTime: execDate ? `${execDate} ${time}` : time },
+                    })
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
       </details>

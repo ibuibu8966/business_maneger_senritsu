@@ -59,6 +59,7 @@ export function TaskCreateDialog({
   const [deadline, setDeadline] = useState("")
   const [executionTime, setExecutionTime] = useState("")
   const [executionDate, setExecutionDate] = useState("")
+  const [scheduleMode, setScheduleMode] = useState<"daily" | "once">("daily")
   const [notifyMinutesBefore, setNotifyMinutesBefore] = useState(0)
   const [recurring, setRecurring] = useState(false)
   const [recurringPattern, setRecurringPattern] = useState("")
@@ -498,14 +499,37 @@ export function TaskCreateDialog({
             </div>
             <div>
               <Label className="text-[10px] text-muted-foreground">実行日時（LINE通知）</Label>
-              <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1 mt-0.5 mb-1">
-                <p className="text-[10px] text-yellow-800">⚠️ 時刻を先に設定しないと日付が入力できません</p>
+              <div className="flex gap-3 mt-1 mb-1.5">
+                <label className="flex items-center gap-1 text-xs cursor-pointer">
+                  <input
+                    type="radio"
+                    className="cursor-pointer"
+                    checked={scheduleMode === "daily"}
+                    onChange={() => {
+                      setScheduleMode("daily")
+                      setExecutionDate("")
+                    }}
+                  />
+                  毎日
+                </label>
+                <label className="flex items-center gap-1 text-xs cursor-pointer">
+                  <input
+                    type="radio"
+                    className="cursor-pointer"
+                    checked={scheduleMode === "once"}
+                    onChange={() => setScheduleMode("once")}
+                  />
+                  日付指定
+                </label>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-0.5">
-                <Input type="date" className="h-7 text-xs" value={executionDate} onChange={(e) => setExecutionDate(e.target.value)} />
+              {scheduleMode === "daily" ? (
                 <Input type="time" className="h-7 text-xs" value={executionTime} onChange={(e) => setExecutionTime(e.target.value)} />
-              </div>
-              <p className="text-[9px] text-muted-foreground italic mt-1">日付なし＝毎日 / 日付あり＝1回のみ</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 mt-0.5">
+                  <Input type="date" className="h-7 text-xs" value={executionDate} onChange={(e) => setExecutionDate(e.target.value)} />
+                  <Input type="time" className="h-7 text-xs" value={executionTime} onChange={(e) => setExecutionTime(e.target.value)} />
+                </div>
+              )}
             </div>
           </div>
 
