@@ -309,37 +309,19 @@ export function TaskRowExpanded({
                 onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { executionTime: e.target.value || null } })}
               />
             ) : (
-              <div className="grid grid-cols-2 gap-2 mt-0.5">
-                <Input
-                  type="date"
-                  className="h-7 text-xs"
-                  value={execDate}
-                  onChange={(e) => {
-                    const date = e.target.value
-                    const time = execTime || "09:00"
-                    updateTaskMutation.mutate({
-                      id: task.id,
-                      data: { executionTime: date ? `${date} ${time}` : (execTime || null) },
-                    })
-                  }}
-                />
-                <Input
-                  type="time"
-                  className="h-7 text-xs"
-                  value={execTime}
-                  onChange={(e) => {
-                    const time = e.target.value
-                    if (!time) {
-                      updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })
-                      return
-                    }
-                    updateTaskMutation.mutate({
-                      id: task.id,
-                      data: { executionTime: execDate ? `${execDate} ${time}` : time },
-                    })
-                  }}
-                />
-              </div>
+              <Input
+                type="datetime-local"
+                className="h-7 text-xs"
+                value={execDate && execTime ? `${execDate}T${execTime}` : ""}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (!val) {
+                    updateTaskMutation.mutate({ id: task.id, data: { executionTime: null } })
+                    return
+                  }
+                  updateTaskMutation.mutate({ id: task.id, data: { executionTime: val.replace("T", " ") } })
+                }}
+              />
             )}
           </div>
         </div>

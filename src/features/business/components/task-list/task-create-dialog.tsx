@@ -525,10 +525,22 @@ export function TaskCreateDialog({
               {scheduleMode === "daily" ? (
                 <Input type="time" className="h-7 text-xs" value={executionTime} onChange={(e) => setExecutionTime(e.target.value)} />
               ) : (
-                <div className="grid grid-cols-2 gap-2 mt-0.5">
-                  <Input type="date" className="h-7 text-xs" value={executionDate} onChange={(e) => setExecutionDate(e.target.value)} />
-                  <Input type="time" className="h-7 text-xs" value={executionTime} onChange={(e) => setExecutionTime(e.target.value)} />
-                </div>
+                <Input
+                  type="datetime-local"
+                  className="h-7 text-xs"
+                  value={executionDate && executionTime ? `${executionDate}T${executionTime}` : ""}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (!val) {
+                      setExecutionDate("")
+                      setExecutionTime("")
+                      return
+                    }
+                    const [d, t] = val.split("T")
+                    setExecutionDate(d)
+                    setExecutionTime(t)
+                  }}
+                />
               )}
             </div>
           </div>
