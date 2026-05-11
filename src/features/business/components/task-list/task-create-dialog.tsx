@@ -571,7 +571,7 @@ export function TaskCreateDialog({
           <div className="px-5 py-3 border-b">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">④ 連絡</p>
             <div className="grid grid-cols-3 gap-2">
-              <div>
+              {/* <div>
                 <Label className="text-[10px] text-muted-foreground">連絡先</Label>
                 <select className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background" value={contactId} onChange={(e) => setContactId(e.target.value)}>
                   <option value="">なし</option>
@@ -584,9 +584,9 @@ export function TaskCreateDialog({
                   <option value="">なし</option>
                   {partners.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
                 </select>
-              </div>
+              </div> */}
               <div>
-                <Label className="text-[10px] text-muted-foreground">ツール</Label>
+                {/* <Label className="text-[10px] text-muted-foreground">ツール</Label> */}
                 <select className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background" value={tool} onChange={(e) => setTool(e.target.value)}>
                   <option value="">なし</option>
                   {(Object.keys(TOOL_CONFIG) as TicketTool[]).map((t) => (

@@ -388,7 +388,7 @@ export function TaskRowExpanded({
         </summary>
         <div className="px-3 pb-3">
           <div className="grid grid-cols-3 gap-2">
-            <div>
+            {/* <div>
               <Label className="text-[10px] text-muted-foreground">連絡先</Label>
               <select
                 className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
@@ -413,9 +413,9 @@ export function TaskRowExpanded({
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-            </div>
+            </div> */}
             <div>
-              <Label className="text-[10px] text-muted-foreground">ツール</Label>
+              {/* <Label className="text-[10px] text-muted-foreground">ツール</Label> */}
               <select
                 className="w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 bg-background"
                 value={task.tool ?? ""}
