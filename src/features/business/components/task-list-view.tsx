@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star, AlertCircle, CalendarDays, Pencil } from "lucide-react"
+import { Plus, Repeat, Loader2, Check, X, Trash2, FolderOpen, ChevronRight, ChevronDown, Star, AlertCircle, CalendarDays, Pencil, PanelRightOpen } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -100,6 +100,7 @@ export function TaskListView() {
   const [sortMode, setSortMode] = useState<"manual" | "priority" | "deadline" | "created">("manual")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [taskOrder, setTaskOrder] = useState<string[]>([])
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
 
   const { data: businesses = [], isLoading: bizLoading } = useBusinessDetails()
   const { data: projects = [], isLoading: projLoading } = useProjects()
@@ -471,19 +472,35 @@ export function TaskListView() {
       allBusinesses={allBusinesses}
       allIssues={issues as unknown as IssueInfo[]}
       onSelectTask={setSelectedTaskId}
+      onClose={() => setIsPanelOpen(false)}
     />
   )
 
   return (
-    <div className="h-full">
+    <div className="h-full relative">
+      {!isPanelOpen && (
+        <button
+          type="button"
+          onClick={() => setIsPanelOpen(true)}
+          className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-1 text-xs rounded border bg-card hover:bg-muted shadow-sm"
+          aria-label="事業・プロジェクトパネルを開く"
+        >
+          <PanelRightOpen className="w-4 h-4" />
+          <span>事業・PJ</span>
+        </button>
+      )}
       <ResizablePanelGroup direction="horizontal" autoSaveId="task-list-2col" className="h-full">
         <ResizablePanel id="tasks-list" order={1} defaultSize={70} minSize={30}>
           {leftColumn}
         </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel id="project-side" order={2} defaultSize={30} minSize={15}>
-          {rightColumn}
-        </ResizablePanel>
+        {isPanelOpen && (
+          <>
+            <ResizableHandle withHandle />
+            <ResizablePanel id="project-side" order={2} defaultSize={30} minSize={15}>
+              {rightColumn}
+            </ResizablePanel>
+          </>
+        )}
       </ResizablePanelGroup>
 
       <TaskCreateDialog

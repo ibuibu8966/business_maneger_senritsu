@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronRight, PanelRightClose } from "lucide-react"
 import type { TaskItem, ProjectNode } from "../mock-data"
 import type { BizInfo, IssueInfo } from "./types"
 import { STATUS_DOT } from "./constants"
@@ -17,6 +17,7 @@ export function ProjectSidePanel({
   allBusinesses,
   allIssues,
   onSelectTask,
+  onClose,
 }: {
   selectedTask: TaskItem | null
   allTasks: TaskItem[]
@@ -24,6 +25,7 @@ export function ProjectSidePanel({
   allBusinesses: BizInfo[]
   allIssues: IssueInfo[]
   onSelectTask: (id: string) => void
+  onClose?: () => void
 }) {
   const [expandedBizIds, setExpandedBizIds] = useState<Set<string>>(new Set())
   const [expandedProjIds, setExpandedProjIds] = useState<Set<string>>(new Set())
@@ -69,8 +71,18 @@ export function ProjectSidePanel({
 
   return (
     <div className="border-l bg-card h-full flex flex-col">
-      <div className="px-3 py-2.5 border-b shrink-0">
+      <div className="px-3 py-2.5 border-b shrink-0 flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold">事業・プロジェクト</h3>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded hover:bg-muted"
+            aria-label="パネルを閉じる"
+          >
+            <PanelRightClose className="w-4 h-4" />
+          </button>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {bizGroups.map((biz) => {
