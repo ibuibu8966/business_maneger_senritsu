@@ -498,6 +498,9 @@ export function TaskCreateDialog({
             </div>
             <div>
               <Label className="text-[10px] text-muted-foreground">実行日時（LINE通知）</Label>
+              <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1 mt-0.5 mb-1">
+                <p className="text-[10px] text-yellow-800">⚠️ 時刻を先に設定しないと日付が入力できません</p>
+              </div>
               <div className="grid grid-cols-2 gap-2 mt-0.5">
                 <Input type="date" className="h-7 text-xs" value={executionDate} onChange={(e) => setExecutionDate(e.target.value)} />
                 <Input type="time" className="h-7 text-xs" value={executionTime} onChange={(e) => setExecutionTime(e.target.value)} />

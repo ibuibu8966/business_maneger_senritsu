@@ -277,6 +277,9 @@ export function TaskRowExpanded({
                 </button>
               )}
             </Label>
+            <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1 mt-0.5 mb-1">
+              <p className="text-[10px] text-yellow-800">⚠️ 時刻を先に設定しないと日付が入力できません</p>
+            </div>
             <div className="grid grid-cols-2 gap-2 mt-0.5">
               <Input
                 type="date"
