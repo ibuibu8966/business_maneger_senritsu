@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -156,19 +156,19 @@ function SalonModal({
   const [name, setName] = useState("")
   const [isActive, setIsActive] = useState(true)
 
-  const handleOpenChange = (open: boolean) => {
-    if (open && salon) {
+  useEffect(() => {
+    if (!open) return
+    if (salon) {
       setName(salon.name)
       setIsActive(salon.isActive)
-    } else if (open) {
+    } else {
       setName("")
       setIsActive(true)
     }
-    onOpenChange(open)
-  }
+  }, [open, salon])
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{salon ? "サロン編集" : "新規サロン"}</DialogTitle>
@@ -201,20 +201,20 @@ function CourseModal({
   const [discordRoleName, setDiscordRoleName] = useState("")
   const [isActive, setIsActive] = useState(true)
 
-  const handleOpenChange = (open: boolean) => {
-    if (open && course) {
+  useEffect(() => {
+    if (!open) return
+    if (course) {
       setName(course.name)
       setMonthlyFee(String(course.monthlyFee))
       setDiscordRoleName(course.discordRoleName)
       setIsActive(course.isActive)
-    } else if (open) {
+    } else {
       setName(""); setMonthlyFee(""); setDiscordRoleName(""); setIsActive(true)
     }
-    onOpenChange(open)
-  }
+  }, [open, course])
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{course ? "コース編集" : "新規コース"}</DialogTitle>
