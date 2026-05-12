@@ -26,6 +26,11 @@ export function SortableTaskRow({
   onToggleTodayFlag: (t: TaskItem) => void
   isSelected?: boolean
 }) {
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(task.title)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const updateTask = useUpdateBusinessTask()
+
   const {
     attributes,
     listeners,
@@ -33,7 +38,7 @@ export function SortableTaskRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id })
+  } = useSortable({ id: task.id, disabled: isEditingTitle })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -42,11 +47,6 @@ export function SortableTaskRow({
   }
 
   const st = TASK_STATUS_CONFIG[task.status]
-
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [draftTitle, setDraftTitle] = useState(task.title)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const updateTask = useUpdateBusinessTask()
 
   useEffect(() => {
     if (isEditingTitle && inputRef.current) {
