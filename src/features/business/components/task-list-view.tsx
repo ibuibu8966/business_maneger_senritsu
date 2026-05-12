@@ -157,10 +157,13 @@ export function TaskListView() {
     } else if (t.status !== filterStatus) return false
     if (showTodayOnly && !t.todayFlag) return false
     // 繰り返し設定本体（recurring=true）はデフォルト非表示。「繰り返しのみ」フィルタON時のみ表示
-    if (showRecurringOnly) {
-      if (!t.recurring) return false
-    } else {
-      if (t.recurring) return false
+    // ただし選択中（編集中）のタスクは状態遷移中に消えないよう強制表示
+    if (selectedTaskId !== t.id) {
+      if (showRecurringOnly) {
+        if (!t.recurring) return false
+      } else {
+        if (t.recurring) return false
+      }
     }
     if (searchKeyword.trim()) {
       const kw = searchKeyword.trim().toLowerCase()
