@@ -6,6 +6,7 @@ export class PaymentCheckRepository {
       where: {
         year: params.year,
         month: params.month,
+        subscription: { status: "ACTIVE" },
         ...(params.isConfirmed !== undefined && { isConfirmed: params.isConfirmed }),
       },
       include: {
