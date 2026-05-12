@@ -213,8 +213,16 @@ export function PaymentCheckList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedChecks.map((c) => (
-              <TableRow key={c.id} className={cn(c.isConfirmed && !c.isExempt && "bg-muted/50 dark:bg-muted/60", c.isExempt && "bg-amber-100/70 dark:bg-amber-900/40", c.hasNote && "bg-pink-100/70 dark:bg-pink-950/40")}>
+            {sortedChecks.map((c) => {
+              const rowBg = c.hasNote
+                ? "bg-pink-100 dark:bg-pink-950/50"
+                : c.isExempt
+                  ? "bg-amber-100/70 dark:bg-amber-900/40"
+                  : c.isConfirmed
+                    ? "bg-muted/50 dark:bg-muted/60"
+                    : ""
+              return (
+              <TableRow key={c.id} className={rowBg}>
                 <TableCell className="text-sm font-medium">{c.contactName}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.discordId || "-"}</TableCell>
                 <TableCell className="text-sm">{c.courseName}</TableCell>
@@ -265,11 +273,12 @@ export function PaymentCheckList() {
                     className="h-7 w-7"
                     onClick={() => handleToggleNote(c)}
                   >
-                    <StickyNote className={cn("h-3.5 w-3.5", c.hasNote ? "text-pink-600 fill-pink-200 dark:text-pink-300 dark:fill-pink-800" : "text-muted-foreground")} />
+                    <StickyNote className={cn("h-3.5 w-3.5", c.hasNote ? "text-pink-600 dark:text-pink-300" : "text-muted-foreground")} />
                   </Button>
                 </TableCell>
               </TableRow>
-            ))}
+              )
+            })}
             {sortedChecks.length === 0 && (
               <TableRow>
                 <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
