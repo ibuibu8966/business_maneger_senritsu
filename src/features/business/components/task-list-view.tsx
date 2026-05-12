@@ -101,6 +101,7 @@ export function TaskListView() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [taskOrder, setTaskOrder] = useState<string[]>([])
   const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   const { data: businesses = [], isLoading: bizLoading } = useBusinessDetails()
   const { data: projects = [], isLoading: projLoading } = useProjects()
@@ -275,7 +276,6 @@ export function TaskListView() {
   }
 
   // 選択中タスクの詳細
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const selectedTask = allTasks.find((t) => t.id === selectedTaskId) ?? null
 
   // Supabase Realtime 同期：他ユーザーの変更を即時反映
