@@ -291,6 +291,7 @@ export function TaskCreateDialog({
                       <option value="weekly">毎週</option>
                       <option value="monthly_date">毎月（日付指定）</option>
                       <option value="monthly_weekday">毎月（曜日指定）</option>
+                      <option value="irregular">不定期</option>
                     </select>
                   </div>
                   <div>
