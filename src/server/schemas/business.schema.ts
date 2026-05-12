@@ -61,7 +61,7 @@ export const createTaskSchema = z.object({
   memo: z.string().optional(),
   attachments: z.array(z.object({ id: z.string(), name: z.string(), url: z.string(), type: z.string() })).optional(),
   recurring: z.boolean().optional(),
-  recurringPattern: z.enum(["daily", "weekly", "monthly_date", "monthly_weekday"]).nullable().optional(),
+  recurringPattern: z.enum(["daily", "weekly", "monthly_date", "monthly_weekday", "irregular"]).nullable().optional(),
   recurringDay: z.number().int().nullable().optional(),
   recurringDays: z.array(z.number().int()).optional(),
   recurringWeek: z.number().int().nullable().optional(),
