@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -479,11 +479,9 @@ export function TaskRowExpanded({
             </div>
             <div>
               <Label className="text-[10px]">終了日（任意）</Label>
-              <Input
-                type="date"
-                className="mt-0.5 h-7 text-xs"
-                value={task.recurringEndDate ?? ""}
-                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { recurringEndDate: e.target.value || null } })}
+              <RecurringEndDateInput
+                value={task.recurringEndDate ?? null}
+                onCommit={(v) => updateTaskMutation.mutate({ id: task.id, data: { recurringEndDate: v } })}
               />
             </div>
           </div>
@@ -787,5 +785,30 @@ export function TaskRowExpanded({
         </button>
       </div>
     </div>
+  )
+}
+
+function RecurringEndDateInput({
+  value,
+  onCommit,
+}: {
+  value: string | null
+  onCommit: (v: string | null) => void
+}) {
+  const [local, setLocal] = useState<string>(value ?? "")
+  useEffect(() => {
+    setLocal(value ?? "")
+  }, [value])
+  return (
+    <Input
+      type="date"
+      className="mt-0.5 h-7 text-xs"
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => {
+        const next = local || null
+        if (next !== (value ?? null)) onCommit(next)
+      }}
+    />
   )
 }

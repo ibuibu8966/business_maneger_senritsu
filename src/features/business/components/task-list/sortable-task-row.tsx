@@ -134,6 +134,7 @@ export function SortableTaskRow({
               onClick={(e) => e.stopPropagation()}
               onBlur={commitEdit}
               onKeyDown={(e) => {
+                e.stopPropagation()
                 if (e.key === "Enter") {
                   e.preventDefault()
                   commitEdit()
