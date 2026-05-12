@@ -80,6 +80,7 @@ export const upsertPaymentCheckSchema = z.object({
   isConfirmed: z.boolean(),
   confirmedBy: z.string(),
   discordRoleAssigned: z.boolean().optional(),
+  hasNote: z.boolean().optional(),
 })
 
 // ========== Partner ==========

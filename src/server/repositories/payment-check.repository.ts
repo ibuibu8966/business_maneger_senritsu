@@ -21,7 +21,7 @@ export class PaymentCheckRepository {
     })
   }
 
-  static async upsert(data: { subscriptionId: string; year: number; month: number; isConfirmed: boolean; confirmedBy: string; discordRoleAssigned?: boolean }) {
+  static async upsert(data: { subscriptionId: string; year: number; month: number; isConfirmed: boolean; confirmedBy: string; discordRoleAssigned?: boolean; hasNote?: boolean }) {
     // If discordRoleAssigned is provided, update the subscription
     if (data.discordRoleAssigned !== undefined) {
       await prisma.subscription.update({
@@ -31,8 +31,8 @@ export class PaymentCheckRepository {
     }
     return prisma.paymentCheck.upsert({
       where: { subscriptionId_year_month: { subscriptionId: data.subscriptionId, year: data.year, month: data.month } },
-      create: { subscriptionId: data.subscriptionId, year: data.year, month: data.month, isConfirmed: data.isConfirmed, confirmedBy: data.confirmedBy, confirmedAt: data.isConfirmed ? new Date() : null },
-      update: { isConfirmed: data.isConfirmed, confirmedBy: data.confirmedBy, confirmedAt: data.isConfirmed ? new Date() : null },
+      create: { subscriptionId: data.subscriptionId, year: data.year, month: data.month, isConfirmed: data.isConfirmed, confirmedBy: data.confirmedBy, confirmedAt: data.isConfirmed ? new Date() : null, ...(data.hasNote !== undefined && { hasNote: data.hasNote }) },
+      update: { isConfirmed: data.isConfirmed, confirmedBy: data.confirmedBy, confirmedAt: data.isConfirmed ? new Date() : null, ...(data.hasNote !== undefined && { hasNote: data.hasNote }) },
       include: {
         subscription: {
           include: {

@@ -727,6 +727,7 @@ model PaymentCheck {
   isConfirmed    Boolean      @default(false) // 確認済み？
   confirmedBy    String       @default("") // 確認者
   confirmedAt    DateTime? // 確認日時
+  hasNote        Boolean      @default(false) // 付箋ON/OFF
   createdAt      DateTime     @default(now())
 
   @@unique([subscriptionId, year, month]) // 1サブスク×1年月で1レコード

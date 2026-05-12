@@ -309,6 +309,7 @@ export class PaymentCheckController {
         paymentMethod: p.subscription.paymentMethod.toLowerCase(),
         year: p.year, month: p.month, isConfirmed: p.isConfirmed,
         confirmedBy: p.confirmedBy, confirmedAt: p.confirmedAt?.toISOString() ?? null,
+        hasNote: p.hasNote,
       })))
     } catch (e) { return handleApiError(e, { resource: "決済確認", action: "取得" }) }
   }
@@ -333,6 +334,7 @@ export class PaymentCheckController {
         paymentMethod: r.subscription.paymentMethod.toLowerCase(),
         year: r.year, month: r.month, isConfirmed: r.isConfirmed,
         confirmedBy: r.confirmedBy, confirmedAt: r.confirmedAt?.toISOString() ?? null,
+        hasNote: r.hasNote,
       })
     } catch (e) {
       return handleApiError(e, { resource: "決済確認", action: "更新" })

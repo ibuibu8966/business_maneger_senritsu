@@ -235,6 +235,7 @@ export interface PaymentCheckDTO {
   isConfirmed: boolean
   confirmedBy: string
   confirmedAt: string | null
+  hasNote: boolean
 }
 
 export interface PartnerDTO {

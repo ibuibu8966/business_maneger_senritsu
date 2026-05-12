@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useSession } from "next-auth/react"
-import { Check, RefreshCw, Copy, ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
+import { Check, RefreshCw, Copy, ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown, StickyNote } from "lucide-react"
 import { usePaymentChecks, useUpsertPaymentCheck, useGeneratePaymentChecks } from "@/hooks/use-crm"
 import { cn } from "@/lib/utils"
 
@@ -116,6 +116,17 @@ export function PaymentCheckList() {
     })
   }
 
+  const handleToggleNote = (check: typeof checks[number]) => {
+    upsertMutation.mutate({
+      subscriptionId: check.subscriptionId,
+      year,
+      month,
+      isConfirmed: check.isConfirmed,
+      confirmedBy: check.confirmedBy || session?.user?.name || "",
+      hasNote: !check.hasNote,
+    })
+  }
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
   }
@@ -176,7 +187,7 @@ export function PaymentCheckList() {
             </Badge>
           )}
           {exemptCount > 0 && (
-            <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+            <Badge variant="outline" className="text-xs text-amber-700 dark:text-amber-200 border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-900/40">
               免除: {exemptCount}
             </Badge>
           )}
@@ -198,11 +209,12 @@ export function PaymentCheckList() {
               <SortableHead label="決済確認" sortKey="isConfirmed" current={sortKey} dir={sortDir} onSort={handleSort} className="w-12" />
               <SortableHead label="ロール付与" sortKey="discordRoleAssigned" current={sortKey} dir={sortDir} onSort={handleSort} className="w-24" />
               <SortableHead label="確認者" sortKey="confirmedBy" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <TableHead className="w-12 text-center">付箋</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedChecks.map((c) => (
-              <TableRow key={c.id} className={cn(c.isConfirmed && !c.isExempt && "bg-muted/30", c.isExempt && "bg-amber-50/50")}>
+              <TableRow key={c.id} className={cn(c.isConfirmed && !c.isExempt && "bg-muted/50 dark:bg-muted/60", c.isExempt && "bg-amber-100/70 dark:bg-amber-900/40", c.hasNote && "bg-pink-100/70 dark:bg-pink-950/40")}>
                 <TableCell className="text-sm font-medium">{c.contactName}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.discordId || "-"}</TableCell>
                 <TableCell className="text-sm">{c.courseName}</TableCell>
@@ -216,7 +228,7 @@ export function PaymentCheckList() {
                 <TableCell className="text-sm">{c.discordRoleName || "-"}</TableCell>
                 <TableCell>
                   {c.isExempt ? (
-                    <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">免除</Badge>
+                    <Badge variant="outline" className="text-xs text-amber-700 dark:text-amber-200 border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-900/40">免除</Badge>
                   ) : (
                     <Button
                       variant={c.isConfirmed ? "default" : "outline"}
@@ -246,11 +258,21 @@ export function PaymentCheckList() {
                     </div>
                   )}
                 </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleToggleNote(c)}
+                  >
+                    <StickyNote className={cn("h-3.5 w-3.5", c.hasNote ? "text-pink-600 fill-pink-200 dark:text-pink-300 dark:fill-pink-800" : "text-muted-foreground")} />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {sortedChecks.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                   データがありません。「一括生成」ボタンで生成してください
                 </TableCell>
               </TableRow>
