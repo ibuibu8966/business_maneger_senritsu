@@ -22,7 +22,7 @@ import {
   type Priority,
   type TicketTool,
 } from "../mock-data"
-import { useCreateBusinessTask, useChecklistTemplates, useAddTaskChecklistItem } from "@/hooks/use-business"
+import { useCreateBusinessTask, useChecklistTemplates, useAddTaskChecklistItem, useCompleteIrregularBusinessTask } from "@/hooks/use-business"
 import { useCreateScheduleEvent } from "@/hooks/use-schedule"
 import { toast } from "sonner"
 
@@ -67,6 +67,7 @@ export function TaskCreateDialog({
   const [recurringDays, setRecurringDays] = useState<number[]>([])
   const [recurringWeek, setRecurringWeek] = useState("")
   const [recurringEndDate, setRecurringEndDate] = useState("")
+  const [irregularNextDate, setIrregularNextDate] = useState("")
   const [contactId, setContactId] = useState("")
   const [partnerId, setPartnerId] = useState("")
   const [priority, setPriority] = useState<Priority>("medium")
@@ -80,6 +81,7 @@ export function TaskCreateDialog({
   const [calendarEventType, setCalendarEventType] = useState<"meeting" | "holiday" | "outing" | "work" | "other">("work")
   const [showAssigneeMenu, setShowAssigneeMenu] = useState(false)
   const createTaskMutation = useCreateBusinessTask()
+  const completeIrregularMutation = useCompleteIrregularBusinessTask()
   const createScheduleEventMutation = useCreateScheduleEvent()
   const addChecklistItemMutation = useAddTaskChecklistItem()
   const { data: checklistTemplates = [] } = useChecklistTemplates()
@@ -118,6 +120,10 @@ export function TaskCreateDialog({
 
   const handleCreate = async () => {
     if (!title.trim() || !targetValue) return
+    if (recurring && recurringPattern === "irregular" && !irregularNextDate) {
+      toast.error("不定期パターンでは「初回の生成日」が必須です")
+      return
+    }
     if (assigneeIds.length === 0) {
       toast.error("担当者を1人以上選択してください")
       return
@@ -169,6 +175,13 @@ export function TaskCreateDialog({
               addChecklistItemMutation.mutateAsync({ taskId: newTaskId, title, sortOrder: i })
             )
           )
+        }
+        // 不定期パターンの場合、初回の子タスクを生成
+        if (recurring && recurringPattern === "irregular" && irregularNextDate) {
+          await completeIrregularMutation.mutateAsync({
+            id: newTaskId,
+            data: { nextDate: irregularNextDate, finished: false },
+          })
         }
       }
 
@@ -359,6 +372,13 @@ export function TaskCreateDialog({
                         <option value="1">月曜日</option><option value="2">火曜日</option><option value="3">水曜日</option><option value="4">木曜日</option><option value="5">金曜日</option><option value="6">土曜日</option><option value="0">日曜日</option>
                       </select>
                     </div>
+                  </div>
+                )}
+                {recurringPattern === "irregular" && (
+                  <div>
+                    <Label className="text-[10px]">初回の生成日 *</Label>
+                    <Input type="date" className="mt-0.5 h-7 text-xs" value={irregularNextDate} onChange={(e) => setIrregularNextDate(e.target.value)} />
+                    <p className="text-[10px] text-muted-foreground mt-1">登録時に、この日付の子タスクが生成されます</p>
                   </div>
                 )}
               </div>

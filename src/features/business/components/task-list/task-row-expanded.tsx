@@ -49,6 +49,7 @@ export function TaskRowExpanded({
   const updateTaskMutation = useUpdateBusinessTask()
   const completeIrregularMutation = useCompleteIrregularBusinessTask()
   const [irregularDialogOpen, setIrregularDialogOpen] = useState(false)
+  const [switchToIrregularDialogOpen, setSwitchToIrregularDialogOpen] = useState(false)
   const deleteTaskMutation = useDeleteBusinessTask()
   const createScheduleMutation = useCreateScheduleEvent()
   const { data: employees = [] } = useEmployees()
@@ -474,6 +475,10 @@ export function TaskRowExpanded({
                 value={task.recurringPattern ?? ""}
                 onChange={(e) => {
                   const pattern = e.target.value || null
+                  if (pattern === "irregular" && task.recurringPattern !== "irregular") {
+                    setSwitchToIrregularDialogOpen(true)
+                    return
+                  }
                   updateTaskMutation.mutate({
                     id: task.id,
                     data: { recurring: !!pattern, recurringPattern: pattern, recurringDay: null, recurringWeek: null }
@@ -809,6 +814,39 @@ export function TaskRowExpanded({
               },
               onError: () => {
                 toast.error("不定期タスクの完了処理に失敗しました")
+              },
+            }
+          )
+        }}
+      />
+      <IrregularCompleteDialog
+        open={switchToIrregularDialogOpen}
+        onOpenChange={setSwitchToIrregularDialogOpen}
+        taskTitle={task.title}
+        title="不定期パターンへの切り替え"
+        description="不定期パターンに切り替えます。最初に生成するタスクの日付を選んでください。"
+        hideFinishedOption
+        onConfirm={(payload) => {
+          if (!payload.nextDate) return
+          updateTaskMutation.mutate(
+            { id: task.id, data: { recurring: true, recurringPattern: "irregular", recurringDay: null, recurringWeek: null } },
+            {
+              onSuccess: () => {
+                completeIrregularMutation.mutate(
+                  { id: task.id, data: { nextDate: payload.nextDate, finished: false } },
+                  {
+                    onSuccess: () => {
+                      setSwitchToIrregularDialogOpen(false)
+                      toast.success("不定期パターンに設定し、初回タスクを生成しました")
+                    },
+                    onError: () => {
+                      toast.error("初回タスクの生成に失敗しました")
+                    },
+                  }
+                )
+              },
+              onError: () => {
+                toast.error("不定期パターンへの切り替えに失敗しました")
               },
             }
           )

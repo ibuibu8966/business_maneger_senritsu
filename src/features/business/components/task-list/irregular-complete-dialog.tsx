@@ -11,11 +11,17 @@ export function IrregularCompleteDialog({
   onOpenChange,
   taskTitle,
   onConfirm,
+  title = "不定期タスクの完了",
+  description,
+  hideFinishedOption = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   taskTitle: string
   onConfirm: (payload: { nextDate: string | null; finished: boolean }) => void
+  title?: string
+  description?: string
+  hideFinishedOption?: boolean
 }) {
   const [nextDate, setNextDate] = useState("")
   const [finished, setFinished] = useState(false)
@@ -42,11 +48,11 @@ export function IrregularCompleteDialog({
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleCancel() }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>不定期タスクの完了</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            「{taskTitle}」を完了します。次回の生成日を選んでください。
+            {description ?? `「${taskTitle}」を完了します。次回の生成日を選んでください。`}
           </p>
           <div>
             <Label className="text-xs">次の生成日</Label>
@@ -58,18 +64,20 @@ export function IrregularCompleteDialog({
               disabled={finished}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              id="irregular-finished"
-              type="checkbox"
-              checked={finished}
-              onChange={(e) => { setFinished(e.target.checked); if (e.target.checked) setNextDate("") }}
-              className="h-4 w-4"
-            />
-            <Label htmlFor="irregular-finished" className="text-sm cursor-pointer">
-              次は生成しない（このタスクを完了する）
-            </Label>
-          </div>
+          {!hideFinishedOption && (
+            <div className="flex items-center gap-2">
+              <input
+                id="irregular-finished"
+                type="checkbox"
+                checked={finished}
+                onChange={(e) => { setFinished(e.target.checked); if (e.target.checked) setNextDate("") }}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="irregular-finished" className="text-sm cursor-pointer">
+                次は生成しない（このタスクを完了する）
+              </Label>
+            </div>
+          )}
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={handleCancel}>キャンセル</Button>
