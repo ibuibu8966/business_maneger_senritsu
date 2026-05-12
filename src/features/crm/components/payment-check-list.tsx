@@ -44,6 +44,20 @@ export function PaymentCheckList() {
 
   const [sortKey, setSortKey] = useState<SortKey | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>("asc")
+  const [salonFilter, setSalonFilter] = useState<string>("all")
+
+  const salonOptions = useMemo(() => {
+    const set = new Set<string>()
+    checks.forEach((c) => {
+      if (c.salonName) set.add(c.salonName)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"))
+  }, [checks])
+
+  const filteredChecks = useMemo(() => {
+    if (salonFilter === "all") return checks
+    return checks.filter((c) => c.salonName === salonFilter)
+  }, [checks, salonFilter])
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -55,8 +69,8 @@ export function PaymentCheckList() {
   }
 
   const sortedChecks = useMemo(() => {
-    if (!sortKey) return checks
-    const arr = [...checks]
+    if (!sortKey) return filteredChecks
+    const arr = [...filteredChecks]
     arr.sort((a, b) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const av = (a as any)[sortKey]
@@ -75,7 +89,7 @@ export function PaymentCheckList() {
       return sortDir === "asc" ? cmp : -cmp
     })
     return arr
-  }, [checks, sortKey, sortDir])
+  }, [filteredChecks, sortKey, sortDir])
 
   const handleConfirm = (check: typeof checks[number]) => {
     upsertMutation.mutate({
@@ -106,10 +120,10 @@ export function PaymentCheckList() {
     navigator.clipboard.writeText(text)
   }
 
-  const nonExempt = checks.filter((c) => !c.isExempt)
+  const nonExempt = filteredChecks.filter((c) => !c.isExempt)
   const confirmed = nonExempt.filter((c) => c.isConfirmed).length
   const total = nonExempt.length
-  const exemptCount = checks.filter((c) => c.isExempt).length
+  const exemptCount = filteredChecks.filter((c) => c.isExempt).length
 
   if (isLoading) return <div className="p-4 text-muted-foreground">読み込み中...</div>
 
@@ -139,6 +153,19 @@ export function PaymentCheckList() {
           <RefreshCw className={cn("h-3.5 w-3.5 mr-1", generateMutation.isPending && "animate-spin")} />
           一括生成
         </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm">サロン:</span>
+          <select
+            value={salonFilter}
+            onChange={(e) => setSalonFilter(e.target.value)}
+            className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="all">全て</option>
+            {salonOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
             確認済み: {confirmed}/{total}
@@ -157,7 +184,7 @@ export function PaymentCheckList() {
       </div>
 
       {/* テーブル */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto [&>[data-slot=table-container]]:overflow-visible">
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]">
             <TableRow>
