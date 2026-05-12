@@ -92,7 +92,7 @@ export function TaskListView() {
   const [filterStaffId, setFilterStaffId] = useState<string>(userId ?? "all")
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all")
   const [showTodayOnly, setShowTodayOnly] = useState<boolean>(false)
-  const [showRecurringOnly, setShowRecurringOnly] = useState<boolean>(false)
+  const [recurringSectionOpen, setRecurringSectionOpen] = useState<boolean>(false)
   const [searchKeyword, setSearchKeyword] = useState<string>("")
   const [filterPriority, setFilterPriority] = useState<"all" | "highest" | "high" | "medium" | "low">("all")
   const [filterDeadline, setFilterDeadline] = useState<"all" | "today" | "thisweek" | "overdue" | "none" | "exists">("all")
@@ -157,15 +157,6 @@ export function TaskListView() {
       if (t.status === "done") return false // 「すべて」でも完了は除外
     } else if (t.status !== filterStatus) return false
     if (showTodayOnly && !t.todayFlag) return false
-    // 繰り返し設定本体（recurring=true）はデフォルト非表示。「繰り返しのみ」フィルタON時のみ表示
-    // ただし選択中（編集中）のタスクは状態遷移中に消えないよう強制表示
-    if (selectedTaskId !== t.id) {
-      if (showRecurringOnly) {
-        if (!t.recurring) return false
-      } else {
-        if (t.recurring) return false
-      }
-    }
     if (searchKeyword.trim()) {
       const kw = searchKeyword.trim().toLowerCase()
       const hit = t.title.toLowerCase().includes(kw) || (t.detail ?? "").toLowerCase().includes(kw)
@@ -213,7 +204,6 @@ export function TaskListView() {
     filterStaffId !== "all" &&
     filterStatus === "all" &&
     !showTodayOnly &&
-    !showRecurringOnly &&
     searchKeyword.trim().length === 0 &&
     filterPriority === "all" &&
     filterDeadline === "all" &&
@@ -227,7 +217,6 @@ export function TaskListView() {
       filterStaffId !== "all" ||
       filterStatus !== "all" ||
       showTodayOnly ||
-      showRecurringOnly ||
       searchKeyword.trim().length > 0 ||
       filterPriority !== "all" ||
       filterDeadline !== "all" ||
@@ -249,14 +238,20 @@ export function TaskListView() {
             .concat(sortedTasks.filter((t) => !taskOrder.includes(t.id)))
         : sortedTasks)
 
+  // 通常タスクと繰り返しタスクに分割
+  const normalOrderedTasks = orderedTasks.filter((t) => !t.recurring)
+  const recurringDisplayTasks = orderedTasks.filter((t) => t.recurring)
+  const recurringSelected = recurringDisplayTasks.some((t) => t.id === selectedTaskId)
+  const recurringShown = recurringSectionOpen || recurringSelected
+
   const handleDragEnd = (event: DragEndEvent) => {
     if (isFilteringActive) return
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = orderedTasks.findIndex((t) => t.id === active.id)
-    const newIndex = orderedTasks.findIndex((t) => t.id === over.id)
+    const oldIndex = normalOrderedTasks.findIndex((t) => t.id === active.id)
+    const newIndex = normalOrderedTasks.findIndex((t) => t.id === over.id)
     if (oldIndex === -1 || newIndex === -1) return
-    const newOrder = arrayMove(orderedTasks.map((t) => t.id), oldIndex, newIndex)
+    const newOrder = arrayMove(normalOrderedTasks.map((t) => t.id), oldIndex, newIndex)
     setTaskOrder(newOrder)
 
     // 担当者フィルタONなら、その人専用の並び順だけ更新（他の人に影響しない）
@@ -349,14 +344,6 @@ export function TaskListView() {
             今日やる
           </span>
 
-          <span
-            onClick={() => setShowRecurringOnly((v) => !v)}
-            title="繰り返し設定がONの親タスクのみ表示"
-            className={`px-2 py-1 cursor-pointer text-[11px] flex items-center gap-1 ${showRecurringOnly ? "rounded bg-muted text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <Repeat className={`w-3 h-3 ${showRecurringOnly ? "text-blue-600 dark:text-blue-400" : ""}`} />
-            繰り返しのみ
-          </span>
         </div>
 
         {/* 2段目: ＋タスク登録 */}
@@ -429,39 +416,84 @@ export function TaskListView() {
 
         {/* タスクリスト（フラット表示） */}
         <div className="p-3">
-          {orderedTasks.length === 0 ? (
+          {normalOrderedTasks.length === 0 && recurringDisplayTasks.length === 0 ? (
             <div className="text-center py-12 text-sm text-muted-foreground">
               該当するタスクはありません
             </div>
           ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={orderedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-1">
-                  {orderedTasks.map((t, i) => (
-                    <div key={t.id}>
-                      <SortableTaskRow
-                        task={t}
-                        index={i}
-                        onClickTask={(task) => setSelectedTaskId((prev) => prev === task.id ? null : task.id)}
-                        onToggleTodayFlag={handleToggleTodayFlag}
-                        isSelected={selectedTaskId === t.id}
-                      />
-                      {selectedTaskId === t.id && (
-                        <TaskRowExpanded
+            <>
+              {/* 通常タスク */}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={normalOrderedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1">
+                    {normalOrderedTasks.map((t, i) => (
+                      <div key={t.id}>
+                        <SortableTaskRow
                           task={t}
-                          contacts={contactsList as unknown as { id: string; name: string }[]}
-                          partners={partnersList as unknown as { id: string; name: string }[]}
-                          issues={issues as unknown as { id: string; title: string; projectId: string }[]}
-                          businesses={allBusinesses as unknown as { id: string; name: string }[]}
-                          projects={allProjects}
-                          onClose={() => setSelectedTaskId(null)}
+                          index={i}
+                          onClickTask={(task) => setSelectedTaskId((prev) => prev === task.id ? null : task.id)}
+                          onToggleTodayFlag={handleToggleTodayFlag}
+                          isSelected={selectedTaskId === t.id}
                         />
-                      )}
+                        {selectedTaskId === t.id && (
+                          <TaskRowExpanded
+                            task={t}
+                            contacts={contactsList as unknown as { id: string; name: string }[]}
+                            partners={partnersList as unknown as { id: string; name: string }[]}
+                            issues={issues as unknown as { id: string; title: string; projectId: string }[]}
+                            businesses={allBusinesses as unknown as { id: string; name: string }[]}
+                            projects={allProjects}
+                            onClose={() => setSelectedTaskId(null)}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+
+              {/* 繰り返しタスク一覧セクション */}
+              {recurringDisplayTasks.length > 0 && (
+                <div className="mt-4 border-t pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setRecurringSectionOpen((v) => !v)}
+                    className="w-full flex items-center gap-1 px-2 py-1.5 text-[11px] text-muted-foreground hover:text-foreground rounded hover:bg-muted/50"
+                  >
+                    {recurringShown ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                    <Repeat className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                    <span className="font-medium">繰り返しタスク一覧</span>
+                    <span className="ml-1">({recurringDisplayTasks.length}件)</span>
+                  </button>
+                  {recurringShown && (
+                    <div className="space-y-1 mt-2">
+                      {recurringDisplayTasks.map((t, i) => (
+                        <div key={t.id}>
+                          <SortableTaskRow
+                            task={t}
+                            index={i}
+                            onClickTask={(task) => setSelectedTaskId((prev) => prev === task.id ? null : task.id)}
+                            onToggleTodayFlag={handleToggleTodayFlag}
+                            isSelected={selectedTaskId === t.id}
+                          />
+                          {selectedTaskId === t.id && (
+                            <TaskRowExpanded
+                              task={t}
+                              contacts={contactsList as unknown as { id: string; name: string }[]}
+                              partners={partnersList as unknown as { id: string; name: string }[]}
+                              issues={issues as unknown as { id: string; title: string; projectId: string }[]}
+                              businesses={allBusinesses as unknown as { id: string; name: string }[]}
+                              projects={allProjects}
+                              onClose={() => setSelectedTaskId(null)}
+                            />
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              </SortableContext>
-            </DndContext>
+              )}
+            </>
           )}
         </div>
     </div>
