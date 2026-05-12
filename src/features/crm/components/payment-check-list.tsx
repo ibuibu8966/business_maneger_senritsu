@@ -21,7 +21,6 @@ type SortKey =
   | "paymentServiceId"
   | "discordRoleName"
   | "isConfirmed"
-  | "discordRoleAssigned"
   | "confirmedBy"
 type SortDir = "asc" | "desc"
 
@@ -103,17 +102,6 @@ export function PaymentCheckList() {
 
   const handleGenerate = () => {
     generateMutation.mutate({ year, month })
-  }
-
-  const handleRoleChange = (check: typeof checks[number], assigned: boolean) => {
-    upsertMutation.mutate({
-      subscriptionId: check.subscriptionId,
-      year,
-      month,
-      isConfirmed: check.isConfirmed,
-      confirmedBy: check.confirmedBy || session?.user?.name || "",
-      discordRoleAssigned: assigned,
-    })
   }
 
   const handleToggleNote = (check: typeof checks[number]) => {
@@ -207,7 +195,6 @@ export function PaymentCheckList() {
               <SortableHead label="決済サービスID" sortKey="paymentServiceId" current={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHead label="ロール名" sortKey="discordRoleName" current={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHead label="決済確認" sortKey="isConfirmed" current={sortKey} dir={sortDir} onSort={handleSort} className="w-12" />
-              <SortableHead label="ロール付与" sortKey="discordRoleAssigned" current={sortKey} dir={sortDir} onSort={handleSort} className="w-24" />
               <SortableHead label="確認者" sortKey="confirmedBy" current={sortKey} dir={sortDir} onSort={handleSort} />
               <TableHead className="w-12 text-center">付箋</TableHead>
             </TableRow>
@@ -248,16 +235,6 @@ export function PaymentCheckList() {
                     </Button>
                   )}
                 </TableCell>
-                <TableCell>
-                  <select
-                    value={c.discordRoleAssigned ? "付与済" : "未付与"}
-                    onChange={(e) => handleRoleChange(c, e.target.value === "付与済")}
-                    className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    <option value="付与済">付与済</option>
-                    <option value="未付与">未付与</option>
-                  </select>
-                </TableCell>
                 <TableCell className="text-sm">
                   {c.confirmedBy || "-"}
                   {c.confirmedAt && (
@@ -281,7 +258,7 @@ export function PaymentCheckList() {
             })}
             {sortedChecks.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   データがありません。「一括生成」ボタンで生成してください
                 </TableCell>
               </TableRow>
