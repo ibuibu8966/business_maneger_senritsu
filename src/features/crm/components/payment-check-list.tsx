@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -8,9 +8,22 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useSession } from "next-auth/react"
-import { Check, RefreshCw, Copy, ExternalLink } from "lucide-react"
+import { Check, RefreshCw, Copy, ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
 import { usePaymentChecks, useUpsertPaymentCheck, useGeneratePaymentChecks } from "@/hooks/use-crm"
 import { cn } from "@/lib/utils"
+
+type SortKey =
+  | "contactName"
+  | "discordId"
+  | "courseName"
+  | "salonName"
+  | "paymentMethod"
+  | "paymentServiceId"
+  | "discordRoleName"
+  | "isConfirmed"
+  | "discordRoleAssigned"
+  | "confirmedBy"
+type SortDir = "asc" | "desc"
 
 const METHOD_LABELS: Record<string, string> = {
   memberpay: "MemberPay", robotpay: "RobotPay", paypal: "PayPal", univpay: "UnivPay", other: "その他",
@@ -28,6 +41,41 @@ export function PaymentCheckList() {
   const { data: checks = [], isLoading } = usePaymentChecks({ year, month })
   const upsertMutation = useUpsertPaymentCheck()
   const generateMutation = useGeneratePaymentChecks()
+
+  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>("asc")
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc")
+    } else {
+      setSortKey(key)
+      setSortDir("asc")
+    }
+  }
+
+  const sortedChecks = useMemo(() => {
+    if (!sortKey) return checks
+    const arr = [...checks]
+    arr.sort((a, b) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const av = (a as any)[sortKey]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bv = (b as any)[sortKey]
+      const isAEmpty = av === null || av === undefined || av === ""
+      const isBEmpty = bv === null || bv === undefined || bv === ""
+      if (isAEmpty && isBEmpty) return 0
+      if (isAEmpty) return 1
+      if (isBEmpty) return -1
+      if (typeof av === "boolean" && typeof bv === "boolean") {
+        const cmp = av === bv ? 0 : av ? -1 : 1
+        return sortDir === "asc" ? cmp : -cmp
+      }
+      const cmp = String(av).localeCompare(String(bv), "ja")
+      return sortDir === "asc" ? cmp : -cmp
+    })
+    return arr
+  }, [checks, sortKey, sortDir])
 
   const handleConfirm = (check: typeof checks[number]) => {
     upsertMutation.mutate({
@@ -111,22 +159,22 @@ export function PaymentCheckList() {
       {/* テーブル */}
       <div className="flex-1 overflow-auto">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]">
             <TableRow>
-              <TableHead>顧客</TableHead>
-              <TableHead>DiscordID</TableHead>
-              <TableHead>コース</TableHead>
-              <TableHead>サロン</TableHead>
-              <TableHead>決済方法</TableHead>
-              <TableHead>決済サービスID</TableHead>
-              <TableHead>ロール名</TableHead>
-              <TableHead className="w-12">決済確認</TableHead>
-              <TableHead className="w-24">ロール付与</TableHead>
-              <TableHead>確認者</TableHead>
+              <SortableHead label="顧客" sortKey="contactName" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHead label="DiscordID" sortKey="discordId" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHead label="コース" sortKey="courseName" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHead label="サロン" sortKey="salonName" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHead label="決済方法" sortKey="paymentMethod" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHead label="決済サービスID" sortKey="paymentServiceId" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHead label="ロール名" sortKey="discordRoleName" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHead label="決済確認" sortKey="isConfirmed" current={sortKey} dir={sortDir} onSort={handleSort} className="w-12" />
+              <SortableHead label="ロール付与" sortKey="discordRoleAssigned" current={sortKey} dir={sortDir} onSort={handleSort} className="w-24" />
+              <SortableHead label="確認者" sortKey="confirmedBy" current={sortKey} dir={sortDir} onSort={handleSort} />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {checks.map((c) => (
+            {sortedChecks.map((c) => (
               <TableRow key={c.id} className={cn(c.isConfirmed && !c.isExempt && "bg-muted/30", c.isExempt && "bg-amber-50/50")}>
                 <TableCell className="text-sm font-medium">{c.contactName}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.discordId || "-"}</TableCell>
@@ -173,7 +221,7 @@ export function PaymentCheckList() {
                 </TableCell>
               </TableRow>
             ))}
-            {checks.length === 0 && (
+            {sortedChecks.length === 0 && (
               <TableRow>
                 <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   データがありません。「一括生成」ボタンで生成してください
@@ -184,5 +232,35 @@ export function PaymentCheckList() {
         </Table>
       </div>
     </div>
+  )
+}
+
+function SortableHead({
+  label,
+  sortKey,
+  current,
+  dir,
+  onSort,
+  className,
+}: {
+  label: string
+  sortKey: SortKey
+  current: SortKey | null
+  dir: SortDir
+  onSort: (key: SortKey) => void
+  className?: string
+}) {
+  const active = current === sortKey
+  return (
+    <TableHead className={cn("cursor-pointer select-none hover:bg-muted/50", className)} onClick={() => onSort(sortKey)}>
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active ? (
+          dir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronsUpDown className="h-3 w-3 opacity-30" />
+        )}
+      </span>
+    </TableHead>
   )
 }
