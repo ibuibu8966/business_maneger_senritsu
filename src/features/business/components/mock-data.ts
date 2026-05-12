@@ -132,6 +132,7 @@ export interface TaskItem {
   recurringWeek: number | null
   userSortOrders?: Record<string, number>
   recurringEndDate: string | null
+  lastGeneratedAt?: string | null
   createdBy: string
   sortOrder: number
   createdAt: string

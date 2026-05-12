@@ -50,6 +50,7 @@ export function TaskRowExpanded({
   const completeIrregularMutation = useCompleteIrregularBusinessTask()
   const [irregularDialogOpen, setIrregularDialogOpen] = useState(false)
   const [switchToIrregularDialogOpen, setSwitchToIrregularDialogOpen] = useState(false)
+  const [irregularNextDateInput, setIrregularNextDateInput] = useState("")
   const deleteTaskMutation = useDeleteBusinessTask()
   const createScheduleMutation = useCreateScheduleEvent()
   const { data: employees = [] } = useEmployees()
@@ -614,6 +615,46 @@ export function TaskRowExpanded({
                   <option value="0">日曜日</option>
                 </select>
               </div>
+            </div>
+          )}
+          {task.recurringPattern === "irregular" && (
+            <div>
+              <Label className="text-[10px]">次の生成日</Label>
+              <div className="flex gap-1.5 mt-0.5">
+                <Input
+                  type="date"
+                  value={irregularNextDateInput}
+                  onChange={(e) => setIrregularNextDateInput(e.target.value)}
+                  className="h-7 text-xs flex-1"
+                />
+                <Button
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={!irregularNextDateInput || completeIrregularMutation.isPending}
+                  onClick={() => {
+                    if (!irregularNextDateInput) return
+                    completeIrregularMutation.mutate(
+                      { id: task.id, data: { nextDate: irregularNextDateInput, finished: false } },
+                      {
+                        onSuccess: () => {
+                          setIrregularNextDateInput("")
+                          toast.success("次回タスクを生成しました")
+                        },
+                        onError: () => {
+                          toast.error("次回タスクの生成に失敗しました")
+                        },
+                      }
+                    )
+                  }}
+                >
+                  生成
+                </Button>
+              </div>
+              {task.lastGeneratedAt && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  最終生成: {new Date(task.lastGeneratedAt).toLocaleString("ja-JP")}
+                </p>
+              )}
             </div>
           )}
         </div>
