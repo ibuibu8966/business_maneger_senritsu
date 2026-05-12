@@ -36,6 +36,7 @@ export class UpdateBusinessTask {
     if (data.recurringDays !== undefined) dbData.recurringDays = (data.recurringDays as number[]) ?? []
     if (data.recurringWeek !== undefined) dbData.recurringWeek = data.recurringWeek ?? null
     if (data.recurringEndDate !== undefined) dbData.recurringEndDate = data.recurringEndDate ? new Date(data.recurringEndDate as string) : null
+    if (data.nextScheduledAt !== undefined) dbData.nextScheduledAt = data.nextScheduledAt ? new Date(data.nextScheduledAt as string) : null
     if (data.sortOrder !== undefined) dbData.sortOrder = data.sortOrder
     if (data.contactId !== undefined) dbData.contactId = data.contactId || null
     if (data.partnerId !== undefined) dbData.partnerId = data.partnerId || null

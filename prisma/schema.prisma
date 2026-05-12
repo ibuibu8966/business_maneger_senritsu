@@ -126,6 +126,10 @@ model BusinessTask {
   recurringWeek       Int? // 第何週(1-5) ※monthly_weekdayのみ
   recurringEndDate    DateTime?          @db.Date // 繰り返し終了日
   lastGeneratedAt     DateTime? // 最終生成日時
+  nextScheduledAt     DateTime?          @db.Date // 不定期パターンの次回生成予定日
+  parentTaskId        String? // 不定期生成元の親タスクID
+  parentTask          BusinessTask?      @relation("RecurringChildren", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  childTasks          BusinessTask[]     @relation("RecurringChildren")
   createdBy           String             @default("") // 作成者
   sortOrder           Int                @default(0) // 表示順（D&D用）
   contactId           String? // 連絡先（任意）

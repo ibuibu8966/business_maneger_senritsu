@@ -133,6 +133,8 @@ export interface TaskItem {
   userSortOrders?: Record<string, number>
   recurringEndDate: string | null
   lastGeneratedAt?: string | null
+  nextScheduledAt?: string | null
+  parentTaskId?: string | null
   createdBy: string
   sortOrder: number
   createdAt: string

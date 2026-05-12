@@ -82,6 +82,15 @@ export class GenerateRecurringTasks {
             task.recurringWeek === todayWeek && task.recurringDay === todayDay
           break
 
+        case "irregular":
+          // 不定期: nextScheduledAt が今日以前なら生成
+          if (task.nextScheduledAt) {
+            const sched = new Date(task.nextScheduledAt)
+            sched.setHours(0, 0, 0, 0)
+            shouldGenerate = sched.getTime() <= today.getTime()
+          }
+          break
+
         default:
           continue
       }
@@ -95,6 +104,11 @@ export class GenerateRecurringTasks {
       })
       const assigneeIds = assigneeRows.map((r) => r.employeeId)
 
+      // 不定期は nextScheduledAt を deadline に、それ以外は今日
+      const childDeadline = task.recurringPattern === "irregular" && task.nextScheduledAt
+        ? new Date(task.nextScheduledAt)
+        : today
+
       // 新タスクを作成: status=TODO、元タスクの情報を引き継ぎ、recurringはfalse
       const created = await BusinessTaskRepository.create({
         projectId: task.projectId,
@@ -102,7 +116,7 @@ export class GenerateRecurringTasks {
         title: task.title,
         detail: task.detail,
         assigneeId: task.assigneeId,
-        deadline: today, // 子タスクは生成日（JST）を期限に。LINE通知の deadline=今日 フィルタで使用
+        deadline: childDeadline,
         status: "TODO",
         memo: task.memo,
         recurring: false,
@@ -116,7 +130,16 @@ export class GenerateRecurringTasks {
         notifyMinutesBefore: task.notifyMinutesBefore,
         issueId: task.issueId,
         createdBy: task.createdBy,
+        parentTaskId: task.id,
       })
+
+      // 不定期の場合、生成済みなので nextScheduledAt をクリア
+      if (task.recurringPattern === "irregular") {
+        await prisma.businessTask.update({
+          where: { id: task.id },
+          data: { nextScheduledAt: null },
+        })
+      }
 
       // 複数担当者を新タスクにもコピー
       if (assigneeIds.length > 0) {

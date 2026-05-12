@@ -50,7 +50,6 @@ export function TaskRowExpanded({
   const completeIrregularMutation = useCompleteIrregularBusinessTask()
   const [irregularDialogOpen, setIrregularDialogOpen] = useState(false)
   const [switchToIrregularDialogOpen, setSwitchToIrregularDialogOpen] = useState(false)
-  const [irregularNextDateInput, setIrregularNextDateInput] = useState("")
   const deleteTaskMutation = useDeleteBusinessTask()
   const createScheduleMutation = useCreateScheduleEvent()
   const { data: employees = [] } = useEmployees()
@@ -168,7 +167,8 @@ export function TaskRowExpanded({
                 value={task.status}
                 onChange={(e) => {
                   const newStatus = e.target.value as TaskStatus
-                  if (task.recurring && task.recurringPattern === "irregular" && newStatus === "done") {
+                  // 子タスク（parentTaskIdあり）を完了にする時は、親の次回生成日を入力するモーダルを開く
+                  if (newStatus === "done" && task.parentTaskId) {
                     setIrregularDialogOpen(true)
                     return
                   }
@@ -617,44 +617,21 @@ export function TaskRowExpanded({
               </div>
             </div>
           )}
-          {task.recurringPattern === "irregular" && (
+          {task.recurringPattern === "irregular" && task.recurring && (
             <div>
               <Label className="text-[10px]">次の生成日</Label>
-              <div className="flex gap-1.5 mt-0.5">
-                <Input
-                  type="date"
-                  value={irregularNextDateInput}
-                  onChange={(e) => setIrregularNextDateInput(e.target.value)}
-                  className="h-7 text-xs flex-1"
-                />
-                <Button
-                  size="sm"
-                  className="h-7 text-xs"
-                  disabled={!irregularNextDateInput || completeIrregularMutation.isPending}
-                  onClick={() => {
-                    if (!irregularNextDateInput) return
-                    completeIrregularMutation.mutate(
-                      { id: task.id, data: { nextDate: irregularNextDateInput, finished: false } },
-                      {
-                        onSuccess: () => {
-                          setIrregularNextDateInput("")
-                          toast.success("次回タスクを生成しました")
-                        },
-                        onError: () => {
-                          toast.error("次回タスクの生成に失敗しました")
-                        },
-                      }
-                    )
-                  }}
-                >
-                  生成
-                </Button>
-              </div>
-              {task.lastGeneratedAt && (
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  最終生成: {new Date(task.lastGeneratedAt).toLocaleString("ja-JP")}
-                </p>
-              )}
+              <Input
+                type="date"
+                value={task.nextScheduledAt ?? ""}
+                onChange={(e) => {
+                  updateTaskMutation.mutate({ id: task.id, data: { nextScheduledAt: e.target.value || null } })
+                }}
+                className="h-7 text-xs mt-0.5"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                当日になったら自動で子タスクが生成されます
+                {task.lastGeneratedAt && <> ／ 最終生成: {new Date(task.lastGeneratedAt).toLocaleString("ja-JP")}</>}
+              </p>
             </div>
           )}
         </div>
@@ -845,17 +822,26 @@ export function TaskRowExpanded({
         open={irregularDialogOpen}
         onOpenChange={setIrregularDialogOpen}
         taskTitle={task.title}
+        title="次回の生成日を選択"
+        description="このタスクを完了します。次回の生成日を選んでください。"
         onConfirm={(payload) => {
+          if (!task.parentTaskId) return
           completeIrregularMutation.mutate(
-            { id: task.id, data: payload },
+            { id: task.parentTaskId, data: payload },
             {
               onSuccess: () => {
-                setIrregularDialogOpen(false)
-                toast.success(payload.finished ? "繰り返しを終了しました" : "次回タスクを生成しました")
+                updateTaskMutation.mutate(
+                  { id: task.id, data: { status: "done" } },
+                  {
+                    onSuccess: () => {
+                      setIrregularDialogOpen(false)
+                      toast.success(payload.finished ? "繰り返しを終了しました" : "次回の生成日を設定しました")
+                    },
+                    onError: () => toast.error("タスクの完了に失敗しました"),
+                  }
+                )
               },
-              onError: () => {
-                toast.error("不定期タスクの完了処理に失敗しました")
-              },
+              onError: () => toast.error("親タスクの次回生成日の設定に失敗しました"),
             }
           )
         }}
@@ -865,26 +851,16 @@ export function TaskRowExpanded({
         onOpenChange={setSwitchToIrregularDialogOpen}
         taskTitle={task.title}
         title="不定期パターンへの切り替え"
-        description="不定期パターンに切り替えます。最初に生成するタスクの日付を選んでください。"
+        description="不定期パターンに切り替えます。最初の生成日を選んでください（当日になると子タスクが自動生成されます）。"
         hideFinishedOption
         onConfirm={(payload) => {
           if (!payload.nextDate) return
           updateTaskMutation.mutate(
-            { id: task.id, data: { recurring: true, recurringPattern: "irregular", recurringDay: null, recurringWeek: null } },
+            { id: task.id, data: { recurring: true, recurringPattern: "irregular", recurringDay: null, recurringWeek: null, nextScheduledAt: payload.nextDate } },
             {
               onSuccess: () => {
-                completeIrregularMutation.mutate(
-                  { id: task.id, data: { nextDate: payload.nextDate, finished: false } },
-                  {
-                    onSuccess: () => {
-                      setSwitchToIrregularDialogOpen(false)
-                      toast.success("不定期パターンに設定し、初回タスクを生成しました")
-                    },
-                    onError: () => {
-                      toast.error("初回タスクの生成に失敗しました")
-                    },
-                  }
-                )
+                setSwitchToIrregularDialogOpen(false)
+                toast.success("不定期パターンに設定しました")
               },
               onError: () => {
                 toast.error("不定期パターンへの切り替えに失敗しました")

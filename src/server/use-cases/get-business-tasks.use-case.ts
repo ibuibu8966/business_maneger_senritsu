@@ -36,6 +36,8 @@ export class GetBusinessTasks {
       recurringWeek: t.recurringWeek ?? null,
       recurringEndDate: t.recurringEndDate ? t.recurringEndDate.toISOString().split("T")[0] : null,
       lastGeneratedAt: t.lastGeneratedAt ? t.lastGeneratedAt.toISOString() : null,
+      nextScheduledAt: t.nextScheduledAt ? t.nextScheduledAt.toISOString().split("T")[0] : null,
+      parentTaskId: t.parentTaskId ?? null,
       createdBy: t.createdBy,
       sortOrder: t.sortOrder,
       userSortOrders: Object.fromEntries(

@@ -370,6 +370,8 @@ export interface BusinessTaskDTO {
   recurringWeek: number | null
   recurringEndDate: string | null
   lastGeneratedAt: string | null
+  nextScheduledAt: string | null
+  parentTaskId: string | null
   createdBy: string
   sortOrder: number
   userSortOrders?: Record<string, number>

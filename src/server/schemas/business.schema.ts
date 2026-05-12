@@ -66,6 +66,7 @@ export const createTaskSchema = z.object({
   recurringDays: z.array(z.number().int()).optional(),
   recurringWeek: z.number().int().nullable().optional(),
   recurringEndDate: z.string().nullable().optional(),
+  nextScheduledAt: z.string().nullable().optional(),
   createdBy: z.string().optional(),
   sortOrder: z.number().int().optional(),
   todayFlag: z.boolean().optional(),

@@ -22,7 +22,7 @@ import {
   type Priority,
   type TicketTool,
 } from "../mock-data"
-import { useCreateBusinessTask, useChecklistTemplates, useAddTaskChecklistItem, useCompleteIrregularBusinessTask } from "@/hooks/use-business"
+import { useCreateBusinessTask, useChecklistTemplates, useAddTaskChecklistItem } from "@/hooks/use-business"
 import { useCreateScheduleEvent } from "@/hooks/use-schedule"
 import { toast } from "sonner"
 
@@ -81,7 +81,6 @@ export function TaskCreateDialog({
   const [calendarEventType, setCalendarEventType] = useState<"meeting" | "holiday" | "outing" | "work" | "other">("work")
   const [showAssigneeMenu, setShowAssigneeMenu] = useState(false)
   const createTaskMutation = useCreateBusinessTask()
-  const completeIrregularMutation = useCompleteIrregularBusinessTask()
   const createScheduleEventMutation = useCreateScheduleEvent()
   const addChecklistItemMutation = useAddTaskChecklistItem()
   const { data: checklistTemplates = [] } = useChecklistTemplates()
@@ -152,6 +151,7 @@ export function TaskCreateDialog({
         recurringDays: recurring && recurringPattern === "weekly" ? recurringDays : [],
         recurringWeek: recurring && recurringWeek !== "" ? Number(recurringWeek) : null,
         recurringEndDate: recurring && recurringEndDate ? recurringEndDate : null,
+        nextScheduledAt: recurring && recurringPattern === "irregular" && irregularNextDate ? irregularNextDate : null,
         createdBy: currentUserName,
         sortOrder: taskCount + 1,
         contactId: contactId || null,
@@ -175,13 +175,6 @@ export function TaskCreateDialog({
               addChecklistItemMutation.mutateAsync({ taskId: newTaskId, title, sortOrder: i })
             )
           )
-        }
-        // 不定期パターンの場合、初回の子タスクを生成
-        if (recurring && recurringPattern === "irregular" && irregularNextDate) {
-          await completeIrregularMutation.mutateAsync({
-            id: newTaskId,
-            data: { nextDate: irregularNextDate, finished: false },
-          })
         }
       }
 
