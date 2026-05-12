@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -15,7 +14,6 @@ import {
 import { Plus, Pencil } from "lucide-react"
 import type { SalonDTO, SalonCourseDTO } from "@/types/dto"
 import { useSalons, useCreateSalon, useUpdateSalon, useCreateCourse, useUpdateCourse } from "@/hooks/use-crm"
-import { formatCurrency } from "@/lib/format"
 
 export function SalonSettings() {
   const { data: salons = [], isLoading } = useSalons()
@@ -30,21 +28,27 @@ export function SalonSettings() {
   const [editingCourse, setEditingCourse] = useState<SalonCourseDTO | null>(null)
   const [targetSalonId, setTargetSalonId] = useState("")
 
-  const handleSaveSalon = (data: { name: string; isActive: boolean }) => {
+  const handleSaveSalon = (data: { name: string }) => {
+    const payload = { ...data, isActive: editingSalon?.isActive ?? true }
     if (editingSalon) {
-      updateSalonMutation.mutate({ id: editingSalon.id, data })
+      updateSalonMutation.mutate({ id: editingSalon.id, data: payload })
     } else {
-      createSalonMutation.mutate(data)
+      createSalonMutation.mutate(payload)
     }
     setSalonModalOpen(false)
     setEditingSalon(null)
   }
 
-  const handleSaveCourse = (data: { salonId: string; name: string; monthlyFee: number; discordRoleName: string; isActive: boolean }) => {
+  const handleSaveCourse = (data: { salonId: string; name: string; discordRoleName: string }) => {
+    const payload = {
+      ...data,
+      monthlyFee: editingCourse?.monthlyFee ?? 0,
+      isActive: editingCourse?.isActive ?? true,
+    }
     if (editingCourse) {
-      updateCourseMutation.mutate({ id: editingCourse.id, data })
+      updateCourseMutation.mutate({ id: editingCourse.id, data: payload })
     } else {
-      createCourseMutation.mutate(data)
+      createCourseMutation.mutate(payload)
     }
     setCourseModalOpen(false)
     setEditingCourse(null)
@@ -67,9 +71,6 @@ export function SalonSettings() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-base">{salon.name}</CardTitle>
-                <Badge variant={salon.isActive ? "default" : "secondary"} className="text-xs">
-                  {salon.isActive ? "有効" : "無効"}
-                </Badge>
               </div>
               <div className="flex gap-1">
                 <Button variant="ghost" size="sm" onClick={() => { setEditingSalon(salon); setSalonModalOpen(true) }}>
@@ -87,9 +88,7 @@ export function SalonSettings() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>コース名</TableHead>
-                    <TableHead>月額</TableHead>
                     <TableHead>Discordロール</TableHead>
-                    <TableHead>状態</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -97,13 +96,7 @@ export function SalonSettings() {
                   {salon.courses.map((course) => (
                     <TableRow key={course.id}>
                       <TableCell className="text-sm font-medium">{course.name}</TableCell>
-                      <TableCell className="text-sm">{formatCurrency(course.monthlyFee)}</TableCell>
                       <TableCell className="text-sm">{course.discordRoleName || "-"}</TableCell>
-                      <TableCell>
-                        <Badge variant={course.isActive ? "default" : "secondary"} className="text-xs">
-                          {course.isActive ? "有効" : "無効"}
-                        </Badge>
-                      </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" className="h-7 w-7"
                           onClick={() => { setTargetSalonId(salon.id); setEditingCourse(course); setCourseModalOpen(true) }}>
@@ -151,20 +144,13 @@ function SalonModal({
   open: boolean
   onOpenChange: (open: boolean) => void
   salon: SalonDTO | null
-  onSave: (data: { name: string; isActive: boolean }) => void
+  onSave: (data: { name: string }) => void
 }) {
   const [name, setName] = useState("")
-  const [isActive, setIsActive] = useState(true)
 
   useEffect(() => {
     if (!open) return
-    if (salon) {
-      setName(salon.name)
-      setIsActive(salon.isActive)
-    } else {
-      setName("")
-      setIsActive(true)
-    }
+    setName(salon ? salon.name : "")
   }, [open, salon])
 
   return (
@@ -178,7 +164,7 @@ function SalonModal({
             <Label className="text-xs">サロン名 *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 text-sm" />
           </div>
-          <Button onClick={() => onSave({ name, isActive })} disabled={!name}>
+          <Button onClick={() => onSave({ name })} disabled={!name}>
             {salon ? "更新" : "登録"}
           </Button>
         </div>
@@ -194,22 +180,18 @@ function CourseModal({
   onOpenChange: (open: boolean) => void
   course: SalonCourseDTO | null
   salonId: string
-  onSave: (data: { salonId: string; name: string; monthlyFee: number; discordRoleName: string; isActive: boolean }) => void
+  onSave: (data: { salonId: string; name: string; discordRoleName: string }) => void
 }) {
   const [name, setName] = useState("")
-  const [monthlyFee, setMonthlyFee] = useState("")
   const [discordRoleName, setDiscordRoleName] = useState("")
-  const [isActive, setIsActive] = useState(true)
 
   useEffect(() => {
     if (!open) return
     if (course) {
       setName(course.name)
-      setMonthlyFee(String(course.monthlyFee))
       setDiscordRoleName(course.discordRoleName)
-      setIsActive(course.isActive)
     } else {
-      setName(""); setMonthlyFee(""); setDiscordRoleName(""); setIsActive(true)
+      setName(""); setDiscordRoleName("")
     }
   }, [open, course])
 
@@ -225,15 +207,11 @@ function CourseModal({
             <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 text-sm" />
           </div>
           <div>
-            <Label className="text-xs">月額</Label>
-            <Input type="number" value={monthlyFee} onChange={(e) => setMonthlyFee(e.target.value)} className="h-8 text-sm" />
-          </div>
-          <div>
             <Label className="text-xs">Discordロール名</Label>
             <Input value={discordRoleName} onChange={(e) => setDiscordRoleName(e.target.value)} className="h-8 text-sm" placeholder="例: エキスパート" />
           </div>
           <Button
-            onClick={() => onSave({ salonId, name, monthlyFee: Number(monthlyFee) || 0, discordRoleName, isActive })}
+            onClick={() => onSave({ salonId, name, discordRoleName })}
             disabled={!name}
           >
             {course ? "更新" : "登録"}

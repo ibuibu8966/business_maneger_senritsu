@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 const tabs = [
-  { href: "/salon", label: "サブスク管理" },
   { href: "/salon/members", label: "サロン生一覧" },
   { href: "/salon/settings", label: "サロン・コース設定" },
+  { href: "/salon", label: "サブスク管理" },
   { href: "/salon/payment-checks", label: "決済確認" },
 ]
 
