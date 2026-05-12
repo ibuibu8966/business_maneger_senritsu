@@ -3,7 +3,7 @@ import { queryKeys } from "@/lib/query-keys"
 import {
   fetchBusinessDetails, fetchBusinessById, createBusiness, updateBusiness, deleteBusiness,
   fetchProjects, fetchProjectById, createProject, updateProject, deleteProject,
-  fetchBusinessTasks, createBusinessTask, updateBusinessTask, deleteBusinessTask, reorderBusinessTasks,
+  fetchBusinessTasks, createBusinessTask, updateBusinessTask, deleteBusinessTask, reorderBusinessTasks, completeIrregularBusinessTask,
   fetchBusinessIssues, createBusinessIssue, updateBusinessIssue, deleteBusinessIssue, addBusinessIssueNote,
   fetchBusinessMemos, createBusinessMemo, deleteBusinessMemo,
   addTaskChecklistItem, updateTaskChecklistItem, deleteTaskChecklistItem,
@@ -168,6 +168,17 @@ export function useReorderBusinessTasks() {
   return useMutation({
     mutationFn: (data: { taskIds: string[]; employeeId?: string }) =>
       reorderBusinessTasks(data),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.businessTasks.all })
+    },
+  })
+}
+
+export function useCompleteIrregularBusinessTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { nextDate: string | null; finished: boolean } }) =>
+      completeIrregularBusinessTask(id, data),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.businessTasks.all })
     },

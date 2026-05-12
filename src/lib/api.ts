@@ -687,6 +687,16 @@ export async function reorderBusinessTasks(data: { taskIds: string[]; employeeId
   if (!res.ok) throw new Error("タスクの並び替えに失敗")
 }
 
+export async function completeIrregularBusinessTask(id: string, data: { nextDate: string | null; finished: boolean }) {
+  const res = await fetch(`${BUSINESS_BASE}/tasks/${id}/complete-irregular`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error("不定期タスクの完了処理に失敗")
+  return res.json()
+}
+
 // --- 課題 ---
 export async function fetchBusinessIssues(params?: { projectId?: string; status?: string; priority?: string }): Promise<BusinessIssueDTO[]> {
   const url = new URL(`${BUSINESS_BASE}/issues`, window.location.origin)

@@ -13,6 +13,7 @@ import { CreateBusinessTask } from "@/server/use-cases/create-business-task.use-
 import { UpdateBusinessTask } from "@/server/use-cases/update-business-task.use-case"
 import { DeleteBusinessTask } from "@/server/use-cases/delete-business-task.use-case"
 import { ReorderBusinessTasks } from "@/server/use-cases/reorder-business-tasks.use-case"
+import { CompleteIrregularTask } from "@/server/use-cases/complete-irregular-task.use-case"
 import { GetBusinessIssues } from "@/server/use-cases/get-business-issues.use-case"
 import { CreateBusinessIssue } from "@/server/use-cases/create-business-issue.use-case"
 import { UpdateBusinessIssue } from "@/server/use-cases/update-business-issue.use-case"
@@ -228,6 +229,21 @@ export class BusinessTaskController {
       const data = reorderSchema.parse(body)
       await ReorderBusinessTasks.execute(data.taskIds, data.employeeId)
       return NextResponse.json({ success: true })
+    } catch (e) {
+      return handleApiError(e, { resource: "タスク", action: "更新" })
+    }
+  }
+
+  static async completeIrregular(req: NextRequest, id: string) {
+    try {
+      const body = await req.json()
+      const nextDate = typeof body?.nextDate === "string" ? body.nextDate : null
+      const finished = body?.finished === true
+      if (!finished && !nextDate) {
+        return NextResponse.json({ error: "nextDate または finished が必要です" }, { status: 400 })
+      }
+      const r = await CompleteIrregularTask.execute(id, { nextDate, finished })
+      return NextResponse.json(r)
     } catch (e) {
       return handleApiError(e, { resource: "タスク", action: "更新" })
     }

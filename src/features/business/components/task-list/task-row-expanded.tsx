@@ -16,10 +16,11 @@ import {
   type ProjectNode,
   type TicketTool,
 } from "../mock-data"
-import { useUpdateBusinessTask, useDeleteBusinessTask } from "@/hooks/use-business"
+import { useUpdateBusinessTask, useDeleteBusinessTask, useCompleteIrregularBusinessTask } from "@/hooks/use-business"
 import { useEmployees, useCreateScheduleEvent } from "@/hooks/use-schedule"
 import { toast } from "sonner"
 import { TaskChecklistSection } from "./task-checklist-section"
+import { IrregularCompleteDialog } from "./irregular-complete-dialog"
 
 type Attachment = { id: string; name: string; url: string; type: string }
 
@@ -46,6 +47,8 @@ export function TaskRowExpanded({
   onClose: () => void
 }) {
   const updateTaskMutation = useUpdateBusinessTask()
+  const completeIrregularMutation = useCompleteIrregularBusinessTask()
+  const [irregularDialogOpen, setIrregularDialogOpen] = useState(false)
   const deleteTaskMutation = useDeleteBusinessTask()
   const createScheduleMutation = useCreateScheduleEvent()
   const { data: employees = [] } = useEmployees()
@@ -63,7 +66,7 @@ export function TaskRowExpanded({
   const [schedTitle, setSchedTitle] = useState(task.title)
 
   const WEEKDAY_LABELS: Record<number, string> = { 0: "日曜日", 1: "月曜日", 2: "火曜日", 3: "水曜日", 4: "木曜日", 5: "金曜日", 6: "土曜日" }
-  const PATTERN_LABELS: Record<string, string> = { daily: "毎日", weekly: "毎週", monthly_date: "毎月（日付）", monthly_weekday: "毎月（曜日）" }
+  const PATTERN_LABELS: Record<string, string> = { daily: "毎日", weekly: "毎週", monthly_date: "毎月（日付）", monthly_weekday: "毎月（曜日）", irregular: "不定期" }
 
   const recurringLabel = task.recurringPattern
     ? (() => {
@@ -161,7 +164,14 @@ export function TaskRowExpanded({
               <select
                 className={`w-full mt-0.5 text-xs border rounded-md px-1.5 py-1 cursor-pointer h-7 font-semibold ${TASK_STATUS_CONFIG[task.status].className}`}
                 value={task.status}
-                onChange={(e) => updateTaskMutation.mutate({ id: task.id, data: { status: e.target.value as TaskStatus } })}
+                onChange={(e) => {
+                  const newStatus = e.target.value as TaskStatus
+                  if (task.recurring && task.recurringPattern === "irregular" && newStatus === "done") {
+                    setIrregularDialogOpen(true)
+                    return
+                  }
+                  updateTaskMutation.mutate({ id: task.id, data: { status: newStatus } })
+                }}
               >
                 {(Object.keys(TASK_STATUS_CONFIG) as TaskStatus[]).map((s) => (
                   <option key={s} value={s}>{TASK_STATUS_CONFIG[s].label}</option>
@@ -475,6 +485,7 @@ export function TaskRowExpanded({
                 <option value="weekly">毎週</option>
                 <option value="monthly_date">毎月（日付指定）</option>
                 <option value="monthly_weekday">毎月（曜日指定）</option>
+                <option value="irregular">不定期</option>
               </select>
             </div>
             <div>
@@ -784,6 +795,25 @@ export function TaskRowExpanded({
           🗑 削除
         </button>
       </div>
+      <IrregularCompleteDialog
+        open={irregularDialogOpen}
+        onOpenChange={setIrregularDialogOpen}
+        taskTitle={task.title}
+        onConfirm={(payload) => {
+          completeIrregularMutation.mutate(
+            { id: task.id, data: payload },
+            {
+              onSuccess: () => {
+                setIrregularDialogOpen(false)
+                toast.success(payload.finished ? "繰り返しを終了しました" : "次回タスクを生成しました")
+              },
+              onError: () => {
+                toast.error("不定期タスクの完了処理に失敗しました")
+              },
+            }
+          )
+        }}
+      />
     </div>
   )
 }
