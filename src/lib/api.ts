@@ -454,6 +454,29 @@ export async function generatePaymentChecks(data: { year: number; month: number 
   return res.json()
 }
 
+export type ImportCsvResult = {
+  matched: { subscriptionId: string; memberId: string; contactName: string; courseName: string }[]
+  unmatched: { memberId: string; courseName: string; reason: string }[]
+  duplicates: { subscriptionId: string; memberId: string; contactName: string; courseName: string }[]
+  upserted: number
+}
+
+export async function importPaymentChecksCsv(data: {
+  year: number
+  month: number
+  rows: { memberId: string; courseName: string }[]
+  dryRun: boolean
+  confirmedBy?: string
+}): Promise<ImportCsvResult> {
+  const res = await fetch(`${CRM_BASE}/payment-checks/import-csv`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error("CSV取込に失敗")
+  return res.json()
+}
+
 // --- 取引先 ---
 export async function fetchPartners(): Promise<PartnerDTO[]> {
   const res = await fetch(`${CRM_BASE}/partners`)

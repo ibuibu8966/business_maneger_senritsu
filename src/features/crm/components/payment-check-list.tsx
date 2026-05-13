@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useSession } from "next-auth/react"
-import { Check, RefreshCw, Copy, ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown, StickyNote } from "lucide-react"
+import { Check, RefreshCw, Copy, ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown, StickyNote, Upload } from "lucide-react"
 import { usePaymentChecks, useUpsertPaymentCheck, useGeneratePaymentChecks } from "@/hooks/use-crm"
 import { cn } from "@/lib/utils"
+import { CsvImportDialog } from "@/features/crm/components/csv-import-dialog"
 
 type SortKey =
   | "contactName"
@@ -44,6 +45,7 @@ export function PaymentCheckList() {
   const [sortKey, setSortKey] = useState<SortKey | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [salonFilter, setSalonFilter] = useState<string>("all")
+  const [csvDialogOpen, setCsvDialogOpen] = useState(false)
 
   const salonOptions = useMemo(() => {
     const set = new Set<string>()
@@ -151,6 +153,10 @@ export function PaymentCheckList() {
         <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generateMutation.isPending}>
           <RefreshCw className={cn("h-3.5 w-3.5 mr-1", generateMutation.isPending && "animate-spin")} />
           一括生成
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setCsvDialogOpen(true)}>
+          <Upload className="h-3.5 w-3.5 mr-1" />
+          CSV取込
         </Button>
         <div className="flex items-center gap-2">
           <span className="text-sm">サロン:</span>
@@ -266,6 +272,13 @@ export function PaymentCheckList() {
           </TableBody>
         </Table>
       </div>
+
+      <CsvImportDialog
+        open={csvDialogOpen}
+        onOpenChange={setCsvDialogOpen}
+        year={year}
+        month={month}
+      />
     </div>
   )
 }

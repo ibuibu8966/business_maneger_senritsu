@@ -44,6 +44,96 @@ export class PaymentCheckRepository {
     })
   }
 
+  static async importCsv(params: {
+    year: number
+    month: number
+    rows: { memberId: string; courseName: string }[]
+    dryRun: boolean
+    confirmedBy: string
+  }) {
+    const { year, month, rows, dryRun, confirmedBy } = params
+
+    const uniqueRows = Array.from(
+      new Map(rows.map((r) => [`${r.memberId}__${r.courseName}`, r])).values()
+    )
+
+    const matched: { subscriptionId: string; memberId: string; contactName: string; courseName: string }[] = []
+    const unmatched: { memberId: string; courseName: string; reason: string }[] = []
+    const duplicates: { subscriptionId: string; memberId: string; contactName: string; courseName: string }[] = []
+
+    for (const row of uniqueRows) {
+      const sub = await prisma.subscription.findFirst({
+        where: {
+          paymentServiceId: row.memberId,
+          course: { name: row.courseName },
+          status: "ACTIVE",
+        },
+        include: { contact: { select: { name: true } }, course: { select: { name: true } } },
+      })
+
+      if (!sub) {
+        unmatched.push({
+          memberId: row.memberId,
+          courseName: row.courseName,
+          reason: "subscription_not_found",
+        })
+        continue
+      }
+
+      const existing = await prisma.paymentCheck.findUnique({
+        where: {
+          subscriptionId_year_month: { subscriptionId: sub.id, year, month },
+        },
+        select: { isConfirmed: true },
+      })
+
+      if (existing?.isConfirmed) {
+        duplicates.push({
+          subscriptionId: sub.id,
+          memberId: row.memberId,
+          contactName: sub.contact.name,
+          courseName: sub.course.name,
+        })
+        continue
+      }
+
+      if (!dryRun) {
+        await prisma.paymentCheck.upsert({
+          where: {
+            subscriptionId_year_month: { subscriptionId: sub.id, year, month },
+          },
+          create: {
+            subscriptionId: sub.id,
+            year,
+            month,
+            isConfirmed: true,
+            confirmedBy,
+            confirmedAt: new Date(),
+          },
+          update: {
+            isConfirmed: true,
+            confirmedBy,
+            confirmedAt: new Date(),
+          },
+        })
+      }
+
+      matched.push({
+        subscriptionId: sub.id,
+        memberId: row.memberId,
+        contactName: sub.contact.name,
+        courseName: sub.course.name,
+      })
+    }
+
+    return {
+      matched,
+      unmatched,
+      duplicates,
+      upserted: dryRun ? 0 : matched.length,
+    }
+  }
+
   static async generateForMonth(year: number, month: number) {
     const activeSubscriptions = await prisma.subscription.findMany({ where: { status: "ACTIVE" } })
     const existing = await prisma.paymentCheck.findMany({ where: { year, month }, select: { subscriptionId: true } })

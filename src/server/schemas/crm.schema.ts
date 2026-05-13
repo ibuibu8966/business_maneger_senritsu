@@ -83,6 +83,19 @@ export const upsertPaymentCheckSchema = z.object({
   hasNote: z.boolean().optional(),
 })
 
+export const importCsvPaymentCheckSchema = z.object({
+  year: z.number().int(),
+  month: z.number().int().min(1).max(12),
+  rows: z.array(
+    z.object({
+      memberId: z.string().min(1),
+      courseName: z.string().min(1),
+    })
+  ),
+  dryRun: z.boolean().default(true),
+  confirmedBy: z.string().default(""),
+})
+
 // ========== Partner ==========
 
 export const createPartnerSchema = z.object({
