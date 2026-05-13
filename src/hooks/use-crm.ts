@@ -4,7 +4,7 @@ import {
   fetchContacts, fetchContactById, createContact, updateContact,
   fetchSalons, createSalon, updateSalon, createCourse, updateCourse,
   fetchSubscriptions, createSubscription, updateSubscription,
-  fetchPaymentChecks, upsertPaymentCheck, generatePaymentChecks,
+  fetchPaymentChecks, upsertPaymentCheck, generatePaymentChecks, importPaymentChecksCsv,
   fetchPartners, fetchPartnerById, createPartner, updatePartner,
   addPartnerContact, addPartnerBusiness,
   fetchTickets, fetchTicketById, createTicket, updateTicket, addTicketComment,
@@ -218,6 +218,24 @@ export function useGeneratePaymentChecks() {
     mutationFn: (data: { year: number; month: number }) => generatePaymentChecks(data),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.paymentChecks.all })
+    },
+  })
+}
+
+export function useImportPaymentChecksCsv() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      year: number
+      month: number
+      rows: { memberId: string; courseName: string }[]
+      dryRun: boolean
+      confirmedBy?: string
+    }) => importPaymentChecksCsv(data),
+    onSettled: (_data, _err, vars) => {
+      if (!vars.dryRun) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.paymentChecks.all })
+      }
     },
   })
 }

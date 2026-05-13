@@ -26,6 +26,7 @@ import {
   createTicketSchema,
   updateTicketSchema,
   createCommentSchema,
+  importCsvPaymentCheckSchema,
 } from "@/server/schemas/crm.schema"
 
 // ===== ContactController =====
@@ -349,6 +350,25 @@ export class PaymentCheckController {
       const { year, month } = z.object({ year: z.number().int(), month: z.number().int().min(1).max(12) }).parse(body)
       const count = await PaymentCheckRepository.generateForMonth(year, month)
       return NextResponse.json({ generated: count })
+    } catch (e) {
+      return handleApiError(e, { resource: "決済確認", action: "実行" })
+    }
+  }
+
+  static async importCsv(req: NextRequest) {
+    try {
+      const { error } = await requireRole("master_admin", "admin")
+      if (error) return error
+      const body = await req.json()
+      const { year, month, rows, dryRun, confirmedBy } = importCsvPaymentCheckSchema.parse(body)
+      const result = await PaymentCheckRepository.importCsv({
+        year,
+        month,
+        rows,
+        dryRun,
+        confirmedBy: confirmedBy ? `${confirmedBy} (CSV取込)` : "CSV取込",
+      })
+      return NextResponse.json(result)
     } catch (e) {
       return handleApiError(e, { resource: "決済確認", action: "実行" })
     }
