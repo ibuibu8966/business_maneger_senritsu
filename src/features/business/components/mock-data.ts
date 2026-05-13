@@ -135,6 +135,7 @@ export interface TaskItem {
   lastGeneratedAt?: string | null
   nextScheduledAt?: string | null
   parentTaskId?: string | null
+  parentRecurringPattern?: string | null
   createdBy: string
   sortOrder: number
   createdAt: string

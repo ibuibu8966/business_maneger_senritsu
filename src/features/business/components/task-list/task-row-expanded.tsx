@@ -167,8 +167,8 @@ export function TaskRowExpanded({
                 value={task.status}
                 onChange={(e) => {
                   const newStatus = e.target.value as TaskStatus
-                  // 子タスク（parentTaskIdあり）を完了にする時は、親の次回生成日を入力するモーダルを開く
-                  if (newStatus === "done" && task.parentTaskId) {
+                  // 不定期パターンの子タスクのみ、完了時に次回生成日入力モーダルを開く
+                  if (newStatus === "done" && task.parentTaskId && task.parentRecurringPattern === "irregular") {
                     setIrregularDialogOpen(true)
                     return
                   }

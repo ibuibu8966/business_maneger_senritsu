@@ -65,6 +65,7 @@ export class BusinessTaskRepository {
         scheduleEvents: { select: { id: true, title: true, startAt: true, endAt: true, allDay: true, googleEventId: true }, orderBy: { startAt: "asc" } },
         checklistItems: { orderBy: { sortOrder: "asc" } },
         userSortOrders: { select: { employeeId: true, sortOrder: true } },
+        parentTask: { select: { recurringPattern: true } },
       },
       orderBy: { sortOrder: "asc" },
     })
