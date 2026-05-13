@@ -86,10 +86,12 @@ export const upsertPaymentCheckSchema = z.object({
 export const importCsvPaymentCheckSchema = z.object({
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
+  source: z.enum(["memberpay", "paypal"]).default("memberpay"),
   rows: z.array(
     z.object({
-      memberId: z.string().min(1),
-      courseName: z.string().min(1),
+      memberId: z.string().optional(),
+      courseName: z.string().optional(),
+      referenceId: z.string().optional(),
     })
   ),
   dryRun: z.boolean().default(true),
