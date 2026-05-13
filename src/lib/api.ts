@@ -454,17 +454,26 @@ export async function generatePaymentChecks(data: { year: number; month: number 
   return res.json()
 }
 
+export type CsvSource = "memberpay" | "paypal"
+
+export type ImportCsvRow = {
+  memberId?: string
+  courseName?: string
+  referenceId?: string
+}
+
 export type ImportCsvResult = {
-  matched: { subscriptionId: string; memberId: string; contactName: string; courseName: string }[]
-  unmatched: { memberId: string; courseName: string; reason: string }[]
-  duplicates: { subscriptionId: string; memberId: string; contactName: string; courseName: string }[]
+  matched: { subscriptionId: string; key: string; contactName: string; courseName: string }[]
+  unmatched: { key: string; detail: string; reason: string }[]
+  duplicates: { subscriptionId: string; key: string; contactName: string; courseName: string }[]
   upserted: number
 }
 
 export async function importPaymentChecksCsv(data: {
   year: number
   month: number
-  rows: { memberId: string; courseName: string }[]
+  source: CsvSource
+  rows: ImportCsvRow[]
   dryRun: boolean
   confirmedBy?: string
 }): Promise<ImportCsvResult> {

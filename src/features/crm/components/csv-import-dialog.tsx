@@ -8,11 +8,66 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { useImportPaymentChecksCsv } from "@/hooks/use-crm"
-import type { ImportCsvResult } from "@/lib/api"
+import type { ImportCsvResult, ImportCsvRow, CsvSource } from "@/lib/api"
 
 const UPDATE_SUFFIX = " 更新決済"
 
-type ParsedRow = { memberId: string; courseName: string; rawProduct: string }
+type ParsedRow = ImportCsvRow & { rawLabel: string }
+
+const SOURCE_LABELS: Record<CsvSource, string> = {
+  memberpay: "Memberpay",
+  paypal: "PayPal",
+}
+
+function detectSource(headers: string[]): CsvSource | null {
+  if (headers.includes("会員ID") && headers.includes("商品")) return "memberpay"
+  if (headers.includes("リファレンス トランザクションID") || headers.includes("取引ID")) {
+    return "paypal"
+  }
+  return null
+}
+
+function parseMemberpayRows(data: Record<string, string>[]): { rows: ParsedRow[]; skipped: number } {
+  const rows: ParsedRow[] = []
+  let skipped = 0
+  for (const r of data) {
+    const product = (r["商品"] ?? "").trim()
+    const memberId = (r["会員ID"] ?? "").trim()
+    const status = (r["支払い状況"] ?? "").trim()
+    if (!product || !memberId) continue
+    if (!product.endsWith(UPDATE_SUFFIX)) { skipped++; continue }
+    if (status && status !== "支払い済み") { skipped++; continue }
+    rows.push({
+      memberId,
+      courseName: product.slice(0, -UPDATE_SUFFIX.length).trim(),
+      rawLabel: `${memberId} / ${product}`,
+    })
+  }
+  return { rows, skipped }
+}
+
+function parsePaypalRows(data: Record<string, string>[]): { rows: ParsedRow[]; skipped: number } {
+  const rows: ParsedRow[] = []
+  let skipped = 0
+  for (const r of data) {
+    const type = (r["タイプ"] ?? "").trim()
+    const status = (r["ステータス"] ?? "").trim()
+    const totalRaw = (r["合計"] ?? "").replace(/,/g, "").trim()
+    const total = Number(totalRaw)
+    const referenceId = (r["リファレンス トランザクションID"] ?? "").trim()
+    const senderEmail = (r["送信者メールアドレス"] ?? "").trim()
+    const product = (r["商品タイトル"] ?? "").trim()
+    if (!referenceId) { skipped++; continue }
+    if (type !== "サブスクリプションの支払い") { skipped++; continue }
+    if (status !== "完了") { skipped++; continue }
+    if (!Number.isFinite(total) || total <= 0) { skipped++; continue }
+    rows.push({
+      referenceId,
+      rawLabel: `${senderEmail || "(no email)"} / ${product || "(no product)"} / ${referenceId}`,
+    })
+  }
+  return { rows, skipped }
+}
 
 export function CsvImportDialog({
   open,
@@ -29,8 +84,9 @@ export function CsvImportDialog({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [fileName, setFileName] = useState<string>("")
+  const [detectedSource, setDetectedSource] = useState<CsvSource | null>(null)
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([])
-  const [skippedNonUpdate, setSkippedNonUpdate] = useState<number>(0)
+  const [skippedCount, setSkippedCount] = useState<number>(0)
   const [preview, setPreview] = useState<ImportCsvResult | null>(null)
   const [showUnmatchedDetail, setShowUnmatchedDetail] = useState(false)
   const [parseError, setParseError] = useState<string>("")
@@ -39,8 +95,9 @@ export function CsvImportDialog({
 
   const resetState = () => {
     setFileName("")
+    setDetectedSource(null)
     setParsedRows([])
-    setSkippedNonUpdate(0)
+    setSkippedCount(0)
     setPreview(null)
     setShowUnmatchedDetail(false)
     setParseError("")
@@ -58,33 +115,31 @@ export function CsvImportDialog({
     setFileName(file.name)
     setParseError("")
     setPreview(null)
+    setDetectedSource(null)
 
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        const rows: ParsedRow[] = []
-        let skipped = 0
-        for (const r of result.data) {
-          const product = (r["商品"] ?? "").trim()
-          const memberId = (r["会員ID"] ?? "").trim()
-          const status = (r["支払い状況"] ?? "").trim()
-          if (!product || !memberId) continue
-          if (!product.endsWith(UPDATE_SUFFIX)) { skipped++; continue }
-          if (status && status !== "支払い済み") { skipped++; continue }
-          rows.push({
-            memberId,
-            courseName: product.slice(0, -UPDATE_SUFFIX.length).trim(),
-            rawProduct: product,
-          })
+        const headers = result.meta.fields ?? []
+        const source = detectSource(headers)
+        if (!source) {
+          setParseError("対応していないCSVフォーマットです（Memberpay/PayPal いずれの形式とも一致しません）")
+          return
         }
+        setDetectedSource(source)
+
+        const { rows, skipped } = source === "paypal"
+          ? parsePaypalRows(result.data)
+          : parseMemberpayRows(result.data)
+
         if (rows.length === 0) {
-          setParseError("取込対象の行が見つかりません（『更新決済』『支払い済み』の行）")
+          setParseError(`取込対象の行が見つかりません（${SOURCE_LABELS[source]}の条件に合う行なし）`)
           return
         }
         setParsedRows(rows)
-        setSkippedNonUpdate(skipped)
-        runPreview(rows)
+        setSkippedCount(skipped)
+        runPreview(source, rows)
       },
       error: (err) => {
         setParseError(`CSVパースに失敗: ${err.message}`)
@@ -92,12 +147,17 @@ export function CsvImportDialog({
     })
   }
 
-  const runPreview = (rows: ParsedRow[]) => {
+  const runPreview = (source: CsvSource, rows: ParsedRow[]) => {
     importMutation.mutate(
       {
         year,
         month,
-        rows: rows.map((r) => ({ memberId: r.memberId, courseName: r.courseName })),
+        source,
+        rows: rows.map((r) => ({
+          memberId: r.memberId,
+          courseName: r.courseName,
+          referenceId: r.referenceId,
+        })),
         dryRun: true,
         confirmedBy: session?.user?.name ?? "",
       },
@@ -109,11 +169,17 @@ export function CsvImportDialog({
   }
 
   const handleExecute = () => {
+    if (!detectedSource) return
     importMutation.mutate(
       {
         year,
         month,
-        rows: parsedRows.map((r) => ({ memberId: r.memberId, courseName: r.courseName })),
+        source: detectedSource,
+        rows: parsedRows.map((r) => ({
+          memberId: r.memberId,
+          courseName: r.courseName,
+          referenceId: r.referenceId,
+        })),
         dryRun: false,
         confirmedBy: session?.user?.name ?? "",
       },
@@ -138,11 +204,11 @@ export function CsvImportDialog({
 
         <div className="space-y-4 pt-2">
           {/* ファイル選択 */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.CSV"
               onChange={handleFileChange}
               className="hidden"
               id="csv-file-input"
@@ -162,6 +228,15 @@ export function CsvImportDialog({
                 {fileName}
               </span>
             )}
+            {detectedSource && (
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200">
+                自動判定: {SOURCE_LABELS[detectedSource]}
+              </span>
+            )}
+          </div>
+
+          <div className="text-xs text-muted-foreground">
+            対応CSV: Memberpay（売上CSV）／ PayPal（取引履歴CSV）
           </div>
 
           {parseError && (
@@ -186,7 +261,7 @@ export function CsvImportDialog({
               <div className="text-sm space-y-2">
                 <div className="text-xs text-muted-foreground">
                   CSV対象行: {parsedRows.length}件
-                  {skippedNonUpdate > 0 && ` （※「更新決済/支払い済み」以外で${skippedNonUpdate}件スキップ）`}
+                  {skippedCount > 0 && `（※条件外で${skippedCount}件スキップ）`}
                 </div>
                 <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
                   <CheckCircle2 className="h-4 w-4" />
@@ -216,18 +291,16 @@ export function CsvImportDialog({
                   <table className="text-xs w-full">
                     <thead>
                       <tr className="text-left text-muted-foreground">
-                        <th className="pr-2 pb-1">会員ID</th>
-                        <th className="pr-2 pb-1">商品名（コース名）</th>
+                        <th className="pr-2 pb-1">識別情報</th>
                         <th className="pb-1">理由</th>
                       </tr>
                     </thead>
                     <tbody>
                       {preview.unmatched.map((u, i) => (
                         <tr key={i}>
-                          <td className="pr-2 py-0.5 font-mono">{u.memberId}</td>
-                          <td className="pr-2 py-0.5">{u.courseName}</td>
+                          <td className="pr-2 py-0.5 font-mono break-all">{u.detail}</td>
                           <td className="py-0.5 text-muted-foreground">
-                            会員ID×コースのSubscription(ACTIVE)が見つからない
+                            ACTIVE な Subscription が見つからない
                           </td>
                         </tr>
                       ))}

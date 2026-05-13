@@ -47,34 +47,48 @@ export class PaymentCheckRepository {
   static async importCsv(params: {
     year: number
     month: number
-    rows: { memberId: string; courseName: string }[]
+    source: "memberpay" | "paypal"
+    rows: { memberId?: string; courseName?: string; referenceId?: string }[]
     dryRun: boolean
     confirmedBy: string
   }) {
-    const { year, month, rows, dryRun, confirmedBy } = params
+    const { year, month, source, rows, dryRun, confirmedBy } = params
 
-    const uniqueRows = Array.from(
-      new Map(rows.map((r) => [`${r.memberId}__${r.courseName}`, r])).values()
-    )
+    const keyFor = (r: { memberId?: string; courseName?: string; referenceId?: string }) =>
+      source === "paypal" ? `paypal__${r.referenceId ?? ""}` : `mp__${r.memberId ?? ""}__${r.courseName ?? ""}`
 
-    const matched: { subscriptionId: string; memberId: string; contactName: string; courseName: string }[] = []
-    const unmatched: { memberId: string; courseName: string; reason: string }[] = []
-    const duplicates: { subscriptionId: string; memberId: string; contactName: string; courseName: string }[] = []
+    const uniqueRows = Array.from(new Map(rows.map((r) => [keyFor(r), r])).values())
+
+    const matched: { subscriptionId: string; key: string; contactName: string; courseName: string }[] = []
+    const unmatched: { key: string; detail: string; reason: string }[] = []
+    const duplicates: { subscriptionId: string; key: string; contactName: string; courseName: string }[] = []
 
     for (const row of uniqueRows) {
-      const sub = await prisma.subscription.findFirst({
-        where: {
-          paymentServiceId: row.memberId,
-          course: { name: row.courseName },
-          status: "ACTIVE",
-        },
-        include: { contact: { select: { name: true } }, course: { select: { name: true } } },
-      })
+      const sub =
+        source === "paypal"
+          ? await prisma.subscription.findFirst({
+              where: {
+                paymentServiceId: row.referenceId ?? "",
+                paymentMethod: "PAYPAL",
+                status: "ACTIVE",
+              },
+              include: { contact: { select: { name: true } }, course: { select: { name: true } } },
+            })
+          : await prisma.subscription.findFirst({
+              where: {
+                paymentServiceId: row.memberId ?? "",
+                course: { name: row.courseName ?? "" },
+                status: "ACTIVE",
+              },
+              include: { contact: { select: { name: true } }, course: { select: { name: true } } },
+            })
+
+      const key = source === "paypal" ? (row.referenceId ?? "") : `${row.memberId ?? ""} / ${row.courseName ?? ""}`
 
       if (!sub) {
         unmatched.push({
-          memberId: row.memberId,
-          courseName: row.courseName,
+          key,
+          detail: source === "paypal" ? `referenceId=${row.referenceId}` : `memberId=${row.memberId}, course=${row.courseName}`,
           reason: "subscription_not_found",
         })
         continue
@@ -90,7 +104,7 @@ export class PaymentCheckRepository {
       if (existing?.isConfirmed) {
         duplicates.push({
           subscriptionId: sub.id,
-          memberId: row.memberId,
+          key,
           contactName: sub.contact.name,
           courseName: sub.course.name,
         })
@@ -120,7 +134,7 @@ export class PaymentCheckRepository {
 
       matched.push({
         subscriptionId: sub.id,
-        memberId: row.memberId,
+        key,
         contactName: sub.contact.name,
         courseName: sub.course.name,
       })

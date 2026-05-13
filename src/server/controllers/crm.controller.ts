@@ -360,10 +360,11 @@ export class PaymentCheckController {
       const { error } = await requireRole("master_admin", "admin")
       if (error) return error
       const body = await req.json()
-      const { year, month, rows, dryRun, confirmedBy } = importCsvPaymentCheckSchema.parse(body)
+      const { year, month, source, rows, dryRun, confirmedBy } = importCsvPaymentCheckSchema.parse(body)
       const result = await PaymentCheckRepository.importCsv({
         year,
         month,
+        source,
         rows,
         dryRun,
         confirmedBy: confirmedBy ? `${confirmedBy} (CSV取込)` : "CSV取込",

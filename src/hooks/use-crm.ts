@@ -228,7 +228,8 @@ export function useImportPaymentChecksCsv() {
     mutationFn: (data: {
       year: number
       month: number
-      rows: { memberId: string; courseName: string }[]
+      source: "memberpay" | "paypal"
+      rows: { memberId?: string; courseName?: string; referenceId?: string }[]
       dryRun: boolean
       confirmedBy?: string
     }) => importPaymentChecksCsv(data),
