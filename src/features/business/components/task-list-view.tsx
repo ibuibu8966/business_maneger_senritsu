@@ -92,7 +92,7 @@ export function TaskListView() {
   const [filterStaffId, setFilterStaffId] = useState<string>(userId ?? "all")
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all")
   const [showTodayOnly, setShowTodayOnly] = useState<boolean>(false)
-  const [recurringSectionOpen, setRecurringSectionOpen] = useState<boolean>(false)
+  const [recurringSectionOpen, setRecurringSectionOpen] = useState<boolean>(true)
   const [searchKeyword, setSearchKeyword] = useState<string>("")
   const [filterPriority, setFilterPriority] = useState<"all" | "highest" | "high" | "medium" | "low">("all")
   const [filterDeadline, setFilterDeadline] = useState<"all" | "today" | "thisweek" | "overdue" | "none" | "exists">("all")
